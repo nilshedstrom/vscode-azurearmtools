@@ -34,13 +34,20 @@
         {
             "type": "npm",
             "script": "watch-grammars",
-            "problemMatcher": [],
-            "isBackground": true
-        },
-        {
-            "type": "npm",
-            "script": "watch",
-            "problemMatcher": [],
+            "label": "watch grammars",
+            "problemMatcher": [
+                {
+                    "owner": "Custom",
+                    "pattern": {
+                        "regexp": "$can't find this^"
+                    },
+                    "background": {
+                        "activeOnStart": false,
+                        "beginsPattern": "^.*Starting.*",
+                        "endsPattern": "^.*Finished.*"
+                    }
+                }
+            ],
             "isBackground": true
         }
     ]

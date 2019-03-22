@@ -62,6 +62,7 @@
         ],
         "missing-jsdoc": false,
         "newline-before-return": false,
+        "no-backbone-get-set-outside-model": false,
         "no-http-string": [
             true,
             "http://www.example.com/?.*",

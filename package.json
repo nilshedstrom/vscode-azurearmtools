@@ -2,7 +2,7 @@
   "name": "azurerm-vscode-tools",
   "displayName": "Azure Resource Manager Tools",
   "description": "Template language support for Azure Resource Manager JSON files.",
-  "version": "0.6.1-alpha",
+  "version": "0.6.1-alphalangserv",
   "publisher": "msazurermtools",
   "categories": [
     "Azure",
@@ -31,23 +31,18 @@
   "icon": "images/AzureRMTools128x128.png",
   "aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
   "engines": {
-    "vscode": "^1.26.0"
+    "vscode": "^1.28.0"
   },
   "preview": true,
   "activationEvents": [
+    "onLanguage:arm-deployment",
     "onLanguage:json",
     "onLanguage:jsonc"
   ],
   "contributes": {
     "grammars": [
       {
-        "injectTo": [
-          "source.json"
-        ],
-        "scopeName": "detect-arm.injection.json.comments",
-        "path": "dist/grammars/detect-arm.injection.tmLanguage.json"
-      },
-      {
+        "language": "arm-deployment",
         "scopeName": "source.json.arm",
         "path": "dist/grammars/JSONC.arm.tmLanguage.json"
       },
@@ -59,7 +54,37 @@
     "configuration": {
       "type": "object",
       "title": "Azure Resource Manager Tools Configuration Settings",
-      "properties": {}
+      "properties": {
+        "azurermtools.languageServerPath": {
+          "deprecationMessage": "azurermtools.languageServerPath has been deprecated, please use azurermtools.languageServer.path instead",
+          "type": "string",
+          "description": "Override the default location used to find the language server (requires restart)"
+        },
+        "azurermtools.languageServer.path": {
+          "type": "string",
+          "description": "Override the default location used to find the language server (requires restart)"
+        },
+        "azurermtools.languageServer.waitForDebugger": {
+          "type": "boolean",
+          "default": false,
+          "description": "If set to true, the language server process will wait in startup until a debugger is attached, and then will force a break (requires restart)"
+        },
+        "azurermtools.languageServer.autoDetectJsonTemplates": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enables auto-detection of deployment template files with the extension *.json or *.jsonc. If set to true, the editor language will automatically be set to ARM Deployment Template for any *.json/*.jsonc files which contain an appropriate ARM schema."
+        },
+        "azurermtools.languageServer.traceLevel": {
+          "type": "string",
+          "enum": [
+            "Off",
+            "Messages",
+            "Verbose"
+          ],
+          "default": "Messages",
+          "description": "Sets the trace level in the Output window for the ARM language server (requires restart)"
+        }
+      }
     },
     "views": {
       "explorer": [
@@ -69,7 +94,26 @@
           "when": "showArmJsonView"
         }
       ]
-    }
+    },
+    "languages": [
+      {
+        "id": "arm-deployment",
+        "aliases": [
+          "ARM Deployment Template"
+        ],
+        "$extensions.todo": "finalize",
+        "extensions": [
+          ".template.json",
+          ".arm.json",
+          ".arm",
+          ".az",
+          ".az.json",
+          ".azrm",
+          ".azrm.json"
+        ],
+        "configuration": "grammars/jsonc.arm.language-configuration.json"
+      }
+    ]
   },
   "main": "main",
   "scripts": {
@@ -89,7 +133,7 @@
     "webpack-profile": "webpack --profile --json --mode production > webpack-stats.json && echo Use http://webpack.github.io/analyse to analyze the stats",
     "build-grammars": "gulp build-grammars",
     "watch-grammars": "gulp watch-grammars",
-    "watch": "gulp watch"
+    "update-language-server": "gulp update-language-server"
   },
   "devDependencies": {
     "@types/fs-extra": "^5.0.5",
@@ -117,6 +161,8 @@
     "fs-extra": "^7.0.1",
     "moment": "^2.24.0",
     "opn": "^5.5.0",
-    "vscode-azureextensionui": "^0.23.2"
+    "vscode-azureextensionui": "^0.23.2",
+    "vscode-jsonrpc": "^4.0.0",
+    "vscode-languageclient": "^4.4.0"
   }
 }

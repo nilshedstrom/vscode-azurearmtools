@@ -10,3 +10,5 @@ export const isWebpack: boolean = /^(false|0)?$/i.test(process.env.AZCODE_ARM_IG
 
 export const assetsPath = path.join(__dirname, isWebpack ? "" : "..", "..", "assets");
 export const iconsPath = path.join(__dirname, isWebpack ? "" : "..", "..", "icons");
+
+export const armDeploymentLanguageId = 'arm-deployment';
