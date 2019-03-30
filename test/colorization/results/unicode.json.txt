@@ -13,15 +13,16 @@ array0              source.json meta.structure.dictionary.json meta.arm-deployme
 ]                   source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.array-access.arm-deployment {{scope-arrayaccess-brackets}}
 ]"                  source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-end}}
 
-TEST STRING: "[γνῶθι().σεαυτὸν","$TEST":"[ᠠᠪᠴᠳᠡᠸ()]"
+TEST STRING: "[γνῶθι().σεαυτὸν]"
 "[                  source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-start}}
 γνῶθι               source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-unknownfunction}}
 ()                  source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-parentheses-grouping}}
 .                   source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.property-access.arm-deployment {{scope-propaccess-dot}}
 σεαυτὸν             source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.property-access.arm-deployment {{scope-propaccess-propname}}
-",                  source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment invalid.illegal.expected-expression.arm-deployment
-"$TEST":            source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment invalid.illegal.expected-expression.arm-deployment
-"[                  source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment invalid.illegal.expected-expression.arm-deployment
+]"                  source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-end}}
+
+TEST STRING: "[ᠠᠪᠴᠳᠡᠸ()]"
+"[                  source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-start}}
 ᠠᠪᠴᠳᠡᠸ              source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-unknownfunction}}
 ()                  source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-parentheses-grouping}}
 ]"                  source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-end}}
