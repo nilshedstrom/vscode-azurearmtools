@@ -1,13 +1,11 @@
 {                   source.json.comments meta.structure.dictionary.json.comments punctuation.definition.dictionary.begin.json.comments
-    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-                    source.json.comments meta.structure.dictionary.json.comments
-                    source.json.comments meta.structure.dictionary.json.comments
-"                   source.json.comments meta.structure.dictionary.json.comments string.json.comments support.type.property-name.json.comments punctuation.support.type.property-name.begin.json.comments
-Test1               source.json.comments meta.structure.dictionary.json.comments string.json.comments support.type.property-name.json.comments
-"                   source.json.comments meta.structure.dictionary.json.comments string.json.comments support.type.property-name.json.comments punctuation.support.type.property-name.end.json.comments
-:                   source.json.comments meta.structure.dictionary.json.comments meta.structure.dictionary.value.json.comments punctuation.separator.dictionary.key-value.json.comments
-                    source.json.comments meta.structure.dictionary.json.comments meta.structure.dictionary.value.json.comments
-"[                  source.json.comments meta.structure.dictionary.json.comments meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-start}}
-'                   source.json.comments meta.structure.dictionary.json.comments meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-string-contents}} {{scope-string-start}}
-]"                  source.json.comments meta.structure.dictionary.json.comments meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-string-contents}}
-}                   source.json.comments meta.structure.dictionary.json.comments meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-string-contents}}
+"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                    source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template keyword.other.meta.azure-schema.arm-deployment
+"                   source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template string.json.comments support.type.property-name.json.comments punctuation.support.type.property-name.begin.json.comments
+Test1               source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template string.json.comments support.type.property-name.json.comments
+"                   source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template string.json.comments support.type.property-name.json.comments punctuation.support.type.property-name.end.json.comments
+:                   source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments punctuation.separator.dictionary.key-value.json.comments
+"[                  source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-start}}
+'                   source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-string-contents}} {{scope-string-start}}
+]"                  source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-string-contents}}
+}                   source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-string-contents}}

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// tslint:disable:max-func-body-length no-console
+// tslint:disable:max-func-body-length no-console cyclomatic-complexity
 'use strict';
 
 // Turn on to overwrite results files rather than creating new ".txt.actual" files when there are differences.
@@ -63,7 +63,8 @@ async function assertUnchangedTokens(testPath: string, resultPath: string): Prom
     let rawData = <{ c: string; t: string; r: unknown[] }[]>await commands.executeCommand('_workbench.captureSyntaxTokens', Uri.file(testPath));
 
     // Let's use more reasonable property names in our data
-    let data: ITokenInfo[] = rawData.map(d => <ITokenInfo>{ text: d.c, scopes: d.t, colors: d.r });
+    let data: ITokenInfo[] = rawData.map(d => <ITokenInfo>{ text: d.c.trim(), scopes: d.t, colors: d.r })
+        .filter(d => d.text !== "");
     let testCases: ITestcase[];
     let allDataAsString = data.map((d, i) => `${i}: ${d.text} => ${d.scopes}`).join(os.EOL);
 
@@ -73,7 +74,9 @@ async function assertUnchangedTokens(testPath: string, resultPath: string): Prom
 
     // If the test filename contains ".not-arm.", then all testcases in it should not contain any arm-deployment tokens.
     // Otherwise they should have at least one.
-    let shouldHaveArmTokens = !testPath.includes('.not-arm.');
+    let shouldBeArmTemplate = !testPath.includes('.not-arm.');
+
+    let shouldBeExpression = !testPath.includes('.NOT-EXPR.');
 
     // If the test contains code like this:
     //
@@ -135,12 +138,14 @@ async function assertUnchangedTokens(testPath: string, resultPath: string): Prom
     testCases = testCases || [<ITestcase>{ data }];
 
     let { results: testcaseResults, fullString: resultsFullString } = getTestcaseResults(testCases);
+    resultsFullString = normalize(resultsFullString.trim());
 
     let actualResultPath = `${resultPath}.actual`;
     let resultPathToWriteTo = OVERWRITE ? resultPath : actualResultPath;
     let removeActualResultPath = false;
     if (fs.existsSync(resultPath)) {
-        let previousResult = fs.readFileSync(resultPath).toString().trimRight().replace(/(\r\n)|\r/g, os.EOL);
+        let previousResult = normalize(fs.readFileSync(resultPath).toString().trim());
+        let isJustDiff = false;
 
         try {
             for (let testcaseResult of testcaseResults) {
@@ -154,7 +159,7 @@ async function assertUnchangedTokens(testPath: string, resultPath: string): Prom
                         "This test's filename does not contain 'invalid', but at least one testcase in it contains an invalid token.");
                 }
 
-                if (shouldHaveArmTokens) {
+                if (shouldBeArmTemplate) {
                     assert(
                         testcaseResult.includes('arm-deployment'),
                         // tslint:disable-next-line: max-line-length
@@ -164,22 +169,34 @@ async function assertUnchangedTokens(testPath: string, resultPath: string): Prom
                         !testcaseResult.includes('arm-deployment'),
                         "This test's filename contains 'not-arm', but at least one testcase in it contains an arm-deployment token.");
                 }
+
+                let isExpression = testcaseResult.includes('meta.expression.arm-deployment');
+                if (shouldBeExpression) {
+                    assert(
+                        isExpression,
+                        // tslint:disable-next-line: max-line-length
+                        "This test's filename does not contain '.NOT-EXPR', and so every testcase in it should be an ARM expression.");
+                } else {
+                    assert(
+                        !isExpression,
+                        "This test's filename contains '.NOT-EXPR', but at least one testcase in it contains an ARM expression.");
+                }
             }
 
-            assert.equal(resultsFullString.trimRight(), previousResult.trimRight());
+            isJustDiff = true;
+            assert.equal(resultsFullString, previousResult);
             removeActualResultPath = true;
         } catch (e) {
+            let nonDiffError = isJustDiff ? "" : `${e.message}${os.EOL}`;
             fs.writeFileSync(resultPathToWriteTo, resultsFullString, { flag: 'w' });
-
-            console.log(e.message ? e.message : e.toString());
 
             if (OVERWRITE) {
                 removeActualResultPath = true;
                 // tslint:disable-next-line: max-line-length
-                throw new Error(`*** MODIFIED THE RESULTS FILE (${resultPathToWriteTo}). VERIFY THE CHANGES BEFORE CHECKING IN!`);
+                throw new Error(`${nonDiffError}*** MODIFIED THE RESULTS FILE (${resultPathToWriteTo}). VERIFY THE CHANGES BEFORE CHECKING IN!`);
             } else {
                 fs.writeFileSync(resultPathToWriteTo, resultsFullString, { flag: 'w' });
-                throw new Error(`*** ACTUAL RESULTS ARE IN (${resultPathToWriteTo}).`);
+                throw new Error(`${nonDiffError}*** ACTUAL RESULTS ARE IN (${resultPathToWriteTo}).`);
             }
         }
     } else {
@@ -198,26 +215,31 @@ function getDictionaryNestingLevel(scopes: string): number {
     return matches ? matches.length : 0;
 }
 
+function normalize(s: string): string {
+    return s.replace(/(\r\n)|\r/g, os.EOL);
+}
+
 function getTestcaseResults(testCases: ITestcase[]): { text: string; results: string[]; fullString: string } {
     let results = testCases.map((testcase: ITestcase) => {
         let prefix = testcase.testString ? `${testcase.testString}${os.EOL}` : "";
 
         let testCaseString = testcase.data.map(td => {
-            let padding = tabSize - td.text.length;
+            let theText = td.text.trim();
+            let padding = tabSize - theText.length;
             let scopes = unpreprocessScopes(td.scopes);
             if (padding > 0) {
-                return `${td.text}${" ".repeat(padding)}${scopes}`;
+                return `${theText}${" ".repeat(padding)}${scopes}`;
             } else {
-                return `${td.text}${os.EOL}${" ".repeat(tabSize)}${scopes}`;
+                return `${theText}${os.EOL}${" ".repeat(tabSize)}${scopes}`;
             }
         }).join(os.EOL);
         return prefix + testCaseString;
     });
 
     let fullString = results.join(`${os.EOL}${os.EOL}`);
-    fullString = `${fullString.trimRight()}${os.EOL}`;
+    fullString = normalize(`${fullString.trim()}${os.EOL}`);
 
-    let text = testCases.map(tc => tc.data).map((tis: ITokenInfo[]) => tis.map(ti => ti.text).join('')).join('');
+    let text = normalize(testCases.map(tc => tc.data).map((tis: ITokenInfo[]) => tis.map(ti => ti.text).join('')).join(''));
 
     return { text, results, fullString };
 }

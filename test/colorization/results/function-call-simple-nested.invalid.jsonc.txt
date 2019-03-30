@@ -1,18 +1,18 @@
 TEST STRING: "[a)]"
-"[                  source.json.comments meta.structure.dictionary.json.comments meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-start}}
-a)                  source.json.comments meta.structure.dictionary.json.comments meta.structure.dictionary.value.json.comments meta.expression.arm-deployment invalid.illegal.expected-expression.arm-deployment
-]"                  source.json.comments meta.structure.dictionary.json.comments meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-end}}
+"[                  source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-start}}
+a)                  source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment invalid.illegal.expected-expression.arm-deployment
+]"                  source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-end}}
 
 TEST STRING: "[a.b]"
-"[                  source.json.comments meta.structure.dictionary.json.comments meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-start}}
-a                   source.json.comments meta.structure.dictionary.json.comments meta.structure.dictionary.value.json.comments meta.expression.arm-deployment invalid.illegal.expected-expression.arm-deployment
-.                   source.json.comments meta.structure.dictionary.json.comments meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.property-access.arm-deployment {{scope-propaccess-dot}}
-b                   source.json.comments meta.structure.dictionary.json.comments meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.property-access.arm-deployment {{scope-propaccess-propname}}
-]"                  source.json.comments meta.structure.dictionary.json.comments meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-end}}
+"[                  source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-start}}
+a                   source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment invalid.illegal.expected-expression.arm-deployment
+.                   source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.property-access.arm-deployment {{scope-propaccess-dot}}
+b                   source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.property-access.arm-deployment {{scope-propaccess-propname}}
+]"                  source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-end}}
 
 TEST STRING: "[b())]"
-"[                  source.json.comments meta.structure.dictionary.json.comments meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-start}}
-b                   source.json.comments meta.structure.dictionary.json.comments meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-unknownfunction}}
-()                  source.json.comments meta.structure.dictionary.json.comments meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-parentheses-grouping}}
-)                   source.json.comments meta.structure.dictionary.json.comments meta.structure.dictionary.value.json.comments meta.expression.arm-deployment invalid.illegal.expected-expression.arm-deployment
-]"                  source.json.comments meta.structure.dictionary.json.comments meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-end}}
+"[                  source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-start}}
+b                   source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-unknownfunction}}
+()                  source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-parentheses-grouping}}
+)                   source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment invalid.illegal.expected-expression.arm-deployment
+]"                  source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-end}}
