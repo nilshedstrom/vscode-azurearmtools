@@ -70,11 +70,11 @@ async function assertUnchangedTokens(testPath: string, resultPath: string): Prom
 
     // If the test filename contains ".invalid.", then all testcases in it should have at least one "invalid" token.
     // Otherwise they should contain none.
-    let shouldHaveInvalidTokens = testPath.includes('.invalid.');
+    let shouldHaveInvalidTokens = testPath.includes('.INVALID.');
 
     // If the test filename contains ".not-arm.", then all testcases in it should not contain any arm-deployment tokens.
     // Otherwise they should have at least one.
-    let shouldBeArmTemplate = !testPath.includes('.not-arm.');
+    let shouldBeArmTemplate = !testPath.includes('.NOT-ARM.');
 
     let shouldBeExpression = shouldBeArmTemplate && !testPath.includes('.NOT-EXPR.');
 
@@ -152,22 +152,22 @@ async function assertUnchangedTokens(testPath: string, resultPath: string): Prom
                 if (shouldHaveInvalidTokens) {
                     assert(
                         testcaseResult.includes('invalid.illegal'),
-                        "This test's filename contains 'invalid', and so should have had at least one invalid token in each testcase result.");
+                        "This test's filename contains '.INVALID.', and so should have had at least one invalid token in each testcase result.");
                 } else {
                     assert(
                         !testcaseResult.includes('invalid.illegal'),
-                        "This test's filename does not contain 'invalid', but at least one testcase in it contains an invalid token.");
+                        "This test's filename does not contain '.INVALID.', but at least one testcase in it contains an invalid token.");
                 }
 
                 if (shouldBeArmTemplate) {
                     assert(
                         testcaseResult.includes('arm-deployment'),
                         // tslint:disable-next-line: max-line-length
-                        "This test's filename does not contain 'not-arm', and so every testcase in it should contain at least one arm-deployment token.");
+                        "This test's filename does not contain '.NOT-ARM.', and so every testcase in it should contain at least one arm-deployment token.");
                 } else {
                     assert(
                         !testcaseResult.includes('arm-deployment'),
-                        "This test's filename contains 'not-arm', but at least one testcase in it contains an arm-deployment token.");
+                        "This test's filename contains '.NOT-ARM.', but at least one testcase in it contains an arm-deployment token.");
                 }
 
                 let isExpression = testcaseResult.includes('meta.expression.arm-deployment');
@@ -175,11 +175,11 @@ async function assertUnchangedTokens(testPath: string, resultPath: string): Prom
                     assert(
                         isExpression,
                         // tslint:disable-next-line: max-line-length
-                        "This test's filename does not contain '.NOT-EXPR', and so every testcase in it should be an ARM expression.");
+                        "This test's filename does not contain '.NOT-EXPR.', and so every testcase in it should be an ARM expression.");
                 } else {
                     assert(
                         !isExpression,
-                        "This test's filename contains '.NOT-EXPR', but at least one testcase in it contains an ARM expression.");
+                        "This test's filename contains '.NOT-EXPR.', but at least one testcase in it contains an ARM expression.");
                 }
             }
 
