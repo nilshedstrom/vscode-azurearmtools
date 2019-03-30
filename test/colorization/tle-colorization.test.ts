@@ -76,7 +76,7 @@ async function assertUnchangedTokens(testPath: string, resultPath: string): Prom
     // Otherwise they should have at least one.
     let shouldBeArmTemplate = !testPath.includes('.not-arm.');
 
-    let shouldBeExpression = !testPath.includes('.NOT-EXPR.');
+    let shouldBeExpression = shouldBeArmTemplate && !testPath.includes('.NOT-EXPR.');
 
     // If the test contains code like this:
     //
