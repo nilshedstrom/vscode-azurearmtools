@@ -70,13 +70,13 @@ async function assertUnchangedTokens(testPath: string, resultPath: string): Prom
 
     // If the test filename contains ".invalid.", then all testcases in it should have at least one "invalid" token.
     // Otherwise they should contain none.
-    let shouldHaveInvalidTokens = testPath.includes('.INVALID.');
+    let shouldHaveInvalidTokens = !!testPath.match(/\.INVALID\./i);
 
     // If the test filename contains ".not-arm.", then all testcases in it should not contain any arm-deployment tokens.
     // Otherwise they should have at least one.
-    let shouldBeArmTemplate = !testPath.includes('.NOT-ARM.');
+    let shouldBeArmTemplate = !testPath.match(/\.NOT-ARM\.'/i);
 
-    let shouldBeExpression = shouldBeArmTemplate && !testPath.includes('.NOT-EXPR.');
+    let shouldBeExpression = shouldBeArmTemplate && !testPath.match(/\.NOT-EXPR\./i);
 
     // If the test contains code like this:
     //
