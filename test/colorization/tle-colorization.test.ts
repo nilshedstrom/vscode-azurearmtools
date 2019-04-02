@@ -46,8 +46,10 @@ function unpreprocessScopes(scopes: string): string {
         let preprocess = grammar.preprocess || {};
         unpreprocess = [];
         for (let key of Object.getOwnPropertyNames(preprocess)) {
-            let value = preprocess[key];
-            unpreprocess.push([new RegExp(value.replace('.', '\\.'), "g"), `{{${key}}}`]);
+            if (key.startsWith("scope-")) {
+                let value = preprocess[key];
+                unpreprocess.push([new RegExp(value.replace('.', '\\.'), "g"), `{{${key}}}`]);
+            }
         }
     }
 

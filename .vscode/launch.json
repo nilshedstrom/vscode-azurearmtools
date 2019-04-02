@@ -57,7 +57,7 @@
             "outFiles": [
                 "${workspaceFolder}/dist/**/*.js"
             ],
-            "preLaunchTask": "npm: build-grammars", // "npm: webpack-dev"
+            "preLaunchTask": "npm: pretest-dev", // "npm: webpack-dev"
             "env": {
                 "MOCHA_grep": "color", // RegExp of tests to run (empty for all)
                 "MOCHA_enableTimeouts": "0", // Disable time-outs

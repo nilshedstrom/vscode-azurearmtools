@@ -8,9 +8,11 @@
 	"preprocess": {
 		"id": "(?:[_$[:alpha:]][_$[:alnum:]]*)",
 		"ns-userfunc": "(?:{{id}}\\s*(\\.)\\s*{{id}})",
+		"runtime": "(?i)(?:resourceGroup|reference|listServiceSas|listSecrets|subscription|resourceId)",
 		"scope-expression-start": "keyword.other.expression.begin.arm-deployment",
 		"scope-expression-end": "keyword.other.expression.end.arm-deployment",
 		"scope-builtin": "support.function.builtin.arm-deployment",
+		"scope-runtime": "support.function.runtime.builtin.arm-deployment",
 		"scope-parameters": "support.constant.parameters.arm-deployment",
 		"scope-variables": "variable.language.variables.arm-deployment",
 		"scope-unknownfunction": "entity.name.function.arm-deployment",
@@ -125,7 +127,7 @@
 		},
 		"functioncall": {
 			"name": "meta.function-call.arm-deployment",
-			"begin": "(?x)(?i) \\s* (?: ({{ns-userfunc}}) | (parameters) | (variables) | ({{builtin}}) | ({{id}}) ) \\s*([(])",
+			"begin": "(?x)(?i) \\s* (?: ({{ns-userfunc}}) | (parameters) | (variables) | ({{runtime}}) | ({{builtin}}) | ({{id}}) ) \\s*([(])",
 			"end": "\\)",
 			"beginCaptures": {
 				"1": {
@@ -145,14 +147,18 @@
 					"name": "{{scope-variables}}"
 				},
 				"5": {
+					"$comment": "runtime functions",
+					"name": "{{scope-runtime}}"
+				},
+				"6": {
 					"$comment": "built-in function name",
 					"name": "{{scope-builtin}}"
 				},
-				"6": {
+				"7": {
 					"$comment": "other function name",
 					"name": "{{scope-unknownfunction}}"
 				},
-				"7": {
+				"8": {
 					"$comment": "open paren",
 					"name": "{{scope-parentheses-funccall}}"
 				}
