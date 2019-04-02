@@ -76,7 +76,7 @@ async function assertUnchangedTokens(testPath: string, resultPath: string): Prom
 
     // If the test filename contains ".not-arm.", then all testcases in it should not contain any arm-deployment tokens.
     // Otherwise they should have at least one.
-    let shouldBeArmTemplate = !testPath.match(/\.NOT-ARM\.'/i);
+    let shouldBeArmTemplate = !testPath.match(/\.NOT-ARM\./i);
 
     let shouldBeExpression = shouldBeArmTemplate && !testPath.match(/\.NOT-EXPR\./i);
 
