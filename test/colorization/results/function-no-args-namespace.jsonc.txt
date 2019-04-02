@@ -3,7 +3,7 @@ TEST STRING: "[a.max()]"
 a                   source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-usernamespaceandfunction}}
 .                   source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-usernamespaceandfunction}} {{scope-usernamespaceandfunction-dot}}
 max                 source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-usernamespaceandfunction}}
-()                  source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-parentheses-grouping}}
+()                  source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-parentheses-funccall}}
 ]"                  source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-end}}
 
 TEST STRING: "[$a.$max()]"
@@ -11,7 +11,7 @@ TEST STRING: "[$a.$max()]"
 $a                  source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-usernamespaceandfunction}}
 .                   source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-usernamespaceandfunction}} {{scope-usernamespaceandfunction-dot}}
 $max                source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-usernamespaceandfunction}}
-()                  source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-parentheses-grouping}}
+()                  source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-parentheses-funccall}}
 ]"                  source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-end}}
 
 TEST STRING: "[_$_123._$max12$_$_()]"
@@ -19,6 +19,6 @@ TEST STRING: "[_$_123._$max12$_$_()]"
 _$_123              source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-usernamespaceandfunction}}
 .                   source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-usernamespaceandfunction}} {{scope-usernamespaceandfunction-dot}}
 _$max12$_$_         source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-usernamespaceandfunction}}
-(                   source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-parentheses-grouping}}
-)                   source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-parentheses-grouping}}
+(                   source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-parentheses-funccall}}
+)                   source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-parentheses-funccall}}
 ]"                  source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-end}}

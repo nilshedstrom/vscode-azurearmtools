@@ -1,20 +1,20 @@
 TEST STRING: "[a()]]"
 "[                  source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-start}}
 a                   source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-unknownfunction}}
-()                  source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-parentheses-grouping}}
+()                  source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-parentheses-funccall}}
 ]                   source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment invalid.illegal.expected-expression.arm-deployment
 ]"                  source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-end}}
 
 TEST STRING: "[a()[]]"
 "[                  source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-start}}
 a                   source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-unknownfunction}}
-()                  source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-parentheses-grouping}}
+()                  source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-parentheses-funccall}}
 []                  source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment invalid.illegal.empty-array-access.arm-deployment
 ]"                  source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-end}}
 
 TEST STRING: "[a()[ ]]"
 "[                  source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-start}}
 a                   source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-unknownfunction}}
-()                  source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-parentheses-grouping}}
+()                  source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment meta.function-call.arm-deployment {{scope-parentheses-funccall}}
 [ ]                 source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment invalid.illegal.empty-array-access.arm-deployment
 ]"                  source.json meta.structure.dictionary.json meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-end}}
