@@ -48,7 +48,7 @@ async function buildGrammars(): Promise<void> {
     const expressionMetadataPath: string = path.resolve("assets/ExpressionMetadata.json");
     const expressionMetadata = <IExpressionMetadata>JSON.parse(fs.readFileSync(expressionMetadataPath).toString());
 
-    // Add list of built-in functions from our metadata and place at beginning of grammar's preprocess section
+    // Create list of built-in functions from our metadata and place at beginning of grammar's preprocess section
     let builtinFunctions: string[] = expressionMetadata.functionSignatures.map(sig => sig.name);
     let grammarAsObject = <IGrammar>JSON.parse(grammar);
     grammarAsObject.preprocess = {
