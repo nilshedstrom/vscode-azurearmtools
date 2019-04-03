@@ -15,8 +15,7 @@ import { gulp_installAzureAccount, gulp_webpack } from 'vscode-azureextensiondev
 const env = process.env;
 
 export const detectionGrammarSourcePath: string = path.resolve('grammars/detect-arm.injection.tmLanguage.json');
-export const jsonDetectionGrammarDestPath: string = path.resolve('dist/grammars/JSON.detect-arm.injection.tmLanguage.json');
-export const jsonCDetectionGrammarDestPath: string = path.resolve('dist/grammars/JSONC.detect-arm.injection.tmLanguage.json');
+export const detectionGrammarDestPath: string = path.resolve('dist/grammars/detect-arm.injection.tmLanguage.json');
 
 export const jsonArmGrammarSourcePath: string = path.resolve('grammars/JSONC.arm.tmLanguage.json');
 export const jsonArmGrammarDestPath: string = path.resolve('dist/grammars/JSONC.arm.tmLanguage.json');
@@ -42,18 +41,6 @@ function test(): cp.ChildProcess {
     env.DEBUGTELEMETRY = '1';
     env.CODE_TESTS_PATH = path.join(__dirname, 'dist/test');
     return cp.spawn('node', ['./node_modules/vscode/bin/test'], { stdio: 'inherit', env });
-}
-
-function buildInjectionGrammars(): void {
-    const sourceGrammar: string = fs.readFileSync(detectionGrammarSourcePath).toString();
-
-    let jsonDetectionGrammar = sourceGrammar.replace(/{{extension}}/g, 'json');
-    let jsonCDetectionGrammar = sourceGrammar.replace(/{{extension}}/g, 'json.comments');
-
-    fs.writeFileSync(jsonDetectionGrammarDestPath, jsonDetectionGrammar);
-    console.log(`Built ${jsonDetectionGrammarDestPath}`);
-    fs.writeFileSync(jsonCDetectionGrammarDestPath, jsonCDetectionGrammar);
-    console.log(`Built ${jsonCDetectionGrammarDestPath}`);
 }
 
 function buildTLEGrammar(): void {
@@ -112,9 +99,10 @@ async function buildGrammars(): Promise<void> {
         fs.mkdirSync('dist/grammars');
     }
 
-    buildInjectionGrammars();
-    buildJsonArmGrammar();
     buildTLEGrammar();
+
+    fs.copyFileSync(jsonArmGrammarSourcePath, jsonArmGrammarDestPath);
+    fs.copyFileSync(detectionGrammarSourcePath, detectionGrammarDestPath);
 }
 
 exports['webpack-dev'] = gulp.series(() => gulp_webpack('development'), buildGrammars);
