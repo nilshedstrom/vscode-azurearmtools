@@ -42,17 +42,17 @@
     "grammars": [
       {
         "injectTo": [
-          "source.json"
-        ],
-        "scopeName": "detect-arm.injection.json",
-        "path": "dist/grammars/JSON.detect-arm.injection.tmLanguage.json"
-      },
-      {
-        "injectTo": [
           "source.json.comments"
         ],
         "scopeName": "detect-arm.injection.json.comments",
         "path": "dist/grammars/JSONC.detect-arm.injection.tmLanguage.json"
+      },
+      {
+        "injectTo": [
+          "source.json"
+        ],
+        "scopeName": "detect-arm.injection.json",
+        "path": "dist/grammars/JSON.detect-arm.injection.tmLanguage.json"
       },
       {
         "scopeName": "source.json.arm",
