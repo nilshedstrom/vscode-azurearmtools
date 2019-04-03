@@ -7,7 +7,7 @@
 'use strict';
 
 // Turn on to overwrite results files rather than creating new ".txt.actual" files when there are differences.
-const OVERWRITE = true;
+const OVERWRITE = false;
 
 import * as assert from 'assert';
 import * as fs from 'fs';

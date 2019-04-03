@@ -1,13 +1,13 @@
 TEST STRING: "['abc123']"
-"[                  source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-start}}
-'                   source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-string-contents}} {{scope-string-start}}
-abc123              source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-string-contents}}
-'                   source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-string-contents}} {{scope-string-end}}
-]"                  source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-end}}
+"[                  source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template.json.comments meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-start}}
+'                   source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template.json.comments meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-string-contents}} {{scope-string-start}}
+abc123              source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template.json.comments meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-string-contents}}
+'                   source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template.json.comments meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-string-contents}} {{scope-string-end}}
+]"                  source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template.json.comments meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-end}}
 
 TEST STRING: "['Say \"hello\"!']"
-"[                  source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-start}}
-'                   source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-string-contents}} {{scope-string-start}}
-Say \"hello\"!      source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-string-contents}}
-'                   source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-string-contents}} {{scope-string-end}}
-]"                  source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-end}}
+"[                  source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template.json.comments meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-start}}
+'                   source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template.json.comments meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-string-contents}} {{scope-string-start}}
+Say \"hello\"!      source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template.json.comments meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-string-contents}}
+'                   source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template.json.comments meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-string-contents}} {{scope-string-end}}
+]"                  source.json.comments meta.structure.dictionary.json.comments meta.arm-deployment-template.json.comments meta.structure.dictionary.value.json.comments meta.expression.arm-deployment {{scope-expression-end}}
