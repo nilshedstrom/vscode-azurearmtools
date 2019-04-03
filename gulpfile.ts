@@ -86,11 +86,6 @@ function buildTLEGrammar(): void {
     }
 }
 
-function buildJsonArmGrammar(): void {
-    fs.copyFileSync(jsonArmGrammarSourcePath, jsonArmGrammarDestPath);
-    console.log(`Copied ${jsonArmGrammarDestPath}`);
-}
-
 async function buildGrammars(): Promise<void> {
     if (!fs.existsSync('dist')) {
         fs.mkdirSync('dist');
