@@ -8,16 +8,15 @@
 	"preprocess": {
 		"id": "(?:[_$[:alpha:]][_$[:alnum:]]*)",
 		"ns-userfunc": "(?:{{id}}\\s*(\\.)\\s*{{id}})",
-		"runtime": "(?i)(?:resourceGroup|reference|listServiceSas|listSecrets|subscription|resourceId)",
 		"scope-expression-start": "keyword.other.expression.begin.arm-deployment",
 		"scope-expression-end": "keyword.other.expression.end.arm-deployment",
 		"scope-builtin": "support.function.builtin.arm-deployment",
-		"scope-runtime": "support.function.runtime.builtin.arm-deployment",
 		"scope-parameters": "support.constant.parameters.arm-deployment",
 		"scope-variables": "variable.language.variables.arm-deployment",
 		"scope-unknownfunction": "entity.name.function.arm-deployment",
 		"scope-usernamespaceandfunction": "support.class.userfunction.arm-deployment",
 		"scope-usernamespaceandfunction-dot": "punctuation.accessor.userfunction.arm-deployment",
+		"scope-parentheses-grouping": "meta.brace.round.arm-deployment",
 		"scope-parentheses-funccall": "meta.brace.round.arm-deployment",
 		"scope-escapedapostrophe": "constant.escape.string.arm-deployment",
 		"scope-string-contents": "string.quoted.single.arm-deployment",
@@ -76,6 +75,17 @@
 				},
 				{
 					"include": "#arrayaccess"
+				},
+				{
+					"name": "{{scope-parentheses-grouping}}",
+					"$comment": "Parentheses grouping an expression",
+					"begin": "\\s*\\(\\s*",
+					"end": "\\s*\\)\\s*",
+					"patterns": [
+						{
+							"include": "#expression"
+						}
+					]
 				}
 			]
 		},
@@ -115,7 +125,7 @@
 		},
 		"functioncall": {
 			"name": "meta.function-call.arm-deployment",
-			"begin": "(?x)(?i) \\s* (?: ({{ns-userfunc}}) | (parameters) | (variables) | ({{runtime}}) | ({{builtin}}) | ({{id}}) ) \\s*([(])",
+			"begin": "(?x)(?i) \\s* (?: ({{ns-userfunc}}) | (parameters) | (variables) | ({{builtin}}) | ({{id}}) ) \\s*([(])",
 			"end": "\\)",
 			"beginCaptures": {
 				"1": {
@@ -135,18 +145,14 @@
 					"name": "{{scope-variables}}"
 				},
 				"5": {
-					"$comment": "runtime functions",
-					"name": "{{scope-runtime}}"
-				},
-				"6": {
 					"$comment": "built-in function name",
 					"name": "{{scope-builtin}}"
 				},
-				"7": {
+				"6": {
 					"$comment": "other function name",
 					"name": "{{scope-unknownfunction}}"
 				},
-				"8": {
+				"7": {
 					"$comment": "open paren",
 					"name": "{{scope-parentheses-funccall}}"
 				}

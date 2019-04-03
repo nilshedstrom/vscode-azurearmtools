@@ -5,7 +5,7 @@
     "$comment1": "This is the same as the JSONC grammar except that it switches to source.json.arm if it detects a",
     "$comment2": "valid ARM deployment schema",
     "$commentZ": "==================================================================================================",
-    "scopeName": "source.json.comments",
+    "scopeName": "source.json",
     "patterns": [
         {
             "include": "#value"
@@ -100,11 +100,11 @@
                     "$comment": "========================== START OF MODIFICATION: ADDED ==========================",
                     "$comment2": "Inside of a dictionary, if the key/value are a valid ARM deployment schema, then switch to the ARM grammar for property values for the rest of the file",
                     "$comment3": "",
-                    "name": "meta.arm-deployment-template",
+                    "$asdfname": "meta.arm-deployment-template",
                     "begin": "\\s*\"\\$schema\":\\s*\"https?:\\/\\/schema.management.azure.com\\/schemas\\/[^\"\\/]+\\/(deploymentTemplate|subscriptionDeploymentTemplate)\\.json#?\"\\s*,",
-                    "beginCaptures": {
+                    "$asdfbeginCaptures": {
                         "0": {
-                            "name": "keyword.other.meta.azure-schema.arm-deployment"
+                            "name": "keyword.other.meta.azure-schema.   arm-deployment"
                         }
                     },
                     "end": "$no-end-we-want-scope-to-continue-to-end-of-file",
