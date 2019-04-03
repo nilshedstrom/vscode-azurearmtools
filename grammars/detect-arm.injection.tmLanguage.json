@@ -14,13 +14,43 @@
             "$comment3": "  the ARM grammar for property values for the rest of the file",
             "$comment4": "=================================================================================",
             "name": "meta.arm-deployment-template.json.comments",
-            "begin": "\\s*\"\\$schema\":\\s*\"https?:\\/\\/schema.management.azure.com\\/schemas\\/[^\"\\/]+\\/(deploymentTemplate|subscriptionDeploymentTemplate)\\.json#?\"\\s*,",
+            "begin": "(?x) \\s* (?<key>(\")\\$schema(\")) (?<colon>:) (?<value> \\s*(\")https?:\\/\\/schema.management.azure.com\\/schemas\\/[^\"\\/]+\\/(?:deploymentTemplate|subscriptionDeploymentTemplate)\\.json\\#?(\") )\\s* (,)",
+            "end": "$no-end-we-want-scope-to-continue-to-end-of-file",
+            "$beginCapturesComment": "Colorize the schema key/value the same as normal key/value pairs",
             "beginCaptures": {
-                "0": {
-                    "name": "keyword.other.meta.azure-schema.arm-deployment"
+                "1": {
+                    "$comment": "$schema",
+                    "name": "support.type.property-name"
+                },
+                "2": {
+                    "$comment": "begin quote",
+                    "name": "punctuation.support.type.property-name.begin.json.comments"
+                },
+                "3": {
+                    "$comment": "end quote",
+                    "name": "punctuation.support.type.property-name.end.json.comments"
+                },
+                "4": {
+                    "$comment": "colon",
+                    "name": "punctuation.separator.dictionary.key-value.json.comments"
+                },
+                "5": {
+                    "$comment": "quoted string value",
+                    "name": "string.quoted.double.json.comments"
+                },
+                "6": {
+                    "$comment": "quote begin",
+                    "name": "punctuation.definition.string.begin.json.arm"
+                },
+                "7": {
+                    "$comment": "quote end",
+                    "name": "punctuation.definition.string.end.json.arm"
+                },
+                "8": {
+                    "$comment": "comma",
+                    "name": "punctuation.separator.dictionary.pair.json.comments"
                 }
             },
-            "end": "$no-end-we-want-scope-to-continue-to-end-of-file",
             "patterns": [
                 {
                     "comment": "the JSON object key",
