@@ -41,22 +41,26 @@
   "contributes": {
     "grammars": [
       {
-        "language": "jsonc",
-        "scopeName": "source.json.comments",
-        "path": "grammars/JSONC.detect-arm.tmLanguage.json"
+        "injectTo": [
+          "source.json"
+        ],
+        "scopeName": "detect-arm.injection.json",
+        "path": "dist/grammars/JSON.detect-arm.injection.tmLanguage.json"
       },
       {
-        "language": "json",
-        "scopeName": "source.json",
-        "path": "grammars/JSON.detect-arm.tmLanguage.json"
+        "injectTo": [
+          "source.json.comments"
+        ],
+        "scopeName": "detect-arm.injection.json.comments",
+        "path": "dist/grammars/JSONC.detect-arm.injection.tmLanguage.json"
       },
       {
         "scopeName": "source.json.arm",
-        "path": "grammars/arm.tmLanguage.json"
+        "path": "dist/grammars/JSONC.arm.tmLanguage.json"
       },
       {
         "scopeName": "source.expression-string.arm-deployment",
-        "path": "dist/arm-expression-string.tmLanguage.json"
+        "path": "dist/grammars/arm-expression-string.tmLanguage.json"
       }
     ],
     "configuration": {

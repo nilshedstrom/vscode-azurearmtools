@@ -12,7 +12,7 @@
             "$comment": "========================== START OF MODIFICATION: ADDED ==========================",
             "$comment2": "Inside of a dictionary, if the key+value are a valid ARM deployment schema, then switch to the ARM grammar for property values for the rest of the file",
             "$comment3": "",
-            "name": "meta.arm-deployment-template",
+            "name": "meta.arm-deployment-template-asdf-{{extension}}",
             "begin": "\\s*\"\\$schema\":\\s*\"https?:\\/\\/schema.management.azure.com\\/schemas\\/[^\"\\/]+\\/(deploymentTemplate|subscriptionDeploymentTemplate)\\.json#?\"\\s*,",
             "beginCaptures": {
                 "0": {
