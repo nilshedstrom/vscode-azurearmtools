@@ -14,8 +14,15 @@ import { gulp_installAzureAccount, gulp_webpack } from 'vscode-azureextensiondev
 
 const env = process.env;
 
+export const detectionGrammarSourcePath: string = path.resolve('grammars/detect-arm.injection.tmLanguage.json');
+export const jsonDetectionGrammarDestPath: string = path.resolve('dist/grammars/JSON.detect-arm.injection.tmLanguage.json');
+export const jsonCDetectionGrammarDestPath: string = path.resolve('dist/grammars/JSONC.detect-arm.injection.tmLanguage.json');
+
+export const jsonArmGrammarSourcePath: string = path.resolve('grammars/JSONC.arm.tmLanguage.json');
+export const jsonArmGrammarDestPath: string = path.resolve('dist/grammars/JSONC.arm.tmLanguage.json');
+
 export const tleGrammarSourcePath: string = path.resolve('grammars/arm-expression-string.tmLanguage.json');
-export const tleGrammarBuiltPath: string = path.resolve('dist/arm-expression-string.tmLanguage.json');
+export const tleGrammarBuiltPath: string = path.resolve('dist/grammars/arm-expression-string.tmLanguage.json');
 
 export interface IGrammar {
     preprocess?: {
@@ -37,14 +44,21 @@ function test(): cp.ChildProcess {
     return cp.spawn('node', ['./node_modules/vscode/bin/test'], { stdio: 'inherit', env });
 }
 
-async function buildGrammars(): Promise<void> {
-    if (!fs.existsSync('dist')) {
-        fs.mkdirSync('dist');
-    }
+function buildInjectionGrammars(): void {
+    const sourceGrammar: string = fs.readFileSync(detectionGrammarSourcePath).toString();
 
+    let jsonDetectionGrammar = sourceGrammar.replace(/{{extension}}/g, 'json');
+    let jsonCDetectionGrammar = sourceGrammar.replace(/{{extension}}/g, 'json.comments');
+
+    fs.writeFileSync(jsonDetectionGrammarDestPath, jsonDetectionGrammar);
+    console.log(`Built ${jsonDetectionGrammarDestPath}`);
+    fs.writeFileSync(jsonCDetectionGrammarDestPath, jsonCDetectionGrammar);
+    console.log(`Built ${jsonCDetectionGrammarDestPath}`);
+}
+
+function buildTLEGrammar(): void {
     const sourceGrammar: string = fs.readFileSync(tleGrammarSourcePath).toString();
     let grammar: string = sourceGrammar;
-    console.log(2);
     const expressionMetadataPath: string = path.resolve("assets/ExpressionMetadata.json");
     const expressionMetadata = <IExpressionMetadata>JSON.parse(fs.readFileSync(expressionMetadataPath).toString());
 
@@ -83,6 +97,24 @@ async function buildGrammars(): Promise<void> {
     if (grammar.includes('{{')) {
         throw new Error("At least one replacement key could not be found in the grammar - '{{' was found in the final file");
     }
+}
+
+function buildJsonArmGrammar(): void {
+    fs.copyFileSync(jsonArmGrammarSourcePath, jsonArmGrammarDestPath);
+    console.log(`Copied ${jsonArmGrammarDestPath}`);
+}
+
+async function buildGrammars(): Promise<void> {
+    if (!fs.existsSync('dist')) {
+        fs.mkdirSync('dist');
+    }
+    if (!fs.existsSync('dist/grammars')) {
+        fs.mkdirSync('dist/grammars');
+    }
+
+    buildInjectionGrammars();
+    buildJsonArmGrammar();
+    buildTLEGrammar();
 }
 
 exports['webpack-dev'] = gulp.series(() => gulp_webpack('development'), buildGrammars);
