@@ -25,14 +25,8 @@ export function startArmLanguageServer(context: ExtensionContext): void {
         // let serverDll = 'C:\\Users\\stephwe\\Repos\\arm-language-server\\Microsoft.ArmLanguageServer\\bin\\Debug\\netcoreapp2.2\\Microsoft.ArmLanguageServer.dll';
         let serverExe = 'dotnet.exe'; // 'c:\\Users\\stephwe\\.dotnet\\x64\\dotnet.exe';
 
-        if (workspace.getConfiguration('azurermtools').get<string | undefined>('languageServerPath')) {
-            // asdf remove old setting
-            window.showWarningMessage("azurermtools.languageServerPath has been deprecated, please use azurermtools.languageServer.path instead");
-        }
-
         // asdf remove old setting
-        let serverDllPath = workspace.getConfiguration('azurermtools').get<string | undefined>('languageServer.path')
-            || workspace.getConfiguration('azurermtools').get<string | undefined>('languageServerPath');
+        let serverDllPath = workspace.getConfiguration('azurermtools').get<string | undefined>('languageServer.path');
 
         if (typeof serverDllPath !== 'string' || serverDllPath === '') {
             // Check for the files under LanguageServerBin

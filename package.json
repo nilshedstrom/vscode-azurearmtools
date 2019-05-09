@@ -55,11 +55,6 @@
       "type": "object",
       "title": "Azure Resource Manager Tools Configuration Settings",
       "properties": {
-        "azurermtools.languageServerPath": {
-          "deprecationMessage": "azurermtools.languageServerPath has been deprecated, please use azurermtools.languageServer.path instead",
-          "type": "string",
-          "description": "Override the default location used to find the language server (requires restart)"
-        },
         "azurermtools.languageServer.path": {
           "type": "string",
           "description": "Override the default location used to find the language server (requires restart)"
