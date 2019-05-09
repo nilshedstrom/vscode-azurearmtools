@@ -57,7 +57,7 @@
       "properties": {
         "azurermtools.languageServer.path": {
           "type": "string",
-          "description": "Override the default location used to find the language server (requires restart)"
+          "description": "Override the default location used to find the language server binaries (requires restart)"
         },
         "azurermtools.languageServer.waitForDebugger": {
           "type": "boolean",
@@ -67,7 +67,7 @@
         "azurermtools.languageServer.autoDetectJsonTemplates": {
           "type": "boolean",
           "default": true,
-          "description": "Enables auto-detection of deployment template files with the extension *.json or *.jsonc. If set to true, the editor language will automatically be set to ARM Deployment Template for any *.json/*.jsonc files which contain an appropriate ARM schema."
+          "description": "Enables auto-detection of deployment template files with the extension *.json or *.jsonc. If set to true (default), the editor language will automatically be set to ARM Deployment Template for any *.json/*.jsonc file which contains an appropriate ARM schema."
         },
         "azurermtools.languageServer.traceLevel": {
           "type": "string",
