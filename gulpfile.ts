@@ -10,8 +10,8 @@ import * as fs from 'fs';
 import * as gulp from 'gulp';
 import * as path from 'path';
 import * as process from 'process';
-
 import { gulp_installAzureAccount, gulp_webpack } from 'vscode-azureextensiondev';
+
 
 const env = process.env;
 
@@ -60,8 +60,7 @@ function buildTLEGrammar(): void {
         ...grammarAsObject
     };
     grammar = JSON.stringify(grammarAsObject, null, 4);
-    // tslint:disable-next-line: no-non-null-assertion // We just wrote to preprocess section, guaranteed to exist
-    const replacementKeys = Object.getOwnPropertyNames((<IGrammar>JSON.parse(grammar)).preprocess!);
+    const replacementKeys = Object.getOwnPropertyNames((<IGrammar>JSON.parse(grammar)).preprocess);
 
     // Build grammar: Make replacements specified
     for (let key of replacementKeys) {
@@ -122,7 +121,5 @@ exports['webpack-dev'] = gulp.series(() => gulp_webpack('development'), buildGra
 exports['webpack-prod'] = gulp.series(() => gulp_webpack('production'), buildGrammars);
 exports.test = gulp.series(gulp_installAzureAccount, test);
 exports['build-grammars'] = buildGrammars;
-exports['watch-grammars'] = gulp.series(buildGrammars, () => {
-    return gulp.watch('grammars/**', buildGrammars);
-});
+exports['watch-grammars'] = (): unknown => gulp.watch('grammars/**', buildGrammars);
 exports['update-language-server'] = updateLanguageServer;

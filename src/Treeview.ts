@@ -78,6 +78,7 @@ export class JsonOutlineProvider implements vscode.TreeDataProvider<string> {
                 let result = [];
                 if (!element) {
                     if (this.tree.value instanceof Json.ObjectValue) {
+                        // tslint:disable-next-line:one-variable-per-declaration
                         for (let i = 0, il = this.tree.value.properties.length; i < il; i++) {
                             let item = this.getElementInfo(this.tree.value.properties[i]);
                             result.push(item);
@@ -91,6 +92,7 @@ export class JsonOutlineProvider implements vscode.TreeDataProvider<string> {
                     // Value is an object and is collapsible
                     if (valueNode instanceof Json.ObjectValue && elementInfo.current.collapsible) {
 
+                        // tslint:disable-next-line:one-variable-per-declaration
                         for (let i = 0, il = valueNode.properties.length; i < il; i++) {
                             let item = this.getElementInfo(valueNode.properties[i], elementInfo);
                             result.push(item);
@@ -98,6 +100,7 @@ export class JsonOutlineProvider implements vscode.TreeDataProvider<string> {
                         }
                     } else if (valueNode instanceof Json.ArrayValue && elementInfo.current.collapsible) {
                         // Array with objects
+                        // tslint:disable-next-line:one-variable-per-declaration
                         for (let i = 0, il = valueNode.length; i < il; i++) {
                             let valueElement = valueNode.elements[i];
                             if (valueElement instanceof Json.ObjectValue) {
@@ -174,6 +177,7 @@ export class JsonOutlineProvider implements vscode.TreeDataProvider<string> {
                 }
 
                 // Look for name element
+                // tslint:disable-next-line:one-variable-per-declaration
                 for (var i = 0, l = keyNode.properties.length; i < l; i++) {
                     let props = keyNode.properties[i];
                     // If name element is found
@@ -317,6 +321,7 @@ export class JsonOutlineProvider implements vscode.TreeDataProvider<string> {
             const rootNode = this.tree.getValueAtCharacterIndex(elementInfo.root.key.start);
 
             if (rootNode.toString().toUpperCase() === "resources".toUpperCase() && keyOrResourceNode instanceof Json.ObjectValue) {
+                // tslint:disable-next-line:one-variable-per-declaration
                 for (var i = 0, il = keyOrResourceNode.properties.length; i < il; i++) {
                     if (keyOrResourceNode.properties[i].name.toString().toUpperCase() === "type".toUpperCase()) {
                         let resourceType = keyOrResourceNode.properties[i].value.toString().toUpperCase();

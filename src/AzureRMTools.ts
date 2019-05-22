@@ -335,6 +335,7 @@ export class AzureRMTools {
     }
 
     private static setToJson(s: Set<string>): string {
+        // tslint:disable-next-line: strict-boolean-expressions
         if (!s.size) {
             return "";
         }
@@ -350,6 +351,7 @@ export class AzureRMTools {
         const message: string = issue.message;
         let diagnostic = new vscode.Diagnostic(range, message, severity);
         diagnostic.source = diagnosticsSource;
+        diagnostic.code = "";
         return diagnostic;
     }
 
@@ -365,6 +367,7 @@ export class AzureRMTools {
     private async onProvideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): Promise<vscode.Hover> {
         const deploymentTemplate = this.getDeploymentTemplate(document);
         if (deploymentTemplate) {
+            // tslint:disable-next-line:no-this-assignment
             const me = this;
             return await callWithTelemetryAndErrorHandling('Hover', async function (this: IActionContext): Promise<vscode.Hover> {
                 this.suppressErrorDisplay = true;
@@ -397,6 +400,7 @@ export class AzureRMTools {
     private async onProvideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): Promise<vscode.CompletionList> {
         const deploymentTemplate = this.getDeploymentTemplate(document);
         if (deploymentTemplate) {
+            // tslint:disable-next-line:no-this-assignment
             const me = this;
             return await callWithTelemetryAndErrorHandling('provideCompletionItems', async function (this: IActionContext): Promise<vscode.CompletionList | undefined> {
                 let properties = <TelemetryProperties & { completionKind?: string }>this.properties;
@@ -445,6 +449,7 @@ export class AzureRMTools {
     private onProvideDefinition(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.Location {
         const deploymentTemplate: DeploymentTemplate = this.getDeploymentTemplate(document);
         if (deploymentTemplate) {
+            // tslint:disable-next-line:no-this-assignment
             const me = this;
             return callWithTelemetryAndErrorHandlingSync('Go To Definition', function (this: IActionContext): vscode.Location {
                 let properties = <TelemetryProperties & { definitionType?: string }>this.properties;
@@ -475,6 +480,7 @@ export class AzureRMTools {
     private onProvideReferences(document: vscode.TextDocument, position: vscode.Position, context: vscode.ReferenceContext, token: vscode.CancellationToken): vscode.Location[] {
         const deploymentTemplate: DeploymentTemplate = this.getDeploymentTemplate(document);
         if (deploymentTemplate) {
+            // tslint:disable-next-line:no-this-assignment
             const me = this;
             return callWithTelemetryAndErrorHandlingSync('Find References', function (this: IActionContext): vscode.Location[] {
                 const results: vscode.Location[] = [];
@@ -545,6 +551,7 @@ export class AzureRMTools {
     private onProvideRename(document: vscode.TextDocument, position: vscode.Position, newName: string, token: vscode.CancellationToken): vscode.WorkspaceEdit {
         const deploymentTemplate: DeploymentTemplate = this.getDeploymentTemplate(document);
         if (deploymentTemplate) {
+            // tslint:disable-next-line:no-this-assignment
             const me = this;
             return callWithTelemetryAndErrorHandlingSync('Rename', () => {
                 const result: vscode.WorkspaceEdit = new vscode.WorkspaceEdit();
@@ -588,6 +595,7 @@ export class AzureRMTools {
     }
 
     private onActiveTextEditorChanged(): void {
+        // tslint:disable-next-line:no-this-assignment
         const me = this;
         callWithTelemetryAndErrorHandlingSync('onActiveTextEditorChanged', function (this: IActionContext): void {
             this.properties.isActivationEvent = 'true';
@@ -604,6 +612,7 @@ export class AzureRMTools {
     }
 
     private onTextSelectionChanged(): void {
+        // tslint:disable-next-line:no-this-assignment
         const me = this;
         callWithTelemetryAndErrorHandlingSync('onTextSelectionChanged', function (this: IActionContext): void {
             this.properties.isActivationEvent = 'true';
@@ -639,6 +648,7 @@ export class AzureRMTools {
     }
 
     private onDocumentClosed(closedDocument: vscode.TextDocument): void {
+        // tslint:disable-next-line:no-this-assignment
         const me = this;
         callWithTelemetryAndErrorHandlingSync('onDocumentClosed', function (this: IActionContext): void {
             this.properties.isActivationEvent = 'true';
