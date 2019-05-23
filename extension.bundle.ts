@@ -45,7 +45,7 @@ export { ParameterDefinition } from "./src/ParameterDefinition";
 export { PositionContext } from "./src/PositionContext";
 export { containsArmSchema, isArmSchema } from './src/supported';
 export { JsonOutlineProvider, shortenTreeLabel } from "./src/Treeview";
-export { UnrecognizedFunctionIssue } from "./src/UnrecognizedFunctionIssue";
+export { UnrecognizedBuiltinFunctionIssue as UnrecognizedFunctionIssue } from "./src/UnrecognizedFunctionIssue";
 export { Completion };
 export { Json };
 export { Language };

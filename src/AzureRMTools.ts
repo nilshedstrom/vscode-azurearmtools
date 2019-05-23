@@ -25,7 +25,7 @@ import { Stopwatch } from "./Stopwatch";
 import { armDeploymentDocumentSelector, mightBeDeploymentTemplate } from "./supported";
 import * as TLE from "./TLE";
 import { JsonOutlineProvider } from "./Treeview";
-import { UnrecognizedFunctionIssue } from "./UnrecognizedFunctionIssue";
+import { UnrecognizedBuiltinFunctionIssue } from "./UnrecognizedFunctionIssue";
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -351,13 +351,13 @@ export class AzureRMTools {
             let unrecognized = new Set<string>();
             let incorrectArgCounts = new Set<string>();
             for (const issue of issues) {
-                if (issue instanceof UnrecognizedFunctionIssue) {
+                if (issue instanceof UnrecognizedBuiltinFunctionIssue) {
                     unrecognized.add(issue.functionName);
                 } else if (issue instanceof IncorrectArgumentsCountIssue) {
                     // Encode function name as "funcname(<actual-args>)[<min-expected>..<max-expected>]"
                     let encodedName = `${issue.functionName}(${issue.actual})[${issue.minExpected}..${issue.maxExpected}]`;
                     incorrectArgCounts.add(encodedName);
-                }
+                } //asdf user funcs?
             }
             properties.unrecognized = AzureRMTools.setToJson(unrecognized);
             properties.incorrectArgs = AzureRMTools.setToJson(incorrectArgCounts);
