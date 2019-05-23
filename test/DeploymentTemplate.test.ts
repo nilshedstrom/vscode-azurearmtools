@@ -8,7 +8,9 @@
 import * as assert from "assert";
 import { randomBytes } from "crypto";
 import { ISuiteCallbackContext, ITestCallbackContext } from "mocha";
-import { DeploymentTemplate, Histogram, IncorrectArgumentsCountIssue, Json, Language, ParameterDefinition, Reference, ReferenceInVariableDefinitionJSONVisitor, UnrecognizedFunctionIssue } from "../extension.bundle";
+import { DeploymentTemplate, Histogram, IncorrectArgumentsCountIssue, Json, Language, ParameterDefinition, Reference, ReferenceInVariableDefinitionJSONVisitor } from "../extension.bundle";
+import { InvalidFunctionContextIssue } from "../src/InvalidFunctionContextIssue";
+import { UnrecognizedUserFunctionIssue, UnrecognizedUserNamespaceIssue } from "../src/UnrecognizedFunctionIssue";
 import { sources, testDiagnostics } from "./support/diagnostics";
 import { testWithLanguageServer } from "./support/testWithLanguageServer";
 
@@ -196,10 +198,130 @@ suite("DeploymentTemplate", () => {
             });
         });
 
-        test("with one unrecognized function error deployment template", () => {
-            const dt = new DeploymentTemplate("{ 'name': '[blah(\"test\")]' }", "id");
+        test("with one unrecognized user namespace error deployment template", () => {
+            const dt = new DeploymentTemplate("{ \"name\": \"[namespace.blah('test')]\" }", "id");
             const expectedErrors = [
-                new UnrecognizedFunctionIssue(new Language.Span(12, 4), "blah")
+                new UnrecognizedUserNamespaceIssue(new Language.Span(12, 9), "namespace")
+            ];
+            return dt.errors.then((errors: Language.Issue[]) => {
+                assert.deepStrictEqual(errors, expectedErrors);
+            });
+        });
+
+        test("with one unrecognized function error deployment template", () => {
+            const dt = new DeploymentTemplate(
+                `{ "name": \"[contoso.blah('prefix')]\",
+                    "functions": [
+                       {
+                         "namespace": "contoso",
+                         "members": {
+                           "uniqueName": {
+                             "parameters": [
+                               {
+                                 "name": "namePrefix",
+                                 "type": "string"
+                               }
+                             ],
+                             // asdf "output": {
+                                //   "type": "string",
+                                // "value": "[concat(toLower(parameters('namePrefix')), uniqueString(resourceGroup().id))]"
+                                // }
+                           }
+                         }
+                       }
+                     ]
+                   }`,
+                "id");
+            const expectedErrors = [
+                new UnrecognizedUserFunctionIssue(new Language.Span(20, 4), "contoso", "blah")
+            ];
+            return dt.errors.then((errors: Language.Issue[]) => {
+                assert.deepStrictEqual(errors, expectedErrors);
+            });
+        });
+
+        test("with one recognized user function referenced in deployment template", () => {
+            const dt = new DeploymentTemplate(
+                `{
+                 "name": "[contoso.uniqueName('prefix')]",
+                 "functions": [
+                    {
+                      "namespace": "contoso",
+                      "members": {
+                        "uniqueName": {
+                          "parameters": [
+                            {
+                              "name": "namePrefix",
+                              "type": "string"
+                            }
+                          ],
+                          //asdf
+                          //"output": {
+                            //  "type": "string",
+                            //"value": "[concat(toLower(parameters('namePrefix')), uniqueString(resourceGroup().id))]"
+                            //}
+                        }
+                      }
+                    }
+                  ]
+                }`,
+                "id");
+            const expectedErrors = [
+            ];
+            return dt.errors.then((errors: Language.Issue[]) => {
+                assert.deepStrictEqual(errors, expectedErrors);
+            });
+        });
+
+        test("with one recognized user function where function name matches a built-in function", () => {
+            const dt = new DeploymentTemplate(
+                `{
+                 "name": "[contoso.reference()]",
+                 "functions": [
+                    {
+                      "namespace": "contoso",
+                      "members": {
+                        "uniqueName": {
+                          "parameters": [
+                            {
+                              "name": "reference",
+                              "type": "string"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }`,
+                "id");
+            const expectedErrors = [
+                new UnrecognizedUserFunctionIssue(new Language.Span(20, 9), "contoso", "reference")
+            ];
+            return dt.errors.then((errors: Language.Issue[]) => {
+                assert.deepStrictEqual(errors, expectedErrors);
+            });
+        });
+
+        test("can't reference variables from within function", () => { //asdf
+            const dt = new DeploymentTemplate(
+                `{ "name": \"[contoso.blah('prefix')]\",
+                    "functions": [
+                       {
+                         "namespace": "contoso",
+                         "members": {
+                           "foo": {
+                              "output": {
+                                 "type": "string",
+                               "value": "[concat(variables('nope'))]"
+                              }
+                           }
+                         }
+                       }
+                     ]
+                   }`,
+                "id");
+            const expectedErrors = [
+                new InvalidFunctionContextIssue(new Language.Span(20, 4), "variables", "Cannot reference 'variables' inside of a function")
             ];
             return dt.errors.then((errors: Language.Issue[]) => {
                 assert.deepStrictEqual(errors, expectedErrors);
@@ -288,10 +410,13 @@ suite("DeploymentTemplate", () => {
                 [new Language.Issue(new Language.Span(18, 3), "The parameter 'a' is never used.")]);
         });
 
-        test("with no unused parameters", () => {
+        test("with no unused parameters", async () => {
             const dt = new DeploymentTemplate(`{ "parameters": { "a": {} }, "b": "[parameters('a')] }`, "id");
+            console.log("hi");
+            console.log(dt.warnings.length);
+            console.log(await dt.errors);
             assert.deepStrictEqual(dt.warnings, []);
-            assert.deepStrictEqual(dt.warnings, []);
+            assert.deepStrictEqual(await dt.errors, []);
         });
 
         test("with unused variable", () => {
@@ -312,22 +437,22 @@ suite("DeploymentTemplate", () => {
         test("with empty deployment template", () => {
             const dt = new DeploymentTemplate("", "id");
             const expectedHistogram = new Histogram();
-            assert.deepStrictEqual(expectedHistogram, dt.functionCounts);
-            assert.deepStrictEqual(expectedHistogram, dt.functionCounts);
+            assert.deepStrictEqual(expectedHistogram, dt.getFunctionCounts());
+            assert.deepStrictEqual(expectedHistogram, dt.getFunctionCounts());
         });
 
         test("with empty object deployment template", () => {
             const dt = new DeploymentTemplate("{}", "id");
             const expectedHistogram = new Histogram();
-            assert.deepStrictEqual(expectedHistogram, dt.functionCounts);
-            assert.deepStrictEqual(expectedHistogram, dt.functionCounts);
+            assert.deepStrictEqual(expectedHistogram, dt.getFunctionCounts());
+            assert.deepStrictEqual(expectedHistogram, dt.getFunctionCounts());
         });
 
         test("with one property object deployment template", () => {
             const dt = new DeploymentTemplate("{ 'name': 'value' }", "id");
             const expectedHistogram = new Histogram();
-            assert.deepStrictEqual(expectedHistogram, dt.functionCounts);
-            assert.deepStrictEqual(expectedHistogram, dt.functionCounts);
+            assert.deepStrictEqual(expectedHistogram, dt.getFunctionCounts());
+            assert.deepStrictEqual(expectedHistogram, dt.getFunctionCounts());
         });
 
         test("with one TLE function used multiple times in deployment template", () => {
@@ -339,8 +464,8 @@ suite("DeploymentTemplate", () => {
             expectedHistogram.add("concat(0)");
             expectedHistogram.add("concat(2)");
             expectedHistogram.add("concat(2)");
-            assert.deepStrictEqual(expectedHistogram, dt.functionCounts);
-            assert.deepStrictEqual(expectedHistogram, dt.functionCounts);
+            assert.deepStrictEqual(expectedHistogram, dt.getFunctionCounts());
+            assert.deepStrictEqual(expectedHistogram, dt.getFunctionCounts());
         });
 
         test("with two TLE functions in different TLEs deployment template", () => {
@@ -350,8 +475,8 @@ suite("DeploymentTemplate", () => {
             expectedHistogram.add("concat(0)");
             expectedHistogram.add("add");
             expectedHistogram.add("add(0)");
-            assert.deepStrictEqual(expectedHistogram, dt.functionCounts);
-            assert.deepStrictEqual(expectedHistogram, dt.functionCounts);
+            assert.deepStrictEqual(expectedHistogram, dt.getFunctionCounts());
+            assert.deepStrictEqual(expectedHistogram, dt.getFunctionCounts());
         });
     });
 
@@ -508,19 +633,44 @@ suite("DeploymentTemplate", () => {
             assert.deepStrictEqual(apples.span, new Language.Span(18, 30));
         });
 
-        test("with case sensitive and insensitive match", () => {
-            const dt = new DeploymentTemplate("{ 'parameters': { 'apples': { 'type': 'string' }, 'APPLES': { 'type': 'integer' } } }", "id");
+        test("with multiple case insensitive matches", () => {
+            const dt = new DeploymentTemplate(
+                JSON.stringify(
+                    {
+                        'parameters': {
+                            'apples': { 'type': 'string' },
+                            'APPLES': { 'type': 'integer' },
+                            'Apples': { 'type': 'securestring' }
+                        }
+                    },
+                    null,
+                    2),
+                "id");
+
+            // Should always match the last one defined when multiple have the same name
             const APPLES: ParameterDefinition | null = dt.getParameterDefinition("'APPLES'");
             if (!APPLES) { throw new Error("failed"); }
-            assert.deepStrictEqual(APPLES.name.toString(), "APPLES");
-            assert.deepStrictEqual(APPLES.description, null);
-            assert.deepStrictEqual(APPLES.span, new Language.Span(50, 31));
+            assert.deepStrictEqual(APPLES.name.toString(), "Apples");
 
             const apples: ParameterDefinition | null = dt.getParameterDefinition("'APPles'");
             if (!apples) { throw new Error("failed"); }
-            assert.deepStrictEqual(apples.name.toString(), "apples");
-            assert.deepStrictEqual(apples.description, null);
-            assert.deepStrictEqual(apples.span, new Language.Span(18, 30));
+            assert.deepStrictEqual(apples.name.toString(), "Apples");
+        });
+
+        test("with case insensitive match, Unicode", () => {
+            // Should always match the last one defined when multiple have the same name
+            const dt = new DeploymentTemplate("{ 'parameters': { 'Strasse': { 'type': 'string' }, 'Straße': { 'type': 'integer' } } }", "id");
+            const strasse: ParameterDefinition | null = dt.getParameterDefinition("'Strasse'");
+            if (!strasse) { throw new Error("failed"); }
+            assert.deepStrictEqual(strasse.name.toString(), "Straße");
+
+            const straße: ParameterDefinition | null = dt.getParameterDefinition("'Straße'");
+            if (!straße) { throw new Error("failed"); }
+            assert.deepStrictEqual(straße.name.toString(), "Straße");
+
+            const straße2: ParameterDefinition | null = dt.getParameterDefinition("'STRASSE'");
+            if (!straße2) { throw new Error("failed"); }
+            assert.deepStrictEqual(straße2.name.toString(), "Straße");
         });
     });
 
@@ -701,26 +851,25 @@ suite("DeploymentTemplate", () => {
             assert.deepStrictEqual(value.toString(), "yum");
         });
 
-        test("with case sensitive and insensitive match", () => {
+        test("with mulitple case insensitive matches", () => {
             const dt = new DeploymentTemplate("{ 'variables': { 'apples': 'yum', 'APPLES': 'good' } }", "id");
 
+            // Should always find the last definition, because that's what Azure does
             const APPLES: Json.Property | null = dt.getVariableDefinition("'APPLES'");
             if (!APPLES) { throw new Error("failed"); }
             assert.deepStrictEqual(APPLES.name.toString(), "APPLES");
 
             const applesValue: Json.StringValue | null = Json.asStringValue(APPLES.value);
             if (!applesValue) { throw new Error("failed"); }
-            assert.deepStrictEqual(applesValue.span, new Language.Span(44, 6));
             assert.deepStrictEqual(applesValue.toString(), "good");
 
             const apples: Json.Property | null = dt.getVariableDefinition("'APPles'");
             if (!apples) { throw new Error("failed"); }
-            assert.deepStrictEqual(apples.name.toString(), "apples");
+            assert.deepStrictEqual(apples.name.toString(), "APPLES");
 
             const value: Json.StringValue | null = Json.asStringValue(apples.value);
             if (!value) { throw new Error("failed"); }
-            assert.deepStrictEqual(value.span, new Language.Span(27, 5));
-            assert.deepStrictEqual(value.toString(), "yum");
+            assert.deepStrictEqual(value.toString(), "good");
         });
     });
 
@@ -893,6 +1042,23 @@ suite("ReferenceInVariableDefinitionJSONVisitor", () => {
                     "Warning: The variable 'a' is never used. (arm-template (expr))"
                 ]);
         });
+
+        // asdf
+        // testWithLanguageServer("expecting error: reference in variable definition inside user function", async function (this: ITestCallbackContext): Promise<void> {
+        //     await testDiagnostics(
+        //         {
+        //             "variables": {
+        //                 "a": "[reference('test')]"
+        //             },
+        //         },
+        //         {
+        //             includeSources: [sources.expressions]
+        //         },
+        //         [
+        //             "Error: reference() cannot be invoked inside of a variable definition. (arm-template (expr))",
+        //             "Warning: The variable 'a' is never used. (arm-template (expr))"
+        //         ]);
+        // });
     });
 
     suite("visitStringValue(Json.StringValue)", () => {

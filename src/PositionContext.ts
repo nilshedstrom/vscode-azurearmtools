@@ -4,12 +4,12 @@
 
 // tslint:disable:max-line-length
 
-import * as assert from "assert";
 import { AzureRMAssets, FunctionMetadata } from "./AzureRMAssets";
 import { CachedPromise } from "./CachedPromise";
 import { CachedValue } from "./CachedValue";
 import * as Completion from "./Completion";
 import { DeploymentTemplate } from "./DeploymentTemplate";
+import { assert } from './fixed_assert';
 import * as Hover from "./Hover";
 import * as Json from "./JSON";
 import * as language from "./Language";
@@ -146,7 +146,7 @@ export class PositionContext {
             const tleInfo = this.tleInfo;
             if (tleInfo) {
                 const tleValue: TLE.Value | null = tleInfo.tleValue;
-                if (tleValue instanceof TLE.FunctionValue) {
+                if (tleValue instanceof TLE.FunctionCallValue) {
                     if (tleValue.nameToken.span.contains(tleInfo.tleCharacterIndex)) {
                         const functionMetadata: FunctionMetadata | undefined = await AzureRMAssets.getFunctionMetadataFromName(tleValue.nameToken.stringValue);
                         if (functionMetadata) {
@@ -202,7 +202,7 @@ export class PositionContext {
                     return [];
                 }
 
-            } else if (tleValue instanceof TLE.FunctionValue) {
+            } else if (tleValue instanceof TLE.FunctionCallValue) {
                 return this.getFunctionValueCompletions(tleValue, tleInfo.tleCharacterIndex);
             } else if (tleValue instanceof TLE.StringValue) {
                 return this.getStringLiteralCompletions(tleValue, tleInfo.tleCharacterIndex);
@@ -252,7 +252,7 @@ export class PositionContext {
      * Get completions when we're anywhere inside a property accesses, e.g. "resourceGroup().prop1.prop2"
      */
     private async getPropertyAccessCompletions(tleValue: TLE.PropertyAccess, tleCharacterIndex: number): Promise<Completion.Item[]> {
-        const functionSource: TLE.FunctionValue | null = tleValue.functionSource;
+        const functionSource: TLE.FunctionCallValue | null = tleValue.functionSource;
         if (functionSource) {
             let propertyPrefix: string = "";
             let replaceSpan: language.Span = this.emptySpanAtDocumentCharacterIndex;
@@ -262,8 +262,8 @@ export class PositionContext {
                 propertyPrefix = propertyNameToken.stringValue.substring(0, tleCharacterIndex - propertyNameToken.span.startIndex).toLowerCase();
             }
 
-            const variableProperty: Json.Property | null = this._deploymentTemplate.getVariableDefinitionFromFunction(functionSource);
-            const parameterProperty: ParameterDefinition | null = this._deploymentTemplate.getParameterDefinitionFromFunction(functionSource);
+            const variableProperty: Json.Property | null = this._deploymentTemplate.getVariableDefinitionFromFunctionCall(functionSource);
+            const parameterProperty: ParameterDefinition | null = this._deploymentTemplate.getParameterDefinitionFromFunctionCall(functionSource);
             const sourcesNameStack: string[] = tleValue.sourcesNameStack;
             if (variableProperty) {
                 // If the variable's value is an object...
@@ -316,7 +316,7 @@ export class PositionContext {
     /**
      * Return completions when we're anywhere inside a function call expression
      */
-    private async getFunctionValueCompletions(tleValue: TLE.FunctionValue, tleCharacterIndex: number): Promise<Completion.Item[]> {
+    private async getFunctionValueCompletions(tleValue: TLE.FunctionCallValue, tleCharacterIndex: number): Promise<Completion.Item[]> {
         if (tleValue.nameToken.span.contains(tleCharacterIndex, true)) {
             // The caret is inside the TLE function's name
             const functionNameStartIndex: number = tleValue.nameToken.span.startIndex;
@@ -334,9 +334,9 @@ export class PositionContext {
             // The caret is between the function name and the left parenthesis (with whitespace between them)
             return await PositionContext.getMatchingFunctionCompletions("", this.emptySpanAtDocumentCharacterIndex);
         } else {
-            if (tleValue.nameToken.stringValue === "parameters" && tleValue.argumentExpressions.length === 0) {
+            if (tleValue.isBuiltin("parameters") && tleValue.argumentExpressions.length === 0) {
                 return this.getMatchingParameterCompletions("", tleValue, tleCharacterIndex);
-            } else if (tleValue.nameToken.stringValue === "variables" && tleValue.argumentExpressions.length === 0) {
+            } else if (tleValue.isBuiltin("variables") && tleValue.argumentExpressions.length === 0) {
                 return this.getMatchingVariableCompletions("", tleValue, tleCharacterIndex);
             } else {
                 return await PositionContext.getMatchingFunctionCompletions("", this.emptySpanAtDocumentCharacterIndex);
@@ -421,7 +421,7 @@ export class PositionContext {
         return this._signatureHelp.getOrCachePromise(async () => {
             const tleValue: TLE.Value | null = this.tleInfo && this.tleInfo.tleValue;
             if (this.tleInfo && tleValue) {
-                let functionToHelpWith: TLE.FunctionValue | null = TLE.asFunctionValue(tleValue);
+                let functionToHelpWith: TLE.FunctionCallValue | null = TLE.asFunctionValue(tleValue);
                 if (!functionToHelpWith) {
                     functionToHelpWith = TLE.asFunctionValue(tleValue.parent);
                 }
@@ -512,7 +512,7 @@ export class PositionContext {
         return completionItems;
     }
 
-    private getMatchingParameterCompletions(prefix: string, tleValue: TLE.StringValue | TLE.FunctionValue, tleCharacterIndex: number): Completion.Item[] {
+    private getMatchingParameterCompletions(prefix: string, tleValue: TLE.StringValue | TLE.FunctionCallValue, tleCharacterIndex: number): Completion.Item[] {
         const replaceSpanInfo: ReplaceSpanInfo = this.getReplaceSpanInfo(tleValue, tleCharacterIndex);
 
         const parameterCompletions: Completion.Item[] = [];
@@ -532,7 +532,7 @@ export class PositionContext {
         return parameterCompletions;
     }
 
-    private getMatchingVariableCompletions(prefix: string, tleValue: TLE.StringValue | TLE.FunctionValue, tleCharacterIndex: number): Completion.Item[] {
+    private getMatchingVariableCompletions(prefix: string, tleValue: TLE.StringValue | TLE.FunctionCallValue, tleCharacterIndex: number): Completion.Item[] {
         const replaceSpanInfo: ReplaceSpanInfo = this.getReplaceSpanInfo(tleValue, tleCharacterIndex);
 
         const variableCompletions: Completion.Item[] = [];
@@ -544,13 +544,13 @@ export class PositionContext {
         return variableCompletions;
     }
 
-    private getReplaceSpanInfo(tleValue: TLE.StringValue | TLE.FunctionValue, tleCharacterIndex: number): ReplaceSpanInfo {
+    private getReplaceSpanInfo(tleValue: TLE.StringValue | TLE.FunctionCallValue, tleCharacterIndex: number): ReplaceSpanInfo {
         let includeRightParenthesisInCompletion: boolean = true;
         let replaceSpan: language.Span;
         if (tleValue instanceof TLE.StringValue) {
             const stringSpan: language.Span = tleValue.getSpan();
             const stringStartIndex: number = stringSpan.startIndex;
-            const functionValue: TLE.FunctionValue | null = TLE.asFunctionValue(tleValue.parent);
+            const functionValue: TLE.FunctionCallValue | null = TLE.asFunctionValue(tleValue.parent);
 
             const rightParenthesisIndex: number = tleValue.toString().indexOf(")");
             const rightSquareBracketIndex: number = tleValue.toString().indexOf("]");

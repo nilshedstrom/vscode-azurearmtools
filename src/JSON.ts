@@ -88,6 +88,10 @@ export class Token extends Segment {
     public toString(): string {
         return utilities.getCombinedText(this._basicTokens);
     }
+
+    public get debuggerDisplay(): string {
+        return this.toString();
+    }
 }
 
 export function LeftCurlyBracket(startIndex: number): Token {
@@ -862,6 +866,7 @@ export class ParseResult {
         return result;
     }
 
+    // The top-level value, if any
     public get value(): Value | null {
         return this._value;
     }
@@ -1006,6 +1011,51 @@ export class ParseResult {
 
         return result;
     }
+
+    /* asdf
+    public getScopeAtCharacterIndex(characterIndex: number): Value {
+        assert(0 <= characterIndex, `characterIndex (${characterIndex}) cannot be negative.`);//breakpoint
+
+        let result: Value | null = null;
+
+        if (this.value && this.value.span.contains(characterIndex, true)) {
+            let current: Value = this.value;
+
+            while (result === null) {
+                const currentValue: Value = current;
+
+                if (currentValue instanceof Property) {
+                    if (currentValue.name && currentValue.name.span.contains(characterIndex, true)) {
+                        current = currentValue.name;
+                    } else if (currentValue.value && currentValue.value.span.contains(characterIndex, true)) {
+                        current = currentValue.value;
+                    }
+                } else if (currentValue instanceof ObjectValue) {
+                    if (currentValue.properties) {
+                        for (const property of currentValue.properties) {
+                            if (property && property.span.contains(characterIndex, true)) {
+                                current = property;
+                            }
+                        }
+                    }
+                } else if (currentValue instanceof ArrayValue) {
+                    if (currentValue.elements) {
+                        for (const element of currentValue.elements) {
+                            if (element && element.span.contains(characterIndex, true)) {
+                                current = element;
+                            }
+                        }
+                    }
+                }
+
+                if (current === currentValue) {
+                    result = current;
+                }
+            }
+        }
+
+        return result;
+    }*/
 }
 
 /**

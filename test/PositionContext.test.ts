@@ -7,7 +7,9 @@
 
 import * as assert from "assert";
 import { Completion, DeploymentTemplate, Hover, Json, Language, ParameterDefinition, PositionContext, TLE, Utilities } from "../extension.bundle";
+import { FakeScope } from "./fakeScope";
 import * as jsonTest from "./JSON.test";
+import { assertNotNull } from "./support/assertNotNull";
 
 suite("PositionContext", () => {
     suite("fromDocumentLineAndColumnIndexes(DeploymentTemplate,number,number)", () => {
@@ -202,7 +204,7 @@ suite("PositionContext", () => {
         test("with characterIndex at the start of a non-TLE QuotedString", () => {
             let dt = new DeploymentTemplate("{ 'a': 'A', 'b': \"[concat('B')]\" }", "id");
             let pc = dt.getContextFromDocumentCharacterIndex(2);
-            assert.deepStrictEqual(TLE.Parser.parse("'a'"), pc.tleInfo!.tleParseResult);
+            assert.deepStrictEqual(TLE.Parser.parse("'a'", new FakeScope()), pc.tleInfo!.tleParseResult);
         });
 
         test("with characterIndex at the start of a closed TLE QuotedString", () => {
@@ -210,12 +212,11 @@ suite("PositionContext", () => {
             const pc: PositionContext = dt.getContextFromDocumentCharacterIndex(17);
 
             const tleParseResult: TLE.ParseResult = pc.tleInfo!.tleParseResult;
-            assert(tleParseResult);
             assert.deepStrictEqual(tleParseResult.errors, []);
             assert.deepStrictEqual(tleParseResult.leftSquareBracketToken, TLE.Token.createLeftSquareBracket(1));
             assert.deepStrictEqual(tleParseResult.rightSquareBracketToken, TLE.Token.createRightSquareBracket(13));
 
-            const concat: TLE.FunctionValue = assertNotNull(TLE.asFunctionValue(tleParseResult.expression));
+            const concat: TLE.FunctionCallValue = assertNotNull(TLE.asFunctionValue(tleParseResult.expression));
             assert.deepStrictEqual(concat.parent, undefined);
             assert.deepStrictEqual(concat.nameToken, TLE.Token.createLiteral(2, "concat"));
             assert.deepStrictEqual(concat.leftParenthesisToken, TLE.Token.createLeftParenthesis(8));
@@ -232,7 +233,6 @@ suite("PositionContext", () => {
             const pc: PositionContext = dt.getContextFromDocumentCharacterIndex(17);
 
             const tleParseResult: TLE.ParseResult = pc.tleInfo!.tleParseResult;
-            assert(tleParseResult);
             assert.deepStrictEqual(
                 tleParseResult.errors,
                 [
@@ -241,7 +241,7 @@ suite("PositionContext", () => {
             assert.deepStrictEqual(tleParseResult.leftSquareBracketToken, TLE.Token.createLeftSquareBracket(1));
             assert.deepStrictEqual(tleParseResult.rightSquareBracketToken, null);
 
-            const concat: TLE.FunctionValue = assertNotNull(TLE.asFunctionValue(tleParseResult.expression));
+            const concat: TLE.FunctionCallValue = assertNotNull(TLE.asFunctionValue(tleParseResult.expression));
             assert.deepStrictEqual(concat.parent, undefined);
             assert.deepStrictEqual(concat.nameToken, TLE.Token.createLiteral(2, "concat"));
             assert.deepStrictEqual(concat.leftParenthesisToken, TLE.Token.createLeftParenthesis(8));
@@ -329,7 +329,7 @@ suite("PositionContext", () => {
             const dt: DeploymentTemplate = new DeploymentTemplate("{ 'a': 'A', 'b': \"[concat('B')]\" }", "id");
             const pc: PositionContext = dt.getContextFromDocumentCharacterIndex(21);
 
-            const concat: TLE.FunctionValue = assertNotNull(TLE.asFunctionValue(pc.tleInfo!.tleValue));
+            const concat: TLE.FunctionCallValue = assertNotNull(TLE.asFunctionValue(pc.tleInfo!.tleValue));
             assert.deepStrictEqual(concat.nameToken, TLE.Token.createLiteral(2, "concat"));
             assert.deepStrictEqual(concat.leftParenthesisToken, TLE.Token.createLeftParenthesis(8));
             assert.deepStrictEqual(concat.rightParenthesisToken, TLE.Token.createRightParenthesis(12));
@@ -352,7 +352,7 @@ suite("PositionContext", () => {
 
             const b: TLE.StringValue = assertNotNull(TLE.asStringValue(pc.tleInfo!.tleValue));
             assert.deepStrictEqual(b.token, TLE.Token.createQuotedString(9, "'B'"));
-            const concat: TLE.FunctionValue = assertNotNull(TLE.asFunctionValue(b.parent));
+            const concat: TLE.FunctionCallValue = assertNotNull(TLE.asFunctionValue(b.parent));
             assert.deepStrictEqual(concat.nameToken, TLE.Token.createLiteral(2, "concat"));
             assert.deepStrictEqual(concat.leftParenthesisToken, TLE.Token.createLeftParenthesis(8));
             assert.deepStrictEqual(concat.rightParenthesisToken, null);
@@ -1435,11 +1435,3 @@ suite("PositionContext", () => {
         });
     });
 });
-
-function assertNotNull<T>(v: T | undefined | null): T {
-    if (v === undefined || v === null) {
-        throw new Error("Expecting non-null/non-unknown value");
-    }
-
-    return v;
-}

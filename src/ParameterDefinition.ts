@@ -2,8 +2,8 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 // ----------------------------------------------------------------------------
 
-import * as assert from "assert";
 import { CachedValue } from "./CachedValue";
+import { assert } from './fixed_assert';
 import * as Json from "./JSON";
 import * as language from "./Language";
 
