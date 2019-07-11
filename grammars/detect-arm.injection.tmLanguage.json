@@ -14,7 +14,7 @@
             "$comment3": "  the ARM grammar for property values for the rest of the file",
             "$comment4": "=================================================================================",
             "name": "meta.arm-deployment-template.json.comments",
-            "begin": "(?x) \\s* (?<key>(\")\\$schema(\")) (?<colon>:) (?<value> \\s*(\")https?:\\/\\/schema.management.azure.com\\/schemas\\/[^\"\\/]+\\/(?:deploymentTemplate|subscriptionDeploymentTemplate)\\.json\\#?(\") )\\s* (,)",
+            "begin": "(?x) \\s* (?<key>(\")\\$schema(\")) (?<colon>:) (?<value> \\s*(\")https?:.*[Dd]eploymentTemplate\\.jsonc?\\#?(\") )\\s* (,)",
             "end": "$no-end-we-want-scope-to-continue-to-end-of-file",
             "$beginCapturesComment": "Colorize the schema key/value the same as normal key/value pairs",
             "beginCaptures": {
