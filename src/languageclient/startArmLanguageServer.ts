@@ -14,7 +14,6 @@ import { ext } from '../extensionVariables';
 import { armDeploymentDocumentSelector } from '../supported';
 
 const languageServerName = 'ARM Language Server';
-const languageServerFolderName = 'LanguageServerBin';
 const languageServerDllName = 'Microsoft.ArmLanguageServer.dll';
 let serverStartMs: number;
 const languageServerErrorTelemId = "Language Server Error";

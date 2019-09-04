@@ -11,6 +11,7 @@ import * as gulp from 'gulp';
 import * as path from 'path';
 import * as process from 'process';
 import { gulp_installAzureAccount, gulp_webpack } from 'vscode-azureextensiondev';
+import { languageServerFolderName } from './src/constants';
 
 const env = process.env;
 
@@ -111,25 +112,25 @@ async function buildGrammars(): Promise<void> {
     console.log(`Copied ${armConfigurationDestPath}`);
 }
 
-// tslint:disable-next-line:no-suspicious-comment
-// TODO: This is temporary - retrieves binaries from an internal location to package with the extension
 async function updateLanguageServer(): Promise<void> {
-    // tslint:disable-next-line: max-line-length
-    // let armServerBin = path.join(env.ExtensionsBin, '..', '..', 'ARM-LanguageServer', 'Microsoft.ArmLanguageServer', 'bin', 'Debug', 'netcoreapp2.2', 'publish');
-    let armServerBin = '\\\\scratch2\\scratch\\stephwe\\ARM\\Dev Assemblies\\Current';
-    let updateDest = path.join(__dirname, 'LanguageServerBin');
-    if (!fs.existsSync(updateDest)) {
-        fs.mkdirSync(updateDest);
-    }
-
-    fs.readdirSync(armServerBin).forEach(fn => {
-        if (fs.statSync(path.join(armServerBin, fn)).isFile) {
-            let src = path.join(armServerBin, fn);
-            let dest = path.join(updateDest, fn);
-            console.log(`${src} -> ${dest}`);
-            fs.copyFileSync(src, dest);
+    let languageServerLocation = env.LANGUAGE_SERVER_DOWNLOAD_URL;
+    if (languageServerLocation) {
+        let updateDest = path.join(__dirname, languageServerFolderName);
+        if (!fs.existsSync(updateDest)) {
+            fs.mkdirSync(updateDest);
         }
-    });
+
+        fs.readdirSync(languageServerLocation).forEach(fn => {
+            if (fs.statSync(path.join(languageServerLocation, fn)).isFile) {
+                let src = path.join(languageServerLocation, fn);
+                let dest = path.join(updateDest, fn);
+                console.log(`${src} -> ${dest}`);
+                fs.copyFileSync(src, dest);
+            }
+        });
+    } else {
+        console.log("No language server download link provided - not packaging language server with VSIX");
+    }
 }
 
 exports['webpack-dev'] = gulp.series(() => gulp_webpack('development'), buildGrammars);

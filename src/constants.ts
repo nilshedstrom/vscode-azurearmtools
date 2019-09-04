@@ -23,3 +23,5 @@ export namespace configKeys {
 // For testing: We create a diagnostic with this message during testing to indicate when all (expression) diagnostics have been calculated
 export const diagnosticsCompletePrefix = "Diagnostics complete: ";
 export const expressionsDiagnosticsCompletionMessage = diagnosticsCompletePrefix + expressionsDiagnosticsSource;
+
+export const languageServerFolderName = 'languageServer';

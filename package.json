@@ -126,7 +126,7 @@
     "webpack-profile": "webpack --profile --json --mode production > webpack-stats.json && echo Use http://webpack.github.io/analyse to analyze the stats",
     "build-grammars": "gulp build-grammars",
     "watch-grammars": "gulp watch-grammars",
-    "update-language-server": "gulp update-language-server"
+    "download-language-server": "gulp download-language-server"
   },
   "devDependencies": {
     "@types/fs-extra": "^5.0.5",

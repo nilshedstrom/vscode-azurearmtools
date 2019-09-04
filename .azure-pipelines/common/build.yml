@@ -12,3 +12,11 @@ steps:
   inputs:
     command: custom
     customCommand: run build
+
+- task: Npm@1
+  displayName: "Download language server"
+  env:
+    LANGUAGE_SERVER_DOWNLOAD_PATH: $(LANGUAGE_SERVER_DOWNLOAD_PATH)
+  inputs:
+    command: custom
+    customCommand: run download-language-server
