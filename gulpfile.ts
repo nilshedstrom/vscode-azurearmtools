@@ -129,30 +129,31 @@ async function getLanguageServer(): Promise<void> {
             fse.removeSync(destPath);
         }
 
+        console.log(`Downloading language server from ${sourcePath} to ${destPath}`);
         copyFolder(sourcePath, destPath);
 
-        function copyFolder(sourceFolder: string, destFolder: string): void {
-            if (!fse.existsSync(destFolder)) {
-                fse.mkdirSync(destFolder);
-            }
-
-            fse.readdirSync(sourceFolder).forEach(fn => {
-                let src = path.join(sourceFolder, fn);
-                let dest = path.join(destFolder, fn);
-                if (fse.statSync(src).isFile()) {
-                    console.log(`${src} -> ${dest}`);
-                    fse.copyFileSync(src, dest);
-                } else if (fse.statSync(src).isDirectory()) {
-                    console.error("folder", src, dest);
-                    copyFolder(src, dest);
-                } else {
-                    assert("Unexpected path type");
-                }
-            });
-        }
     } else {
         console.warn(`Environment variable ${languageServerSourceEnv} not set, skipping packaging of language server binaries.`);
     }
+}
+
+function copyFolder(sourceFolder: string, destFolder: string, sourceRoot: string = sourceFolder): void {
+    if (!fse.existsSync(destFolder)) {
+        fse.mkdirSync(destFolder);
+    }
+
+    fse.readdirSync(sourceFolder).forEach(fn => {
+        let src = path.join(sourceFolder, fn);
+        let dest = path.join(destFolder, fn);
+        if (fse.statSync(src).isFile()) {
+            console.log(`  ${path.relative(sourceRoot, src)}`);
+            fse.copyFileSync(src, dest);
+        } else if (fse.statSync(src).isDirectory()) {
+            copyFolder(src, dest, sourceRoot);
+        } else {
+            assert("Unexpected path type");
+        }
+    });
 }
 
 exports['webpack-dev'] = gulp.series(() => gulp_webpack('development'), buildGrammars);
