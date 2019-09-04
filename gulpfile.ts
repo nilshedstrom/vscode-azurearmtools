@@ -6,13 +6,18 @@
 // tslint:disable:no-unsafe-any no-console
 
 import * as cp from 'child_process';
-import * as fs from 'fs';
+import * as fse from 'fs-extra';
 import * as gulp from 'gulp';
 import * as path from 'path';
 import * as process from 'process';
 import { gulp_installAzureAccount, gulp_webpack } from 'vscode-azureextensiondev';
+import { languageServerFolderName } from './src/constants';
+import { assert } from './src/fixed_assert';
 
 const env = process.env;
+
+const languageServerSourceEnv = 'ARM_LANGUAGE_SERVER_SOURCE';   // Must be provided by environment (optional)
+const languageServerVersionEnv = 'npm_package_config_ARM_LANGUAGE_SERVER_VERSION'; // Set in package.json's config section
 
 const jsonArmGrammarSourcePath: string = path.resolve('grammars', 'JSONC.arm.tmLanguage.json');
 const jsonArmGrammarDestPath: string = path.resolve('dist', 'grammars', 'JSONC.arm.tmLanguage.json');
@@ -45,10 +50,10 @@ function test(): cp.ChildProcess {
 }
 
 function buildTLEGrammar(): void {
-    const sourceGrammar: string = fs.readFileSync(tleGrammarSourcePath).toString();
+    const sourceGrammar: string = fse.readFileSync(tleGrammarSourcePath).toString();
     let grammar: string = sourceGrammar;
     const expressionMetadataPath: string = path.resolve("assets/ExpressionMetadata.json");
-    const expressionMetadata = <IExpressionMetadata>JSON.parse(fs.readFileSync(expressionMetadataPath).toString());
+    const expressionMetadata = <IExpressionMetadata>JSON.parse(fse.readFileSync(expressionMetadataPath).toString());
 
     // Add list of built-in functions from our metadata and place at beginning of grammar's preprocess section
     let builtinFunctions: string[] = expressionMetadata.functionSignatures.map(sig => sig.name);
@@ -87,7 +92,7 @@ function buildTLEGrammar(): void {
     delete outputGrammarAsObject.preprocess;
     grammar = JSON.stringify(outputGrammarAsObject, null, 4);
 
-    fs.writeFileSync(tleGrammarBuiltPath, grammar);
+    fse.writeFileSync(tleGrammarBuiltPath, grammar);
     console.log(`Built ${tleGrammarBuiltPath}`);
 
     if (grammar.includes('{{')) {
@@ -96,40 +101,58 @@ function buildTLEGrammar(): void {
 }
 
 async function buildGrammars(): Promise<void> {
-    if (!fs.existsSync('dist')) {
-        fs.mkdirSync('dist');
+    if (!fse.existsSync('dist')) {
+        fse.mkdirSync('dist');
     }
-    if (!fs.existsSync('dist/grammars')) {
-        fs.mkdirSync('dist/grammars');
+    if (!fse.existsSync('dist/grammars')) {
+        fse.mkdirSync('dist/grammars');
     }
 
     buildTLEGrammar();
 
-    fs.copyFileSync(jsonArmGrammarSourcePath, jsonArmGrammarDestPath);
+    fse.copyFileSync(jsonArmGrammarSourcePath, jsonArmGrammarDestPath);
     console.log(`Copied ${jsonArmGrammarDestPath}`);
-    fs.copyFileSync(armConfigurationSourcePath, armConfigurationDestPath);
+    fse.copyFileSync(armConfigurationSourcePath, armConfigurationDestPath);
     console.log(`Copied ${armConfigurationDestPath}`);
 }
 
-// tslint:disable-next-line:no-suspicious-comment
-// TODO: This is temporary - retrieves binaries from an internal location to package with the extension
-async function updateLanguageServer(): Promise<void> {
-    // tslint:disable-next-line: max-line-length
-    // let armServerBin = path.join(env.ExtensionsBin, '..', '..', 'ARM-LanguageServer', 'Microsoft.ArmLanguageServer', 'bin', 'Debug', 'netcoreapp2.2', 'publish');
-    let armServerBin = '\\\\scratch2\\scratch\\stephwe\\ARM\\Dev Assemblies\\Current';
-    let updateDest = path.join(__dirname, 'LanguageServerBin');
-    if (!fs.existsSync(updateDest)) {
-        fs.mkdirSync(updateDest);
-    }
+// If language server binaries are available (as provided by an environment variable), downloads them into the
+// expected location.  If not available, language server functionality will not be available.
+async function getLanguageServer(): Promise<void> {
+    const armServerSource = env[languageServerSourceEnv]; // Optional
+    const armServerVersion = env[languageServerVersionEnv];
+    const sourcePath = `${armServerSource}/${armServerVersion}`;
 
-    fs.readdirSync(armServerBin).forEach(fn => {
-        if (fs.statSync(path.join(armServerBin, fn)).isFile) {
-            let src = path.join(armServerBin, fn);
-            let dest = path.join(updateDest, fn);
-            console.log(`${src} -> ${dest}`);
-            fs.copyFileSync(src, dest);
+    if (armServerSource) {
+        let destPath = path.join(__dirname, languageServerFolderName);
+        if (fse.existsSync(destPath)) {
+            fse.removeSync(destPath);
         }
-    });
+
+        copyFolder(sourcePath, destPath);
+
+        function copyFolder(sourceFolder: string, destFolder: string): void {
+            if (!fse.existsSync(destFolder)) {
+                fse.mkdirSync(destFolder);
+            }
+
+            fse.readdirSync(sourceFolder).forEach(fn => {
+                let src = path.join(sourceFolder, fn);
+                let dest = path.join(destFolder, fn);
+                if (fse.statSync(src).isFile()) {
+                    console.log(`${src} -> ${dest}`);
+                    fse.copyFileSync(src, dest);
+                } else if (fse.statSync(src).isDirectory()) {
+                    console.error("folder", src, dest);
+                    copyFolder(src, dest);
+                } else {
+                    assert("Unexpected path type");
+                }
+            });
+        }
+    } else {
+        console.warn(`Environment variable ${languageServerSourceEnv} not set, skipping packaging of language server binaries.`);
+    }
 }
 
 exports['webpack-dev'] = gulp.series(() => gulp_webpack('development'), buildGrammars);
@@ -137,4 +160,4 @@ exports['webpack-prod'] = gulp.series(() => gulp_webpack('production'), buildGra
 exports.test = gulp.series(gulp_installAzureAccount, test);
 exports['build-grammars'] = buildGrammars;
 exports['watch-grammars'] = (): unknown => gulp.watch('grammars/**', buildGrammars);
-exports['update-language-server'] = updateLanguageServer;
+exports['get-language-server'] = getLanguageServer;

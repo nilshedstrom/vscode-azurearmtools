@@ -9,12 +9,11 @@ import { ExtensionContext, workspace } from 'vscode';
 import { callWithTelemetryAndErrorHandlingSync, parseError, TelemetryProperties } from 'vscode-azureextensionui';
 import { Message } from 'vscode-jsonrpc';
 import { CloseAction, ErrorAction, ErrorHandler, LanguageClient, LanguageClientOptions, ServerOptions } from 'vscode-languageclient';
-import { armDeploymentLanguageId } from '../constants';
+import { armDeploymentLanguageId, languageServerFolderName } from '../constants';
 import { ext } from '../extensionVariables';
 import { armDeploymentDocumentSelector } from '../supported';
 
 const languageServerName = 'ARM Language Server';
-const languageServerFolderName = 'LanguageServerBin';
 const languageServerDllName = 'Microsoft.ArmLanguageServer.dll';
 let serverStartMs: number;
 const languageServerErrorTelemId = "Language Server Error";
@@ -28,7 +27,7 @@ export function startArmLanguageServer(context: ExtensionContext): void {
         let serverDllPath = workspace.getConfiguration('armTools').get<string | undefined>('languageServer.path');
 
         if (typeof serverDllPath !== 'string' || serverDllPath === '') {
-            // Check for the files under LanguageServerBin
+            // Check for the files under the language server bin folder
             let serverFolderPath = context.asAbsolutePath(languageServerFolderName);
             serverDllPath = path.join(serverFolderPath, languageServerDllName);
             if (!fs.existsSync(serverFolderPath) || !fs.existsSync(serverDllPath)) {

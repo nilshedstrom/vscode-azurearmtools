@@ -12,6 +12,7 @@ export const assetsPath = path.join(__dirname, isWebpack ? "" : "..", "..", "ass
 export const iconsPath = path.join(__dirname, isWebpack ? "" : "..", "..", "icons");
 
 export const armDeploymentLanguageId = 'arm-deployment';
+export const languageServerFolderName = path.join('dist', 'languageServer');
 
 // String that shows up in our errors as the source in parentheses
 export const expressionsDiagnosticsSource = "ARM (Expressions)";
