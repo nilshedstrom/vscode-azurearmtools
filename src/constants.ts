@@ -17,6 +17,9 @@ export const languageServerFolderName = path.join('dist', 'languageServer');
 // String that shows up in our errors as the source in parentheses
 export const expressionsDiagnosticsSource = "ARM (Expressions)";
 
+// Source string for errors related to the language server starting up or failing
+export const languageServerStateSource = "ARM (Language Server)";
+
 export namespace configKeys {
     export const autoDetectJsonTemplates = "autoDetectJsonTemplates";
 }
