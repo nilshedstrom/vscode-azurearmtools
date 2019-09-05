@@ -5,7 +5,7 @@
   "version": "0.6.1-alphalangserv",
   "publisher": "msazurermtools",
   "config": {
-    "ARM_LANGUAGE_SERVER_VERSION": "20190904.7-mac-fix"
+    "ARM_LANGUAGE_SERVER_VERSION": "20190905.1-linux-patch"
   },
   "categories": [
     "Azure",
