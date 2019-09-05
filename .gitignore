@@ -301,5 +301,3 @@ test-results.xml
 # Colorization test failure diffs
 test/*.actual
 test/**/*.full-scope-result.txt
-
-languageServer/**
