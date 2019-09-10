@@ -5,7 +5,7 @@
   "version": "0.6.1-alphalangserv",
   "publisher": "msazurermtools",
   "config": {
-    "ARM_LANGUAGE_SERVER_VERSION": "20190905.1-linux-patch"
+    "ARM_LANGUAGE_SERVER_VERSION": "20190909.7-pos-within-string"
   },
   "categories": [
     "Azure",
