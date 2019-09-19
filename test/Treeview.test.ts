@@ -10,6 +10,7 @@ import * as path from "path";
 import * as vscode from "vscode";
 import { parseError } from "vscode-azureextensionui";
 import { ext, JsonOutlineProvider, shortenTreeLabel } from "../extension.bundle";
+import { ensureLanguageServerAvailable } from "./support/ensureLanguageServerAvailable";
 import { getTempFilePath } from "./support/getTempFilePath";
 
 suite("TreeView", async (): Promise<void> => {
@@ -45,20 +46,18 @@ suite("TreeView", async (): Promise<void> => {
     suite("JsonOutlineProvider", async (): Promise<void> => {
         let provider: JsonOutlineProvider;
 
-        setup(function (this: Mocha.IHookCallbackContext, done: MochaDone): void {
-            this.timeout(15000);
-
-            async function mySetup(): Promise<void> {
+        // tslint:disable-next-line: no-function-expression
+        setup(async function (this: Mocha.IHookCallbackContext): Promise<void> {
+            try {
+                await ensureLanguageServerAvailable();
                 let extension = vscode.extensions.getExtension(ext.extensionId);
                 assert.equal(!!extension, true, "Extension not found");
                 await extension.activate();
                 provider = ext.jsonOutlineProvider;
                 assert.equal(!!provider, true, "JSON outline provider not found");
+            } catch (error) {
+                assert.fail(`Setup failed: ${parseError(error).message}`);
             }
-
-            mySetup().then(done, (err) => {
-                assert.fail(`Setup failed: ${parseError(err).message}`);
-            });
         });
 
         async function testChildren(template: string, expected: ITestTreeItem[]): Promise<void> {

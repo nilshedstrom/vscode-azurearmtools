@@ -4,10 +4,13 @@
 
 // Support for testing diagnostics in vscode
 
+import * as assert from 'assert';
 import * as os from 'os';
 import * as path from 'path';
 
 export function getTempFilePath(baseFilename?: string, extension?: string): string {
+    assert(!extension || extension.startsWith('.'), "Extension must start with period");
+
     let randomName = '';
     extension = extension === undefined ? '.jsonc' : extension;
 
