@@ -9,7 +9,7 @@ import { OutputDefinition } from "./OutputDefinition";
 /**
  * This class represents the definition of a user-defined function in a deployment template.
  */
-export class FunctionDefinition {
+export class UserFunctionDefinition {
     private _output: OutputDefinition;
 
     constructor(private _name: Json.StringValue, private _value: Json.ObjectValue) {

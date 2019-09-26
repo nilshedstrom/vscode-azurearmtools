@@ -3,14 +3,14 @@
 // ----------------------------------------------------------------------------
 
 import { CachedValue } from "./CachedValue";
-import { DeploymentTemplate } from "./DeploymentTemplate";
-import { assert } from "./fixed_assert";
 import * as Json from "./JSON";
 import { ParameterDefinition } from "./ParameterDefinition";
+import { UserFunctionNamespaceDefinition } from "./UserFunctionNamespaceDefinition";
 
 export interface ITemplateScope {
     parameterDefinitions: ParameterDefinition[];
     variableDefinitions: Json.Property[];
+    namespaceDefinitions: UserFunctionNamespaceDefinition[];
 }
 
 export class TemplateScope implements ITemplateScope {
@@ -20,6 +20,9 @@ export class TemplateScope implements ITemplateScope {
 
     private _parameterDefinitions: CachedValue<ParameterDefinition[]> = new CachedValue<ParameterDefinition[]>();
     private _variableDefinitions: CachedValue<Json.Property[]> = new CachedValue<Json.Property[]>();
+    // The "functions" section (which is an array of namespace definitions)
+    // https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-authoring-templates#functions
+    private _namespaceDefinitions: CachedValue<UserFunctionNamespaceDefinition[]> = new CachedValue<UserFunctionNamespaceDefinition[]>();
 
     /**
      * Constructor
@@ -47,6 +50,7 @@ export class TemplateScope implements ITemplateScope {
         });
     }
 
+    // asdf just repeat those from the owner
     public get variableDefinitions(): Json.Property[] {
         return this._variableDefinitions.getOrCacheValue(() => {
             if (this._scopeObjectValue) {
@@ -59,20 +63,66 @@ export class TemplateScope implements ITemplateScope {
             return []; //testpoint
         });
     }
-}
 
-export interface ITemplateScopeContext {
-    isInUserFunction(): boolean;
-}
+    // asdf just repeat those from the owner
+    public get namespaceDefinitions(): UserFunctionNamespaceDefinition[] {
+        return this._namespaceDefinitions.getOrCacheValue(() => {
+            const namespaceDefinitions: UserFunctionNamespaceDefinition[] = [];
 
-export class TemplateScopeContext {
-    constructor(_template: DeploymentTemplate, _value: Json.Value) {
-        //assert(_token.type === Json.TokenType.QuotedString, "Scope token must be the quoted string that contains the expression");
-        assert(_template); //testpoint
-        assert(_value);
+            // Example:
+            //
+            // "functions": [
+            //     { << This is a UserFunctionNamespaceDefinition
+            //       "namespace": "<namespace-for-functions>",
+            //       "members": { << This is a UserFunctionDefinition
+            //         "<function-name>": {
+            //           "parameters": [
+            //             {
+            //               "name": "<parameter-name>",
+            //               "type": "<type-of-parameter-value>"
+            //             }
+            //           ],
+            //           "output": {
+            //             "type": "<type-of-output-value>",
+            //             "value": "<function-return-value>"
+            //           }
+            //         }
+            //       }
+            //     }
+            //   ],
+
+            if (this._scopeObjectValue) {
+                const functionNamespacesArray: Json.ArrayValue | null = Json.asArrayValue(this._scopeObjectValue.getPropertyValue("functions"));
+                if (functionNamespacesArray) {
+                    for (let namespaceElement of functionNamespacesArray.elements) {
+                        const namespaceObject = Json.asObjectValue(namespaceElement);
+                        if (namespaceObject) {
+                            let namespace = UserFunctionNamespaceDefinition.createIfValid(namespaceObject);
+                            if (namespace) {
+                                namespaceDefinitions.push(namespace);
+                            }
+                        }
+                    }
+                }
+            }
+
+            return namespaceDefinitions;
+        });
     }
-
-    public isInUserFunction(): boolean {
-        return false; //testpoint
-    }
 }
+
+// export interface ITemplateScopeContext { // asdf remove
+//     isInUserFunction(): boolean;
+// }
+
+// export class TemplateScopeContext {
+//     constructor(_template: DeploymentTemplate, _value: Json.Value) {
+//         //assert(_token.type === Json.TokenType.QuotedString, "Scope token must be the quoted string that contains the expression");
+//         assert(_template); //testpoint
+//         assert(_value);
+//     }
+
+//     public isInUserFunction(): boolean {
+//         return false; //testpoint //asdf
+//     }
+// }

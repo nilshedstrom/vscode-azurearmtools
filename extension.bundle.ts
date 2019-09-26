@@ -45,7 +45,7 @@ export { ParameterDefinition } from "./src/ParameterDefinition";
 export { PositionContext } from "./src/PositionContext";
 export { containsArmSchema, isArmSchema } from './src/supported';
 export { JsonOutlineProvider, shortenTreeLabel } from "./src/Treeview";
-export { UnrecognizedBuiltinFunctionIssue } from "./src/UnrecognizedFunctionIssue";
+export { UnrecognizedBuiltinFunctionIssue } from "./src/UnrecognizedFunctionIssues";
 export { ReferenceInVariableDefinitionJSONVisitor } from "./src/visitors/ReferenceInVariableDefinitionJSONVisitor";
 export { Completion };
 export { Json };
@@ -55,3 +55,4 @@ export { Hover };
 export { basic };
 export { Utilities };
 export { TLE };
+

@@ -240,9 +240,9 @@ suite("TLE", () => {
         });
     });
 
-    suite("Function", () => {
+    suite("FunctionCallValue", () => {
         suite("constructor(tle.Token,tle.Token,tle.Value[],tle.Token)", () => {
-            test("with null nameToken", () => {
+            test("with null namespaceToken", () => {
                 let name = TLE.Token.createLiteral(1, "test");
                 let leftParenthesis = TLE.Token.createLeftParenthesis(5);
                 let commaTokens = [];
@@ -250,7 +250,7 @@ suite("TLE", () => {
                 let rightParenthesis = TLE.Token.createRightParenthesis(10);
                 let f = new TLE.FunctionCallValue(null, name, leftParenthesis, commaTokens, args, rightParenthesis);
                 assert.deepStrictEqual(name, f.nameToken);
-                assert.deepStrictEqual(null, f.leftParenthesisToken);
+                assert.deepStrictEqual(leftParenthesis, f.leftParenthesisToken);
                 assert.deepStrictEqual(args, f.argumentExpressions);
                 assert.deepStrictEqual(rightParenthesis, f.rightParenthesisToken);
                 assert.deepStrictEqual(null, f.namespaceToken);
@@ -1766,6 +1766,18 @@ suite("TLE", () => {
                 assert.equal(null, tt.readToken());
             });
 
+            test("with user-defined function TLE with no arguments and with name matching a built-in function", () => {
+                let tt = TLE.Tokenizer.fromString("'[co.sum()]'");
+                assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), tt.readToken());
+                assert.deepStrictEqual(TLE.Token.createLiteral(2, "co"), tt.readToken());
+                assert.deepStrictEqual(TLE.Token.createPeriod(4), tt.readToken());
+                assert.deepStrictEqual(TLE.Token.createLiteral(5, "sum"), tt.readToken());
+                assert.deepStrictEqual(TLE.Token.createLeftParenthesis(8), tt.readToken());
+                assert.deepStrictEqual(TLE.Token.createRightParenthesis(9), tt.readToken());
+                assert.deepStrictEqual(TLE.Token.createRightSquareBracket(10), tt.readToken());
+                assert.equal(null, tt.readToken());
+            });
+
             test("with function TLE with no arguments with no closing right square bracket", () => {
                 let tt = TLE.Tokenizer.fromString("'[concat()'");
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), tt.readToken());
@@ -2171,6 +2183,20 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
                             [new IncorrectArgumentsCountIssue(new Language.Span(2, 30), "The function 'substring' takes between 1 and 3 arguments.", "substring", 4, 1, 3)]);
                     });
             });
+
+            //asdf
+            // test("user function with name matching a built-in, with zero arguments", async () => {
+            //     const functions: FunctionsMetadata = await AzureRMAssets.getFunctionsMetadata();
+            //     const concat: TLE.Value = assertNotNull(parseWithFakeScope(`"[Contoso.resourceId()]"`).expression);
+            //     const scope:FakeScope = new FakeScope();
+            //     scope.
+            //     const visitor = TLE.IncorrectFunctionArgumentCountVisitor.visit(concat, functions);
+            //     assert(visitor);
+            //     assert.deepStrictEqual(
+            //         visitor.errors,
+            //         // tslint:disable-next-line:no-any
+            //         [new IncorrectArgumentsCountIssue(new Language.Span(2, 12), "The function 'resourceId' takes at least 2 arguments.", "resourceId", 0, 2, <any>null)]);
+            // });
         });
     });
 

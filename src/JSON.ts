@@ -602,7 +602,7 @@ export class ObjectValue extends Value {
      * provided name, then undefined will be returned.
      */
     public getPropertyValue(propertyName: string): Value | null {
-        return this.propertyMap[propertyName];
+        return this.propertyMap[propertyName]; //asdf case insensitivity
     }
 
     /**

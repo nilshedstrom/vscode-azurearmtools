@@ -25,7 +25,7 @@ import { Stopwatch } from "./Stopwatch";
 import { armDeploymentDocumentSelector, mightBeDeploymentTemplate } from "./supported";
 import * as TLE from "./TLE";
 import { JsonOutlineProvider } from "./Treeview";
-import { UnrecognizedBuiltinFunctionIssue } from "./UnrecognizedFunctionIssue";
+import { UnrecognizedBuiltinFunctionIssue } from "./UnrecognizedFunctionIssues";
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed

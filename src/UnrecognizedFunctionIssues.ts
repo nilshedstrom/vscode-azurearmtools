@@ -34,7 +34,7 @@ export class UnrecognizedUserNamespaceIssue extends language.Issue {
 
 export class UnrecognizedUserFunctionIssue extends language.Issue {
     constructor(span: language.Span, private _namespaceName: string, private _functionName: string) {
-        super(span, `Unrecognized function name '${_functionName}' in namespace '${_namespaceName}'.`);
+        super(span, `Unrecognized function name '${_functionName}' in user-defined namespace '${_namespaceName}'.`);
     }
 
     public translate(movement: number): language.Issue {

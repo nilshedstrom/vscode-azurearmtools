@@ -14,14 +14,13 @@ import { DeploymentTemplate } from "./DeploymentTemplate";
 import { assert } from "./fixed_assert";
 import { Histogram } from "./Histogram";
 import { IncorrectArgumentsCountIssue } from "./IncorrectArgumentsCountIssue";
-import { InvalidFunctionContextIssue } from "./InvalidFunctionContextIssue";
 import * as Json from "./JSON";
 import * as language from "./Language";
 import { PositionContext } from "./PositionContext";
 import * as Reference from "./Reference";
-import { ITemplateScopeContext } from "./TemplateScope";
+import { ITemplateScope } from "./TemplateScope";
 import * as basic from "./Tokenizer";
-import { UnrecognizedBuiltinFunctionIssue, UnrecognizedUserFunctionIssue, UnrecognizedUserNamespaceIssue } from "./UnrecognizedFunctionIssue";
+import { UnrecognizedBuiltinFunctionIssue, UnrecognizedUserFunctionIssue, UnrecognizedUserNamespaceIssue } from "./UnrecognizedFunctionIssues";
 import * as Utilities from "./Utilities";
 
 export function asStringValue(value: Value | null): StringValue | null {
@@ -376,7 +375,7 @@ export class FunctionCallValue extends ParentValue {
     }
 
     public accept(visitor: Visitor): void {
-        visitor.visitFunction(this);
+        visitor.visitFunctionCall(this);
     }
 
     public toString(): string {
@@ -589,7 +588,7 @@ export abstract class Visitor {
         }
     }
 
-    public visitFunction(tleFunction: FunctionCallValue | null): void {
+    public visitFunctionCall(tleFunction: FunctionCallValue | null): void {
         if (tleFunction) {
             for (const argumentExpression of tleFunction.argumentExpressions) {
                 if (argumentExpression) {
@@ -628,7 +627,7 @@ export class FunctionCountVisitor extends Visitor {
         return this._functionCounts;
     }
 
-    public visitFunction(tleFunction: FunctionCallValue): void {
+    public visitFunctionCall(tleFunction: FunctionCallValue): void {
         // Log count for both "func" and "func(<args-count>)"
         assert(tleFunction.argumentExpressions);
         // tslint:disable-next-line: strict-boolean-expressions
@@ -639,7 +638,7 @@ export class FunctionCountVisitor extends Visitor {
         this._functionCounts.add(functionName);
         this._functionCounts.add(functionNameWithArgs);
 
-        super.visitFunction(tleFunction);
+        super.visitFunctionCall(tleFunction);
     }
 
     public static visit(tleValue: Value | null): FunctionCountVisitor {
@@ -657,7 +656,7 @@ export class FunctionCountVisitor extends Visitor {
 export class UndefinedParameterAndVariableVisitor extends Visitor {
     private _errors: language.Issue[] = [];
 
-    constructor(private _deploymentTemplate: DeploymentTemplate, private _scope: ITemplateScopeContext) {
+    constructor(private _deploymentTemplate: DeploymentTemplate, _scope: ITemplateScope) { //asdf
         super();
 
         assert(_deploymentTemplate !== null, "_deploymentTemplate cannot be null");
@@ -678,19 +677,20 @@ export class UndefinedParameterAndVariableVisitor extends Visitor {
         }
 
         if (tleString.isVariablesArgument()) {
-            if (this._scope.isInUserFunction()) {
-                this._errors.push(
-                    new InvalidFunctionContextIssue(
-                        tleString.token.span,
-                        'variables',
-                        "Variables are not accessible inside of a user-defined function"));
-            } else if (!this._deploymentTemplate.getVariableDefinition(quotedStringValue)) {
+            // if (this._scope.isInUserFunction()) {
+            //     this._errors.push(
+            //         new InvalidFunctionContextIssue(
+            //             tleString.token.span,
+            //             'variables',
+            //             "Variables are not accessible inside of a user-defined function")); //asdf
+            // else
+            if (!this._deploymentTemplate.getVariableDefinition(quotedStringValue)) {
                 this._errors.push(new language.Issue(tleString.token.span, `Undefined variable reference: ${quotedStringValue}`));
             }
         }
     }
 
-    public static visit(tleValue: Value | null, deploymentTemplate: DeploymentTemplate, scope: ITemplateScopeContext): UndefinedParameterAndVariableVisitor {
+    public static visit(tleValue: Value | null, deploymentTemplate: DeploymentTemplate, scope: ITemplateScope): UndefinedParameterAndVariableVisitor { //asdf
         const visitor = new UndefinedParameterAndVariableVisitor(deploymentTemplate, scope);
         if (tleValue) {
             tleValue.accept(visitor);
@@ -713,7 +713,7 @@ export class UnrecognizedFunctionVisitor extends Visitor {
         return this._errors;
     }
 
-    public visitFunction(tleFunction: FunctionCallValue): void {
+    public visitFunctionCall(tleFunction: FunctionCallValue): void {
         const functionName: string = tleFunction.nameToken.stringValue;
 
         if (tleFunction.namespaceToken) {
@@ -721,24 +721,26 @@ export class UnrecognizedFunctionVisitor extends Visitor {
             const namespaceName: string = tleFunction.namespaceToken.stringValue;
             const namespaceSpan: language.Span = tleFunction.namespaceToken.span;
 
-            let namespaceDefinition = this._deploymentTemplate.getNamespaceDefinition(namespaceName);
+            let namespaceDefinition = this._deploymentTemplate.getFunctionNamespaceDefinition(namespaceName);
             if (!namespaceDefinition) {
-                this._errors.push(new UnrecognizedUserNamespaceIssue(namespaceSpan, namespaceName));
+                // Namespace not found
+                this._errors.push(new UnrecognizedUserNamespaceIssue(namespaceSpan, namespaceName)); //testpoint
             } else {
-                let funcDefinition = namespaceDefinition.getFunctionDefinition(functionName);
+                // Name not found within namespace
+                let funcDefinition = namespaceDefinition.getMemberDefinition(functionName);
                 if (!funcDefinition) {
-                    this._errors.push(new UnrecognizedUserFunctionIssue(tleFunction.nameToken.span, namespaceName, functionName));
+                    this._errors.push(new UnrecognizedUserFunctionIssue(tleFunction.nameToken.span, namespaceName, functionName)); //testpoint
                 }
             }
         } else {
             // Built-in function
             const functionMetadata: assets.FunctionMetadata | undefined = this._tleFunctions.findbyName(functionName);
             if (!functionMetadata) {
-                this._errors.push(new UnrecognizedBuiltinFunctionIssue(tleFunction.nameToken.span, functionName));
+                this._errors.push(new UnrecognizedBuiltinFunctionIssue(tleFunction.nameToken.span, functionName)); //testpoint
             }
         }
 
-        super.visitFunction(tleFunction);
+        super.visitFunctionCall(tleFunction);
     }
 
     public static visit(
@@ -769,50 +771,56 @@ export class IncorrectFunctionArgumentCountVisitor extends Visitor {
         return this._errors;
     }
 
-    public visitFunction(tleFunction: FunctionCallValue): void {
-        const parsedFunctionName: string = tleFunction.nameToken.stringValue;
-        let functionMetadata: assets.FunctionMetadata | undefined = this._tleFunctions.findbyName(parsedFunctionName);
-        if (functionMetadata) {
-            const actualFunctionName: string = functionMetadata.name;
+    public visitFunctionCall(tleFunction: FunctionCallValue): void {
+        if (tleFunction.namespaceToken) {
+            // User-defined function call
+            //asdf todo
+        } else {
+            // Built-in function call
+            const parsedFunctionName: string = tleFunction.nameToken.stringValue;
+            let functionMetadata: assets.FunctionMetadata | undefined = this._tleFunctions.findbyName(parsedFunctionName);
+            if (functionMetadata) {
+                const actualFunctionName: string = functionMetadata.name;
 
-            const minimumArguments: number = functionMetadata.minimumArguments;
-            // tslint:disable-next-line:max-line-length
-            assert(minimumArguments !== null && minimumArguments !== undefined, `TLE function metadata for '${actualFunctionName}' has a null or undefined minimum argument value.`);
+                const minimumArguments: number = functionMetadata.minimumArguments;
+                // tslint:disable-next-line:max-line-length
+                assert(minimumArguments !== null && minimumArguments !== undefined, `TLE function metadata for '${actualFunctionName}' has a null or undefined minimum argument value.`);
 
-            const maximumArguments: number = functionMetadata.maximumArguments;
-            assert(tleFunction.argumentExpressions);
-            const functionCallArgumentCount: number = tleFunction.argumentExpressions.length;
+                const maximumArguments: number = functionMetadata.maximumArguments;
+                assert(tleFunction.argumentExpressions);
+                const functionCallArgumentCount: number = tleFunction.argumentExpressions.length;
 
-            let message: string | undefined;
-            if (minimumArguments === maximumArguments) {
-                if (functionCallArgumentCount !== minimumArguments) {
-                    message = `The function '${actualFunctionName}' takes ${minimumArguments} ${this.getArgumentsString(minimumArguments)}.`;
+                let message: string | undefined;
+                if (minimumArguments === maximumArguments) {
+                    if (functionCallArgumentCount !== minimumArguments) {
+                        message = `The function '${actualFunctionName}' takes ${minimumArguments} ${this.getArgumentsString(minimumArguments)}.`;
+                    }
+                } else if (maximumArguments === null || maximumArguments === undefined) {
+                    if (functionCallArgumentCount < minimumArguments) {
+                        message = `The function '${actualFunctionName}' takes at least ${minimumArguments} ${this.getArgumentsString(minimumArguments)}.`;
+                    }
+                } else {
+                    assert(minimumArguments < maximumArguments);
+                    if (functionCallArgumentCount < minimumArguments || maximumArguments < functionCallArgumentCount) {
+                        // tslint:disable-next-line:max-line-length
+                        message = `The function '${actualFunctionName}' takes between ${minimumArguments} and ${maximumArguments} ${this.getArgumentsString(maximumArguments)}.`;
+                    }
                 }
-            } else if (maximumArguments === null || maximumArguments === undefined) {
-                if (functionCallArgumentCount < minimumArguments) {
-                    message = `The function '${actualFunctionName}' takes at least ${minimumArguments} ${this.getArgumentsString(minimumArguments)}.`;
-                }
-            } else {
-                assert(minimumArguments < maximumArguments);
-                if (functionCallArgumentCount < minimumArguments || maximumArguments < functionCallArgumentCount) {
-                    // tslint:disable-next-line:max-line-length
-                    message = `The function '${actualFunctionName}' takes between ${minimumArguments} and ${maximumArguments} ${this.getArgumentsString(maximumArguments)}.`;
-                }
-            }
 
-            if (message) {
-                let issue = new IncorrectArgumentsCountIssue(
-                    tleFunction.getSpan(),
-                    message,
-                    actualFunctionName,
-                    tleFunction.argumentExpressions.length,
-                    functionMetadata.minimumArguments,
-                    functionMetadata.maximumArguments);
-                this._errors.push(issue);
+                if (message) {
+                    let issue = new IncorrectArgumentsCountIssue(
+                        tleFunction.getSpan(),
+                        message,
+                        actualFunctionName,
+                        tleFunction.argumentExpressions.length,
+                        functionMetadata.minimumArguments,
+                        functionMetadata.maximumArguments);
+                    this._errors.push(issue);
+                }
             }
         }
 
-        super.visitFunction(tleFunction);
+        super.visitFunctionCall(tleFunction);
     }
 
     private getArgumentsString(argumentCount: number): string {
@@ -956,7 +964,7 @@ export class FunctionSignatureHelp {
  */
 export class Parser {
     // Handles any JSON string, not just those that are actually TLE expressions beginning with bracket
-    public static parse(stringValue: string, scope: ITemplateScopeContext): ParseResult {
+    public static parse(stringValue: string, scope: ITemplateScope): ParseResult {
         assert(stringValue, "TLE strings cannot be null.");
         assert(1 <= stringValue.length, "TLE strings must be at least 1 character.");
         assert(Utilities.isQuoteCharacter(stringValue[0]), "The first character in a TLE string must be a quote character.");
@@ -1260,7 +1268,7 @@ export class ParseResult {
         private _expression: Value | null,
         private _rightSquareBracketToken: Token | null,
         private _errors: language.Issue[],
-        _scope: ITemplateScopeContext //asdf
+        _scope: ITemplateScope //asdf
     ) {
         assert(_errors);
     }

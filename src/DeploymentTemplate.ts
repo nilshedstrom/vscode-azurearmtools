@@ -6,17 +6,17 @@ import { AzureRMAssets, FunctionsMetadata } from "./AzureRMAssets";
 import { CachedPromise } from "./CachedPromise";
 import { CachedValue } from "./CachedValue";
 import { assert } from "./fixed_assert";
-import { FunctionDefinition } from "./FunctionDefinition";
 import { Histogram } from "./Histogram";
 import * as Json from "./JSON";
 import * as language from "./Language";
-import { NamespaceDefinition } from "./NamespaceDefinition";
 import { ParameterDefinition } from "./ParameterDefinition";
 import { PositionContext } from "./PositionContext";
 import * as Reference from "./Reference";
 import { isArmSchema } from "./supported";
-import { ITemplateScope, TemplateScope, TemplateScopeContext } from "./TemplateScope";
+import { ITemplateScope, TemplateScope } from "./TemplateScope";
 import * as TLE from "./TLE";
+import { UserFunctionDefinition } from "./UserFunctionDefinition";
+import { UserFunctionNamespaceDefinition } from "./UserFunctionNamespaceDefinition";
 import * as Utilities from "./Utilities";
 import { GenericStringVisitor } from "./visitors/GenericStringVisitor";
 import { ReferenceInVariableDefinitionJSONVisitor } from "./visitors/ReferenceInVariableDefinitionJSONVisitor";
@@ -34,10 +34,6 @@ export class DeploymentTemplate {
 
     // A list of parse results for every quoted string in the template
     private _tleParseResults: CachedValue<TLE.ParseResult[]> = new CachedValue<TLE.ParseResult[]>();
-
-    // The "functions" section (which is an array of namespace definitions)
-    // https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-authoring-templates#functions
-    private _namespaceDefinitions: CachedValue<NamespaceDefinition[]> = new CachedValue<NamespaceDefinition[]>();
 
     // All errors and warnings in the template
     private _errors: CachedPromise<language.Issue[]> = new CachedPromise<language.Issue[]>();
@@ -105,7 +101,8 @@ export class DeploymentTemplate {
                 // Parse the string as a possible TLE expression
                 let tleParseResult: TLE.ParseResult = TLE.Parser.parse(
                     jsonQuotedStringToken.toString(),
-                    new TemplateScopeContext(this, stringValue)); // asdf
+                    this._topLevelScope // asdf new TemplateScopeContext(this, stringValue));
+                );
 
                 // Cache the results of this parse by the string's value // asdf: can't map by string value, they might be in different scopes, getting different results.  Need to cache by string and scope
                 this._quotedStringToTleParseResultMap[jsonQuotedStringToken.toString()] = tleParseResult;
@@ -190,26 +187,30 @@ export class DeploymentTemplate {
                             }
 
                             const tleExpression: TLE.Value | null = tleParseResult.expression;
-                            //asdf
-                            // const tleUndefinedParameterAndVariableVisitor =
-                            //     TLE.UndefinedParameterAndVariableVisitor.visit(
-                            //         tleExpression,
-                            //         this,
-                            //         new Scope(jsonQuotedStringToken)); //asdf
-                            // for (const error of tleUndefinedParameterAndVariableVisitor.errors) {
-                            //     parseErrors.push(error.translate(jsonTokenStartIndex));
-                            // }
 
+                            // Undefined parameter/variable references
+                            const tleUndefinedParameterAndVariableVisitor =
+                                TLE.UndefinedParameterAndVariableVisitor.visit(
+                                    tleExpression,
+                                    this,
+                                    this.topLevelScope); //asdf
+                            for (const error of tleUndefinedParameterAndVariableVisitor.errors) {
+                                parseErrors.push(error.translate(jsonTokenStartIndex));
+                            }
+
+                            // Unrecognized function calls
                             const tleUnrecognizedFunctionVisitor = TLE.UnrecognizedFunctionVisitor.visit(this, tleExpression, functions);
                             for (const error of tleUnrecognizedFunctionVisitor.errors) {
                                 parseErrors.push(error.translate(jsonTokenStartIndex));
                             }
 
+                            // Incorrect number of function arguments
                             const tleIncorrectArgumentCountVisitor = TLE.IncorrectFunctionArgumentCountVisitor.visit(tleExpression, functions);
                             for (const error of tleIncorrectArgumentCountVisitor.errors) {
                                 parseErrors.push(error.translate(jsonTokenStartIndex));
                             }
 
+                            // Undefined variable properties
                             const tleUndefinedVariablePropertyVisitor = TLE.UndefinedVariablePropertyVisitor.visit(tleExpression, this);
                             for (const error of tleUndefinedVariablePropertyVisitor.errors) {
                                 parseErrors.push(error.translate(jsonTokenStartIndex));
@@ -227,6 +228,7 @@ export class DeploymentTemplate {
                             );
                             variablesObject.accept(referenceInVariablesFinder);
 
+                            // Can't call reference() inside variable definitions //asdf scopes
                             for (const referenceSpan of referenceInVariablesFinder.referenceSpans) {
                                 parseErrors.push(
                                     new language.Issue(referenceSpan, "reference() cannot be invoked inside of a variable definition."));
@@ -325,25 +327,8 @@ export class DeploymentTemplate {
         return this._topLevelScope.variableDefinitions;
     }
 
-    public get namespaceDefinitions(): NamespaceDefinition[] {
-        return this._namespaceDefinitions.getOrCacheValue(() => {
-            const namespaceDefinitions: NamespaceDefinition[] = [];
-
-            const value: Json.ObjectValue | null = Json.asObjectValue(this._jsonParseResult.value);
-            if (value) {
-                const namespaces: Json.ArrayValue | null = Json.asArrayValue(value.getPropertyValue("functions"));
-                if (namespaces) {
-                    for (const member of namespaces.elements) {
-                        let valueObject = Json.asObjectValue(member);
-                        if (valueObject) {
-                            namespaceDefinitions.push(new NamespaceDefinition(valueObject));
-                        }
-                    }
-                }
-            }
-
-            return namespaceDefinitions;
-        });
+    public get namespaceDefinitions(): UserFunctionNamespaceDefinition[] {
+        return this._topLevelScope.namespaceDefinitions;
     }
 
     // asdf move to scope
@@ -363,17 +348,17 @@ export class DeploymentTemplate {
         return null;
     }
 
-    public getNamespaceDefinition(namespaceName: string): NamespaceDefinition | undefined {
+    public getFunctionNamespaceDefinition(namespaceName: string): UserFunctionNamespaceDefinition | undefined {
         assert(!!namespaceName, "namespaceName cannot be null, undefined, or empty");
         let namespaceNameLC = namespaceName.toLowerCase();
-        return this.namespaceDefinitions.find((nd: NamespaceDefinition) => !!nd.name && nd.name.toString().toLowerCase() === namespaceNameLC);
+        return this.namespaceDefinitions.find((nd: UserFunctionNamespaceDefinition) => nd.namespaceName.toString().toLowerCase() === namespaceNameLC);
     }
 
-    public getFunctionDefinition(namespaceName: string, functionName: string): FunctionDefinition | null {
+    public getFunctionDefinition(namespaceName: string, functionName: string): UserFunctionDefinition | null {
         assert(!!functionName, "functionName cannot be null, undefined, or empty");
-        let nd = this.getNamespaceDefinition(namespaceName);
+        let nd = this.getFunctionNamespaceDefinition(namespaceName);
         if (nd) {
-            let result = nd.getFunctionDefinition(functionName);
+            let result = nd.getMemberDefinition(functionName);
             return result ? result : null;
         }
 

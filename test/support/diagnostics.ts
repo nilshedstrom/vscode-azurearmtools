@@ -16,6 +16,7 @@ import { commands, Diagnostic, DiagnosticSeverity, Disposable, languages, TextDo
 import { diagnosticsCompletePrefix, expressionsDiagnosticsSource, getLanguageServerState, LanguageServerState, languageServerStateSource } from "../../extension.bundle";
 import { DISABLE_LANGUAGE_SERVER_TESTS } from "../testConstants";
 import { getTempFilePath } from "./getTempFilePath";
+import { stringify } from "./stringify";
 
 export const diagnosticsTimeout = 30000; // CONSIDER: Use this long timeout only for first test, or for suite setup
 export const testFolder = path.join(__dirname, '..', '..', '..', 'test');
@@ -227,7 +228,7 @@ export async function getDiagnosticsForTemplate(
     } else {
         // It's a (flying?) object
         let templateObject: Partial<IDeploymentTemplate> = templateContentsOrFileName;
-        templateContents = JSON.stringify(templateObject, undefined, 2);
+        templateContents = stringify(templateObject);
     }
 
     // Add schema if not already present (to make it easier to write tests)

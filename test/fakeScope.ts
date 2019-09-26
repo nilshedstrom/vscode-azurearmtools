@@ -3,12 +3,19 @@
 // ----------------------------------------------------------------------------
 
 import { TLE } from "../extension.bundle";
-import { ITemplateScopeContext } from "../src/TemplateScope";
+import { Property } from "../src/JSON";
+import { ParameterDefinition } from "../src/ParameterDefinition";
+import { ITemplateScope } from "../src/TemplateScope";
+import { UserFunctionNamespaceDefinition } from "../src/UserFunctionNamespaceDefinition";
 
-export class FakeScope implements ITemplateScopeContext {
-    public isInUserFunction(): boolean {
-        return false;
-    }
+export class FakeScope implements ITemplateScope {
+    public parameterDefinitions: ParameterDefinition[] = [];
+    public variableDefinitions: Property[] = [];
+    public namespaceDefinitions: UserFunctionNamespaceDefinition[] = [];
+
+    // public isInUserFunction(): boolean {
+    //     return false;
+    // }
 }
 
 export function parse(stringValue: string): TLE.ParseResult {

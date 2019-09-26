@@ -50,11 +50,11 @@ class ReferenceInVariableDefinitionTLEVisitor extends TLE.Visitor { //asdf
         return this._referenceSpans;
     }
 
-    public visitFunction(functionValue: TLE.FunctionCallValue | null): void {
+    public visitFunctionCall(functionValue: TLE.FunctionCallValue | null): void {
         if (functionValue && functionValue.doesNameMatch("", "reference")) {
             this._referenceSpans.push(functionValue.nameToken.span);
         }
 
-        super.visitFunction(functionValue);
+        super.visitFunctionCall(functionValue);
     }
 }
