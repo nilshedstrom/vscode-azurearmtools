@@ -13,6 +13,7 @@ import { UnrecognizedUserFunctionIssue, UnrecognizedUserNamespaceIssue } from ".
 import { sources, testDiagnostics } from "./support/diagnostics";
 import { stringify } from "./support/stringify";
 import { testWithLanguageServer } from "./support/testWithLanguageServer";
+import { DISABLE_SLOW_TESTS } from "./testConstants";
 
 suite("DeploymentTemplate", () => {
     suite("constructor(string)", () => {
@@ -1135,8 +1136,49 @@ suite("ReferenceInVariableDefinitionJSONVisitor", () => {
     });
 });
 
-suite("Incomplete JSON shouldn't crash parse", function (this: ISuiteCallbackContext): void {
+suite("Incomplete JSON shouldn't cause crash", function (this: ISuiteCallbackContext): void {
     this.timeout(10000);
+
+    async function exercisePositionContextAtEveryPointInTheDoc(json: string): Promise<void> {
+        await exercisePositionContextAtRandomPointsInTheDoc(json, json.length + 1); // length+1 so we include past the last character as a position
+    }
+
+    async function exercisePositionContextAtRandomPointsInTheDoc(json: string, numberOfIndicesToTest: number): Promise<void> {
+        if (DISABLE_SLOW_TESTS) {
+            // Slow tests disabled - choose fewer samples points
+            numberOfIndicesToTest = numberOfIndicesToTest / 100;
+        }
+
+        if (numberOfIndicesToTest < 1) {
+            // Take it as a probability of doing a single sample
+            if (Math.random() > numberOfIndicesToTest) {
+                return;
+            }
+        }
+
+        for (let i = 0; i < numberOfIndicesToTest; ++i) {
+            let index = i;
+            if (numberOfIndicesToTest <= json.length) {
+                index = Math.floor(Math.random() * (json.length + 1)); // length+1 so we include past the last character as a position
+            }
+
+            // console.log(`Testing index ${index}`);
+            try {
+                // Just make sure nothing throws
+                let dt = new DeploymentTemplate(json, "id");
+                let pc = dt.getContextFromDocumentCharacterIndex(index);
+                pc.references;
+                pc.signatureHelp;
+                pc.tleInfo;
+                pc.variableDefinition;
+                pc.parameterDefinition;
+                await pc.getCompletionItems();
+                await pc.hoverInfo;
+            } catch (err) {
+                throw new Error(`exercisePositionContextAtRandomPointsInTheDoc: Threw at index ${i}:\n${json.slice(i)}<***HERE***>${json.slice(i)}`);
+            }
+        }
+    }
 
     const template: string =
         `{
@@ -1248,6 +1290,8 @@ suite("Incomplete JSON shouldn't crash parse", function (this: ISuiteCallbackCon
             let partialTemplate = template.slice(0, i);
             let dt = new DeploymentTemplate(partialTemplate, "id");
             await dt.errors;
+
+            await exercisePositionContextAtRandomPointsInTheDoc(template, 0.1);
         }
     });
 
@@ -1257,6 +1301,8 @@ suite("Incomplete JSON shouldn't crash parse", function (this: ISuiteCallbackCon
             let partialTemplate = template.slice(i);
             let dt = new DeploymentTemplate(partialTemplate, "id");
             await dt.errors;
+
+            await exercisePositionContextAtRandomPointsInTheDoc(template, 0.1);
         }
     });
 
@@ -1267,7 +1313,14 @@ suite("Incomplete JSON shouldn't crash parse", function (this: ISuiteCallbackCon
             let partialTemplate = template.slice(0, i) + template.slice(i + 1);
             let dt = new DeploymentTemplate(partialTemplate, "id");
             await dt.errors;
+
+            await exercisePositionContextAtRandomPointsInTheDoc(template, 0.1);
         }
+    });
+
+    test("exercise PositionContext at every point in the full json", async () => {
+        // Just make sure nothing throws
+        await exercisePositionContextAtEveryPointInTheDoc(template);
     });
 
     test("Random modifications", async () => {
@@ -1290,6 +1343,8 @@ suite("Incomplete JSON shouldn't crash parse", function (this: ISuiteCallbackCon
 
             let dt = new DeploymentTemplate(modifiedTemplate, "id");
             await dt.errors;
+
+            await exercisePositionContextAtRandomPointsInTheDoc(template, 0.1);
         }
     });
 });

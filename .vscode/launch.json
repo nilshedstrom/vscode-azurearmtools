@@ -67,7 +67,7 @@
                 "DEBUGTELEMETRY": "1", // "1"=don't send, quiet + "verbose"=don't send + show in console
                 "NODE_DEBUG": "",
                 "DISABLE_LANGUAGE_SERVER_TESTS": "0",
-                "DISABLE_SLOW_TESTS": "0"
+                "DISABLE_SLOW_TESTS": "1"
             }
         },
         {
