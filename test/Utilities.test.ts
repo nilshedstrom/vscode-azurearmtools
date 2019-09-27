@@ -202,22 +202,45 @@ suite("Utilities", () => {
     });
 
     suite("unquote(string)", () => {
-        test("with null", () => {
-            // tslint:disable-next-line: no-any
-            assert.deepStrictEqual(Utilities.unquote(<any>null), null);
+        function testUnquote(input: string, expected: string): void {
+            test(String(input), () => {
+                assert.deepStrictEqual(Utilities.unquote(input), expected);
+            });
+        }
+        // tslint:disable-next-line: no-any
+        testUnquote(<any>null, "");
+        // tslint:disable-next-line: no-any
+        testUnquote(<any>undefined, "");
+        testUnquote("\"\"", "");
+        testUnquote("''", "");
+
+        testUnquote("\"hello\"", "hello");
+        testUnquote("'hello'", "hello");
+
+        suite("No quotes", () => {
+            testUnquote("", "");
+            testUnquote("hello", "hello");
         });
 
-        test("with undefined", () => {
-            // tslint:disable-next-line: no-any
-            assert.deepStrictEqual(Utilities.unquote(<any>undefined), undefined);
+        suite("Only end quote - don't remove end quote (string tokens should have beginning quote but might not have end quote)", () => {
+            testUnquote("hello'", "hello'");
+            testUnquote("hello\"", "hello\"");
         });
 
-        test(`with ""`, () => {
-            assert.deepStrictEqual(Utilities.quote(""), `""`);
+        suite("Mismatched quotes - only remove opening quote", () => {
+            testUnquote("\"'", "'");
+            testUnquote("'\"", "\"");
+
+            testUnquote("\"hello'", "hello'");
+            testUnquote("'hello\"", "hello\"");
         });
 
-        test(`with "hello"`, () => {
-            assert.deepStrictEqual(Utilities.quote("hello"), `"hello"`);
+        suite("Missing end quote - only remove opening quote", () => {
+            testUnquote("\"", "");
+            testUnquote("'", "");
+
+            testUnquote("\"hello", "hello");
+            testUnquote("'hello", "hello");
         });
     });
 

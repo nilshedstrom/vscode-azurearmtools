@@ -494,7 +494,7 @@ export class DeploymentTemplate {
      */
     public getTLEParseResultFromJSONToken(jsonToken: Json.Token | null): TLE.ParseResult | null {
         if (!jsonToken || jsonToken.type !== Json.TokenType.QuotedString) {
-            // Don't do a map lookup if it's not a quoted string parse //testpoint
+            // Don't do a map lookup if it's not a quoted string parse
             return null;
         }
 
