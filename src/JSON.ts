@@ -69,7 +69,10 @@ export abstract class Segment {
 }
 
 /**
- * A JSON token from a JSON string.
+ * A JSON token from a JSON string. The JSON token is made up of one or more basic tokens (for instance,
+ * a JSON string literal would be composed of the basic token representing a double quote, followed
+ * by some group of basic tokens representing groups of letters, groups of numbers, punctuation, etc.,
+ * and possibly ending with a double quote basic token).
  */
 export class Token extends Segment {
     constructor(private _type: TokenType, _startIndex: number, private _basicTokens: basic.Token[]) {
@@ -85,11 +88,17 @@ export class Token extends Segment {
         return utilities.getCombinedLength(this._basicTokens);
     }
 
+    /**
+     * Gets the original string that this token was parsed from.
+     */
     public toString(): string {
         return utilities.getCombinedText(this._basicTokens);
     }
 
-    public get debuggerDisplay(): string {
+    /**
+     * Convenient way of seeing what this token represents in the debugger, shouldn't be used for production code
+     */
+    public get debugDisplay(): string {
         return this.toString();
     }
 }
@@ -173,6 +182,8 @@ export function asBooleanValue(value: Value | null): BooleanValue | null {
 /**
  * Read a JSON quoted string from the provided tokenizer. The tokenizer must be pointing at
  * either a SingleQuote or DoubleQuote Token.
+ *
+ * Note that the returned quoted string may not end with a quote (if EOD is reached)
  */
 export function readQuotedString(iterator: utilities.Iterator<basic.Token>): basic.Token[] {
     const startingToken: basic.Token | undefined = iterator.current();

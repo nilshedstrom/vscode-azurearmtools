@@ -82,7 +82,7 @@ export class DeploymentTemplate {
     }
 
     /**
-     * Parse all JSON strings in the template and cache the resulting TLE.ParseResult.  Try to avoic
+     * Parse all JSON strings in the template and cache the resulting TLE.ParseResult.  Try to avoid
      * parsing the exact same expression string more than once for a given scope.
      * asdf Should be more lazy?
      */

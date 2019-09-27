@@ -1189,7 +1189,7 @@ suite("Incomplete JSON shouldn't crash parse", function (this: ISuiteCallbackCon
         // Just make sure nothing throws
         let modifiedTemplate = template.replace('"type": "string"', '"type": string');
         let dt = new DeploymentTemplate(modifiedTemplate, "id");
-        await dt.errors;
+        await dt.errors; // asdf test completions, etc.
     });
 
     test("typing character by character", async () => {
@@ -1205,6 +1205,15 @@ suite("Incomplete JSON shouldn't crash parse", function (this: ISuiteCallbackCon
         // Just make sure nothing throws
         for (let i = 0; i < template.length; ++i) {
             let partialTemplate = template.slice(i);
+            let dt = new DeploymentTemplate(partialTemplate, "id");
+            await dt.errors;
+        }
+    });
+
+    test("try parsing the document with a single character deleted (repeat through the whole document)", async () => {
+        // Just make sure nothing throws
+        for (let i = 0; i < template.length; ++i) {
+            let partialTemplate = template.slice(0, i) + template.slice(i + 1);
             let dt = new DeploymentTemplate(partialTemplate, "id");
             await dt.errors;
         }
