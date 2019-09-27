@@ -491,7 +491,7 @@ suite("DeploymentTemplate", () => {
         });
 
         test("with two TLE functions in different TLEs deployment template", () => {
-            const dt = new DeploymentTemplate("{ 'name': '[concat()]', 'height': '[add()]' }", "id");
+            const dt = new DeploymentTemplate(`{ "name": "[concat()]", "height": "[add()]" }`, "id");
             const expectedHistogram = new Histogram();
             expectedHistogram.add("concat");
             expectedHistogram.add("concat(0)");
@@ -499,6 +499,12 @@ suite("DeploymentTemplate", () => {
             expectedHistogram.add("add(0)");
             assert.deepStrictEqual(expectedHistogram, dt.getFunctionCounts());
             assert.deepStrictEqual(expectedHistogram, dt.getFunctionCounts());
+        });
+
+        test("with the same string repeated in multiple places (each use should get counted once, even though the strings are the exact same and may be cached)", () => {
+            const dt = new DeploymentTemplate("{ 'name': '[concat()]', 'height': '[concat()]', 'width': \"[concat()]\" }", "id");
+            assert.deepStrictEqual(3, dt.getFunctionCounts().getCount("concat(0)"));
+            assert.deepStrictEqual(3, dt.getFunctionCounts().getCount("concat"));
         });
     });
 
@@ -1192,6 +1198,50 @@ suite("Incomplete JSON shouldn't crash parse", function (this: ISuiteCallbackCon
         await dt.errors; // asdf test completions, etc.
     });
 
+    test("Unended string", async () => {
+        const json = "{ \"";
+        let dt = new DeploymentTemplate(json, "id");
+        await dt.errors;
+        dt.getFunctionCounts();
+    });
+
+    test("No top-level object", async () => {
+        const json = "\"hello\"";
+        let dt = new DeploymentTemplate(json, "id");
+        await dt.errors;
+        dt.getFunctionCounts();
+    });
+
+    test("Malformed property name", async () => {
+        const json = `
+        {
+            "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+            "contentVersion": "1.0.0.0",
+            : {
+                "nsgId": "something",
+                "vnetId": "[resourceId(resourceGrou2p().name,'Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
+                "subnetRef": "[concat(variables('vne2tId'), '/subnets/', parameters('subnetName'))]"
+            }
+        }`;
+        const dt = new DeploymentTemplate(json, "id");
+        await dt.errors;
+    });
+
+    test("Malformed property", async () => {
+        const json = `
+        {
+            "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+            "contentVersion": "1.0.0.0",
+            /*missing prop name and colon*/ {
+                "nsgId": "something",
+                "vnetId": "[resourceId(resourceGrou2p().name,'Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
+                "subnetRef": "[concat(variables('vne2tId'), '/subnets/', parameters('subnetName'))]"
+            }
+        }`;
+        const dt = new DeploymentTemplate(json, "id");
+        await dt.errors;
+    });
+
     test("typing character by character", async () => {
         // Just make sure nothing throws
         for (let i = 0; i < template.length; ++i) {
@@ -1213,6 +1263,7 @@ suite("Incomplete JSON shouldn't crash parse", function (this: ISuiteCallbackCon
     test("try parsing the document with a single character deleted (repeat through the whole document)", async () => {
         // Just make sure nothing throws
         for (let i = 0; i < template.length; ++i) {
+            // Remove the single character at position i
             let partialTemplate = template.slice(0, i) + template.slice(i + 1);
             let dt = new DeploymentTemplate(partialTemplate, "id");
             await dt.errors;

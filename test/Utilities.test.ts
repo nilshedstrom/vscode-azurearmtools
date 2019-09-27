@@ -201,6 +201,26 @@ suite("Utilities", () => {
         });
     });
 
+    suite("unquote(string)", () => {
+        test("with null", () => {
+            // tslint:disable-next-line: no-any
+            assert.deepStrictEqual(Utilities.unquote(<any>null), null);
+        });
+
+        test("with undefined", () => {
+            // tslint:disable-next-line: no-any
+            assert.deepStrictEqual(Utilities.unquote(<any>undefined), undefined);
+        });
+
+        test(`with ""`, () => {
+            assert.deepStrictEqual(Utilities.quote(""), `""`);
+        });
+
+        test(`with "hello"`, () => {
+            assert.deepStrictEqual(Utilities.quote("hello"), `"hello"`);
+        });
+    });
+
     suite("escape(string)", () => {
         test("with null", () => {
             assert.deepStrictEqual(Utilities.escape(null), null);

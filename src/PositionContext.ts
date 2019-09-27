@@ -124,6 +124,9 @@ export class PositionContext {
         return this.jsonToken!.span.startIndex;
     }
 
+    /**
+     * Retrieves TleInfo for the current position if it's inside a string
+     */
     public get tleInfo(): TleInfo | null {
         return this._tleInfo.getOrCacheValue(() => {
             const tleParseResult = this._deploymentTemplate.getTLEParseResultFromJSONToken(this.jsonToken);

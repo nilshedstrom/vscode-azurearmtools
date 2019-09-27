@@ -7,6 +7,11 @@
 // tslint:disable:function-name // Grandfathered in
 // tslint:disable:cyclomatic-complexity // Grandfathered in
 
+// CONSIDER: This parser makes the incorrect assumption that JSON strings can be enclosed by either
+//   single or double quotes.  JSON only allows double quotes.
+// Because the JSON/ARM parsers catch these errors, it doesn't make too much difference for the end user
+//   so might not be worth fixing.
+
 import { assert } from "./fixed_assert";
 import * as language from "./Language";
 import * as basic from "./Tokenizer";
@@ -563,6 +568,13 @@ export abstract class Value {
      * A user-friendly string that represents this value, suitable for display in a label, etc.
      */
     public abstract toFriendlyString(): string;
+
+    /**
+     * Convenient way of seeing what this token represents in the debugger, shouldn't be used for production code
+     */
+    public get debugDisplay(): string {
+        return this.toString();
+    }
 }
 
 /**

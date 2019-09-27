@@ -60,6 +60,10 @@ export function unquote(value: string): string {
     let result = value;
 
     if (result) {
+        if (!isQuoteCharacter(result[0]) && isQuoteCharacter(result[result.length - 1])) {
+            assert(false); //asdf testpoint - I don't think we need this scenario
+        }
+
         if (isQuoteCharacter(result[0])) {
             result = result.substr(1);
         }
