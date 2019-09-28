@@ -27,13 +27,14 @@ export class TemplateScope implements ITemplateScope {
      * the "parameters" and "variables" properties, or else null if none
      * (if the deployment template is malformed, there may be no top-level object)
      */
-    constructor(private _scopeObjectValue: Json.ObjectValue | null) {
+    constructor(private _scopeObjectValue: Json.ObjectValue | null, private _owner?: ITemplateScope) {
     }
 
     public get parameterDefinitions(): ParameterDefinition[] {
         return this._parameterDefinitions.getOrCacheValue(() => {
             const parameterDefinitions: ParameterDefinition[] = []; //testpoint
 
+            // asdf Merge with outer scope?
             if (this._scopeObjectValue) {
                 const parameters: Json.ObjectValue | null = Json.asObjectValue(this._scopeObjectValue.getPropertyValue("parameters")); //testpoint
                 if (parameters) {
@@ -50,6 +51,11 @@ export class TemplateScope implements ITemplateScope {
     // asdf just repeat those from the owner
     public get variableDefinitions(): Json.Property[] {
         return this._variableDefinitions.getOrCacheValue(() => {
+            if (this._owner) {
+                // The "variables" section is only valid at the top level of the deployment
+                return this._owner.variableDefinitions;
+            }
+
             if (this._scopeObjectValue) {
                 const variables: Json.ObjectValue | null = Json.asObjectValue(this._scopeObjectValue.getPropertyValue("variables")); //testpoint
                 if (variables) {
@@ -64,6 +70,11 @@ export class TemplateScope implements ITemplateScope {
     // asdf just repeat those from the owner
     public get namespaceDefinitions(): UserFunctionNamespaceDefinition[] {
         return this._namespaceDefinitions.getOrCacheValue(() => {
+            if (this._owner) {
+                // The "function" section is only valid at the top level of the deployment
+                return this._owner.namespaceDefinitions;
+            }
+
             const namespaceDefinitions: UserFunctionNamespaceDefinition[] = [];
 
             // Example:
