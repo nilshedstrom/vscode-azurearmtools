@@ -33,8 +33,7 @@ export class DeploymentTemplate {
 
     // A map from all quoted string values (not including the surrounding quotes) to the
     //   cached TLE parse, if the string is found in a valid portion of the document tree.
-    // asdf change to a real map
-    private _quotedStringToTleParseResultMap: CachedValue<{ [key: string]: TLE.ParseResult | undefined }> = new CachedValue<{ [key: string]: TLE.ParseResult | undefined }>();
+    private _quotedStringToTleParseResultMap: CachedValue<Map<string, TLE.ParseResult>> = new CachedValue<Map<string, TLE.ParseResult>>();
 
     // All errors and warnings in the template
     private _errors: CachedPromise<language.Issue[]> = new CachedPromise<language.Issue[]>();
@@ -68,7 +67,7 @@ export class DeploymentTemplate {
     /**
      * A list of all JSON tokens in the template that represent quoted strings
      */
-    private get quotedStringJsonTokens(): Json.Token[] {
+    private get jsonQuotedStringTokens(): Json.Token[] {
         return this._jsonQuotedStringTokens.getOrCacheValue(() => {
             const jsonQuotedStringTokens: Json.Token[] = [];
 
@@ -90,47 +89,41 @@ export class DeploymentTemplate {
      *
      * asdf Should be more lazy?
      */
-    private get quotedStringToTleParseResultMap(): { [key: string]: TLE.ParseResult | undefined } {
+    private get quotedStringToTleParseResultMap(): Map<string, TLE.ParseResult> {
         return this._quotedStringToTleParseResultMap.getOrCacheValue(() => {
-            const quotedStringToTleParseResultMap: { [key: string]: TLE.ParseResult | undefined } = {};
+            const quotedStringToTleParseResultMap = new Map<string, TLE.ParseResult>();
 
-            // NOTE: Since we're visiting by following valid branches of the parse tree, we may not traverse all JSON string tokens in the text
-            if (this.jsonParseResult.value) {
-                let visitor = new GenericStringVisitor((stringValue: Json.StringValue): void => {
-                    // asdf better way to go from Json.Value to Json.Token?
-                    // Wny not just use the string value from the Json.Value?
-                    let jsonQuotedStringToken: Json.Token | null = this.getJSONTokenAtDocumentCharacterIndex(stringValue.span.startIndex);
-                    assert(!!jsonQuotedStringToken, "Expected token at this location, because the location came from a StringValue from the JSON parse");
+            for (let jsonQuotedStringToken of this.jsonQuotedStringTokens) {
+                let tleParseResult: TLE.ParseResult = TLE.Parser.parse(jsonQuotedStringToken.toString(), this.topLevelScope);
+                // Cache the results of this parse by the string's value // asdf: can't map by string value, they might be in different scopes, getting different results.  Need to cache by string and scope
+                const unquoted: string = Utilities.unquote(jsonQuotedStringToken.toString()); // not positive about this - "\"" is turning into empty string
+                quotedStringToTleParseResultMap.set(unquoted, tleParseResult);
 
-                    // tslint:disable-next-line:no-non-null-assertion // Asserted
-                    jsonQuotedStringToken = jsonQuotedStringToken!;
-                    assert(jsonQuotedStringToken.type === Json.TokenType.QuotedString, "Expected quoted string token");
+                // // NOTE: Since we're visiting by following valid branches of the parse tree, we may not traverse all JSON string tokens in the text
+                // if (this.jsonParseResult.value) {
+                //     let visitor = new GenericStringVisitor((stringValue: Json.StringValue): void => {
+                //         // asdf better way to go from Json.Value to Json.Token?
+                //         // Wny not just use the string value from the Json.Value?
+                //         let jsonQuotedStringToken: Json.Token | null = this.getJSONTokenAtDocumentCharacterIndex(stringValue.span.startIndex);
+                //         assert(!!jsonQuotedStringToken, "Expected token at this location, because the location came from a StringValue from the JSON parse");
 
-                    // Parse the string as a possible TLE expression
-                    let tleParseResult: TLE.ParseResult = TLE.Parser.parse(
-                        jsonQuotedStringToken.toString(),
-                        this._topLevelScope // asdf new TemplateScopeContext(this, stringValue));
-                    );
+                //         // tslint:disable-next-line:no-non-null-assertion // Asserted
+                //         jsonQuotedStringToken = jsonQuotedStringToken!;
+                //         assert(jsonQuotedStringToken.type === Json.TokenType.QuotedString, "Expected quoted string token");
 
-                    // Cache the results of this parse by the string's value without the quotes
-                    // asdf: can't map by string value, they might be in different scopes, getting different results.  Need to cache by string and scope
-                    const unquoted = Utilities.unquote(jsonQuotedStringToken.toString());
-                    quotedStringToTleParseResultMap[unquoted] = tleParseResult; // Don't parse if already done so
-                });
-                this.jsonParseResult.value.accept(visitor);
+                //         // Parse the string as a possible TLE expression
+                //         let tleParseResult: TLE.ParseResult = TLE.Parser.parse(
+                //             jsonQuotedStringToken.toString(),
+                //             this._topLevelScope // asdf new TemplateScopeContext(this, stringValue));
+                //         );
+
+                //         // Cache the results of this parse by the string's value without the quotes
+                //         // asdf: can't map by string value, they might be in different scopes, getting different results.  Need to cache by string and scope
+                //         const unquoted = Utilities.unquote(jsonQuotedStringToken.toString());
+                //         quotedStringToTleParseResultMap.set(unquoted, tleParseResult); // asdf Don't parse if already done so
+                //     });
+                //     this.jsonParseResult.value.accept(visitor);
             }
-
-            // for (let jsonQuotedStringToken of this.quotedStringJsonTokens) {
-            //     let parseResult = this._quotedStringToTleParseResultMap[jsonQuotedStringToken.toString()];
-            //     assert(!!parseResult, "Missed a quoted string token");
-
-            //     // let jsonValue = this.getJSONValueAtDocumentCharacterIndex(jsonQuotedStringToken.span.startIndex);
-            //     // assert(jsonValue);
-            //     // let tleParseResult: TLE.ParseResult = TLE.Parser.parse(jsonQuotedStringToken.toString(), new Scope(this, jsonValue)); // asdf
-            //     // if (tleParseResult) {
-            //     //     this._quotedStringToTleParseResultMap[jsonQuotedStringToken.toString()] = tleParseResult;
-            //     // }
-            // }
 
             return quotedStringToTleParseResultMap;
         });
@@ -171,7 +164,7 @@ export class DeploymentTemplate {
                 try {
                     let functions: FunctionsMetadata = await AzureRMAssets.getFunctionsMetadata();
                     const parseErrors: language.Issue[] = [];
-                    for (const jsonQuotedStringToken of this.quotedStringJsonTokens) {
+                    for (const jsonQuotedStringToken of this.jsonQuotedStringTokens) {
                         const jsonTokenStartIndex: number = jsonQuotedStringToken.span.startIndex;
 
                         const tleParseResult: TLE.ParseResult | null = this.getTLEParseResultFromJSONToken(jsonQuotedStringToken);
@@ -490,7 +483,7 @@ export class DeploymentTemplate {
     }
 
     /**
-     * Can return null if the token is not in a valid portion of the template (e.g. there's no top-level object)
+     * Can return null if the token is not in a valid portion of the template (e.g. there's no top-level object)asdf
      */
     public getTLEParseResultFromJSONToken(jsonToken: Json.Token | null): TLE.ParseResult | null {
         if (!jsonToken || jsonToken.type !== Json.TokenType.QuotedString) {
@@ -503,20 +496,27 @@ export class DeploymentTemplate {
     }
 
     /**
-     * Can return null if the string is not in a valid portion of the template (e.g. there's no top-level object)
+     * Can return null if the string is not in a valid portion of the template (e.g. there's no top-level object) asdf
      */
     public getTLEParseResultFromJSONStringValue(jsonStringValue: Json.StringValue | null): TLE.ParseResult | null {
-        return jsonStringValue ? this.getTLEParseResultFromString(jsonStringValue.toString()) : null;
+        if (!jsonStringValue) {
+            return null;
+        }
+
+        const result = this.getTLEParseResultFromString(jsonStringValue.toString());
+        assert(result); // asdf why would this be null?  - probably best to be safe and remove this assert
+        return result;
     }
 
     /**
-     * Can return null if the string is not in a valid portion of the template (e.g. there's no top-level object)
+     * Can return null if the string is not in a valid portion of the template (e.g. there's no top-level object)asdf
      */
     private getTLEParseResultFromString(value: string): TLE.ParseResult | null {
         let result: TLE.ParseResult | undefined;
-        if (value) {
-            result = this.quotedStringToTleParseResultMap[value];
+        if (typeof value === "string") {
+            result = this.quotedStringToTleParseResultMap.get(value);
         }
+
         return result ? result : null;
     }
 
@@ -544,7 +544,7 @@ export class DeploymentTemplate {
                     break;
             }
 
-            for (const jsonStringToken of this.quotedStringJsonTokens) {
+            for (const jsonStringToken of this.jsonQuotedStringTokens) {
                 const tleParseResult: TLE.ParseResult | null = this.getTLEParseResultFromJSONToken(jsonStringToken);
                 if (tleParseResult && tleParseResult.expression) {
                     const visitor = TLE.FindReferencesVisitor.visit(tleParseResult.expression, referenceType, referenceName);
