@@ -31,8 +31,8 @@ export class DeploymentTemplate {
     // A list of all JSON tokens in the template that represent quoted strings
     private _jsonQuotedStringTokens: CachedValue<Json.Token[]> = new CachedValue<Json.Token[]>();
 
-    // A map from all quoted string values (not including the surrounding quotes) to the
-    //   cached TLE parse, if the string is found in a valid portion of the document tree.
+    // A map from all quoted string values (not including the surrounding quotes) to their
+    //   cached TLE parse results.
     private _quotedStringToTleParseResultMap: CachedValue<Map<string, TLE.ParseResult>> = new CachedValue<Map<string, TLE.ParseResult>>();
 
     // All errors and warnings in the template
@@ -82,12 +82,12 @@ export class DeploymentTemplate {
     }
 
     /**
-     * Parse all JSON strings in valid portions of the template and cache the resulting TLE.ParseResult.
+     * Parses all JSON strings in the template and cache the resulting TLE.ParseResult.
      * Tries to avoid parsing the exact same expression string more than once for a given scope.
-     *
-     * NOTE: JSON strings in invalid portions of the temlpate may not traverse end up in this map
+     * Returns a map that maps from the unquoted string to the parse result.
      *
      * asdf Should be more lazy?
+     * asdf should it map from the token instead?
      */
     private get quotedStringToTleParseResultMap(): Map<string, TLE.ParseResult> {
         return this._quotedStringToTleParseResultMap.getOrCacheValue(() => {
@@ -482,9 +482,6 @@ export class DeploymentTemplate {
         return PositionContext.fromDocumentCharacterIndex(this, documentCharacterIndex);
     }
 
-    /**
-     * Can return null if the token is not in a valid portion of the template (e.g. there's no top-level object)asdf
-     */
     public getTLEParseResultFromJSONToken(jsonToken: Json.Token | null): TLE.ParseResult | null {
         if (!jsonToken || jsonToken.type !== Json.TokenType.QuotedString) {
             // Don't do a map lookup if it's not a quoted string parse
@@ -495,28 +492,17 @@ export class DeploymentTemplate {
         return this.getTLEParseResultFromString(unquoted);
     }
 
-    /**
-     * Can return null if the string is not in a valid portion of the template (e.g. there's no top-level object) asdf
-     */
-    public getTLEParseResultFromJSONStringValue(jsonStringValue: Json.StringValue | null): TLE.ParseResult | null {
-        if (!jsonStringValue) {
-            return null;
-        }
-
+    // Note: I don't think this should ever return null, but being defensive for now
+    public getTLEParseResultFromJSONStringValue(jsonStringValue: Json.StringValue): TLE.ParseResult | null {
         const result = this.getTLEParseResultFromString(jsonStringValue.toString());
-        assert(result); // asdf why would this be null?  - probably best to be safe and remove this assert
         return result;
     }
 
-    /**
-     * Can return null if the string is not in a valid portion of the template (e.g. there's no top-level object)asdf
-     */
+    // Note: I don't think this should ever return null (unless not a string), but being defensive for now
     private getTLEParseResultFromString(value: string): TLE.ParseResult | null {
-        let result: TLE.ParseResult | undefined;
-        if (typeof value === "string") {
-            result = this.quotedStringToTleParseResultMap.get(value);
-        }
-
+        assert(typeof value === "string");
+        const result: TLE.ParseResult | undefined = this.quotedStringToTleParseResultMap.get(value);
+        assert(result); // asdf why would this be null?  - probably best to be safe and remove this assert
         return result ? result : null;
     }
 
