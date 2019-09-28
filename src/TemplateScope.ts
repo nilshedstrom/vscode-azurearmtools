@@ -14,13 +14,10 @@ export interface ITemplateScope {
 }
 
 export class TemplateScope implements ITemplateScope {
-    // At least one of these must be non-null
-    // asdf private _deploymentTemplate: DeploymentTemplate | null;
-    // private _scopeObjectValue: Json.ObjectValue | null;
-
     private _parameterDefinitions: CachedValue<ParameterDefinition[]> = new CachedValue<ParameterDefinition[]>();
     private _variableDefinitions: CachedValue<Json.Property[]> = new CachedValue<Json.Property[]>();
-    // The "functions" section (which is an array of namespace definitions)
+
+    // Represents the "functions" section (which is an array of namespace definitions)
     // https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-authoring-templates#functions
     private _namespaceDefinitions: CachedValue<UserFunctionNamespaceDefinition[]> = new CachedValue<UserFunctionNamespaceDefinition[]>();
 
@@ -28,7 +25,7 @@ export class TemplateScope implements ITemplateScope {
      * Constructor
      * @param scopeObjectValue The JSON object representing this scope (i.e., containing
      * the "parameters" and "variables" properties, or else null if none
-     * (if the deployment template is malformed, there may be no top-level object)asdf
+     * (if the deployment template is malformed, there may be no top-level object)
      */
     constructor(private _scopeObjectValue: Json.ObjectValue | null) {
     }
@@ -110,19 +107,3 @@ export class TemplateScope implements ITemplateScope {
         });
     }
 }
-
-// export interface ITemplateScopeContext { // asdf remove
-//     isInUserFunction(): boolean;
-// }
-
-// export class TemplateScopeContext {
-//     constructor(_template: DeploymentTemplate, _value: Json.Value) {
-//         //assert(_token.type === Json.TokenType.QuotedString, "Scope token must be the quoted string that contains the expression");
-//         assert(_template); //testpoint
-//         assert(_value);
-//     }
-
-//     public isInUserFunction(): boolean {
-//         return false; //testpoint //asdf
-//     }
-// }
