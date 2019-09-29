@@ -46,7 +46,7 @@ export { PositionContext } from "./src/PositionContext";
 export { containsArmSchema, isArmSchema } from './src/supported';
 export { JsonOutlineProvider, shortenTreeLabel } from "./src/Treeview";
 export { UnrecognizedBuiltinFunctionIssue } from "./src/UnrecognizedFunctionIssues";
-export { ReferenceInVariableDefinitionJSONVisitor } from "./src/visitors/ReferenceInVariableDefinitionJSONVisitor";
+export { ReferenceInVariableDefinitionsVisitor } from "./src/visitors/ReferenceInVariableDefinitionsVisitor";
 export { Completion };
 export { Json };
 export { Language };

@@ -8,8 +8,9 @@
 import * as assert from "assert";
 import { randomBytes } from "crypto";
 import { ISuiteCallbackContext, ITestCallbackContext } from "mocha";
-import { DeploymentTemplate, Histogram, IncorrectArgumentsCountIssue, Json, Language, ParameterDefinition, Reference, ReferenceInVariableDefinitionJSONVisitor } from "../extension.bundle";
+import { DeploymentTemplate, Histogram, IncorrectArgumentsCountIssue, Json, Language, ParameterDefinition, Reference } from "../extension.bundle";
 import { UnrecognizedUserFunctionIssue, UnrecognizedUserNamespaceIssue } from "../src/UnrecognizedFunctionIssues";
+import { ReferenceInVariableDefinitionsVisitor } from "../src/visitors/ReferenceInVariableDefinitionsVisitor";
 import { sources, testDiagnostics } from "./support/diagnostics";
 import { stringify } from "./support/stringify";
 import { testWithLanguageServer } from "./support/testWithLanguageServer";
@@ -1041,17 +1042,17 @@ suite("ReferenceInVariableDefinitionJSONVisitor", () => {
     suite("constructor(DeploymentTemplate)", () => {
         test("with null", () => {
             // tslint:disable-next-line:no-any
-            assert.throws(() => { new ReferenceInVariableDefinitionJSONVisitor(<any>null); });
+            assert.throws(() => { new ReferenceInVariableDefinitionsVisitor(<any>null); });
         });
 
         test("with undefined", () => {
             // tslint:disable-next-line:no-any
-            assert.throws(() => { new ReferenceInVariableDefinitionJSONVisitor(<any>undefined); });
+            assert.throws(() => { new ReferenceInVariableDefinitionsVisitor(<any>undefined); });
         });
 
         test("with deploymentTemplate", () => {
             const dt = new DeploymentTemplate(`{ "variables": { "a": "[reference('test')]" } }`, "id");
-            const visitor = new ReferenceInVariableDefinitionJSONVisitor(dt);
+            const visitor = new ReferenceInVariableDefinitionsVisitor(dt);
             assert.deepStrictEqual(visitor.referenceSpans, []);
         });
 
@@ -1092,21 +1093,21 @@ suite("ReferenceInVariableDefinitionJSONVisitor", () => {
     suite("visitStringValue(Json.StringValue)", () => {
         test("with null", () => {
             const dt = new DeploymentTemplate(`{ "variables": { "a": "[reference('test')]" } }`, "id");
-            const visitor = new ReferenceInVariableDefinitionJSONVisitor(dt);
+            const visitor = new ReferenceInVariableDefinitionsVisitor(dt);
             // tslint:disable-next-line:no-any
             assert.throws(() => { visitor.visitStringValue(<any>null); });
         });
 
         test("with undefined", () => {
             const dt = new DeploymentTemplate(`{ "variables": { "a": "[reference('test')]" } }`, "id");
-            const visitor = new ReferenceInVariableDefinitionJSONVisitor(dt);
+            const visitor = new ReferenceInVariableDefinitionsVisitor(dt);
             // tslint:disable-next-line:no-any
             assert.throws(() => { visitor.visitStringValue(<any>undefined); });
         });
 
         test("with non-TLE string", () => {
             const dt = new DeploymentTemplate(`{ "variables": { "a": "[reference('test')]" } }`, "id");
-            const visitor = new ReferenceInVariableDefinitionJSONVisitor(dt);
+            const visitor = new ReferenceInVariableDefinitionsVisitor(dt);
             const variables: Json.StringValue = Json.asObjectValue(dt.jsonParseResult.value)!.properties[0].name;
             visitor.visitStringValue(variables);
             assert.deepStrictEqual(visitor.referenceSpans, []);
@@ -1114,7 +1115,7 @@ suite("ReferenceInVariableDefinitionJSONVisitor", () => {
 
         test("with TLE string with reference() call", () => {
             const dt = new DeploymentTemplate(`{ "variables": { "a": "[reference('test')]" } }`, "id");
-            const visitor = new ReferenceInVariableDefinitionJSONVisitor(dt);
+            const visitor = new ReferenceInVariableDefinitionsVisitor(dt);
             const dtObject: Json.ObjectValue | null = Json.asObjectValue(dt.jsonParseResult.value);
             const variablesObject: Json.ObjectValue | null = Json.asObjectValue(dtObject!.getPropertyValue("variables"));
             const tle: Json.StringValue | null = Json.asStringValue(variablesObject!.getPropertyValue("a"));
@@ -1125,7 +1126,7 @@ suite("ReferenceInVariableDefinitionJSONVisitor", () => {
 
         test("with TLE string with reference() call inside concat() call", () => {
             const dt = new DeploymentTemplate(`{ "variables": { "a": "[concat(reference('test'))]" } }`, "id");
-            const visitor = new ReferenceInVariableDefinitionJSONVisitor(dt);
+            const visitor = new ReferenceInVariableDefinitionsVisitor(dt);
             const dtObject: Json.ObjectValue | null = Json.asObjectValue(dt.jsonParseResult.value);
             const variablesObject: Json.ObjectValue | null = Json.asObjectValue(dtObject!.getPropertyValue("variables"));
             const tle: Json.StringValue | null = Json.asStringValue(variablesObject!.getPropertyValue("a"));
@@ -1137,18 +1138,13 @@ suite("ReferenceInVariableDefinitionJSONVisitor", () => {
 });
 
 suite("Incomplete JSON shouldn't cause crash", function (this: ISuiteCallbackContext): void {
-    this.timeout(10000);
+    this.timeout(60000);
 
     async function exercisePositionContextAtEveryPointInTheDoc(json: string): Promise<void> {
         await exercisePositionContextAtRandomPointsInTheDoc(json, json.length + 1); // length+1 so we include past the last character as a position
     }
 
     async function exercisePositionContextAtRandomPointsInTheDoc(json: string, numberOfIndicesToTest: number): Promise<void> {
-        if (DISABLE_SLOW_TESTS) {
-            // Slow tests disabled - choose fewer samples points
-            numberOfIndicesToTest = numberOfIndicesToTest / 100;
-        }
-
         if (numberOfIndicesToTest < 1) {
             // Take it as a probability of doing a single sample
             if (Math.random() > numberOfIndicesToTest) {
@@ -1284,7 +1280,12 @@ suite("Incomplete JSON shouldn't cause crash", function (this: ISuiteCallbackCon
         await dt.errors;
     });
 
-    test("typing character by character", async () => {
+    test("typing character by character", async function (this: ITestCallbackContext): Promise<void> {
+        if (DISABLE_SLOW_TESTS) {
+            this.skip();
+            return;
+        }
+
         // Just make sure nothing throws
         for (let i = 0; i < template.length; ++i) {
             let partialTemplate = template.slice(0, i);
@@ -1295,7 +1296,12 @@ suite("Incomplete JSON shouldn't cause crash", function (this: ISuiteCallbackCon
         }
     });
 
-    test("typing backwards character by character", async () => {
+    test("typing backwards character by character", async function (this: ITestCallbackContext): Promise<void> {
+        if (DISABLE_SLOW_TESTS) {
+            this.skip();
+            return;
+        }
+
         // Just make sure nothing throws
         for (let i = 0; i < template.length; ++i) {
             let partialTemplate = template.slice(i);
@@ -1306,7 +1312,12 @@ suite("Incomplete JSON shouldn't cause crash", function (this: ISuiteCallbackCon
         }
     });
 
-    test("try parsing the document with a single character deleted (repeat through the whole document)", async () => {
+    test("try parsing the document with a single character deleted (repeat through the whole document)", async function (this: ITestCallbackContext): Promise<void> {
+        if (DISABLE_SLOW_TESTS) {
+            this.skip();
+            return;
+        }
+
         // Just make sure nothing throws
         for (let i = 0; i < template.length; ++i) {
             // Remove the single character at position i
@@ -1318,12 +1329,22 @@ suite("Incomplete JSON shouldn't cause crash", function (this: ISuiteCallbackCon
         }
     });
 
-    test("exercise PositionContext at every point in the full json", async () => {
+    test("exercise PositionContext at every point in the full json", async function (this: ITestCallbackContext): Promise<void> {
+        if (DISABLE_SLOW_TESTS) {
+            this.skip();
+            return;
+        }
+
         // Just make sure nothing throws
         await exercisePositionContextAtEveryPointInTheDoc(template);
     });
 
-    test("Random modifications", async () => {
+    test("Random modifications", async function (this: ITestCallbackContext): Promise<void> {
+        if (DISABLE_SLOW_TESTS) {
+            this.skip();
+            return;
+        }
+
         // Just make sure nothing throws
         let modifiedTemplate: string = template;
 

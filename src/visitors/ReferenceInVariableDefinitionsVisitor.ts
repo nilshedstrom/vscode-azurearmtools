@@ -9,9 +9,9 @@ import * as language from "../Language";
 import * as TLE from "../TLE";
 
 /**
- * asdf
+ * Finds all spans that represent a call to "reference()" inside of a variable definition
  */
-export class ReferenceInVariableDefinitionJSONVisitor extends Json.Visitor {
+export class ReferenceInVariableDefinitionsVisitor extends Json.Visitor {
     private _referenceSpans: language.Span[] = [];
 
     constructor(private _deploymentTemplate: DeploymentTemplate) {

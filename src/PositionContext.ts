@@ -206,7 +206,7 @@ export class PositionContext {
                 }
 
             } else if (tleValue instanceof TLE.FunctionCallValue) {
-                return this.getFunctionValueCompletions(tleValue, tleInfo.tleCharacterIndex);
+                return this.getFunctionCallCompletions(tleValue, tleInfo.tleCharacterIndex);
             } else if (tleValue instanceof TLE.StringValue) {
                 return this.getStringLiteralCompletions(tleValue, tleInfo.tleCharacterIndex);
             } else if (tleValue instanceof TLE.PropertyAccess) {
@@ -319,7 +319,7 @@ export class PositionContext {
     /**
      * Return completions when we're anywhere inside a function call expression
      */
-    private async getFunctionValueCompletions(tleValue: TLE.FunctionCallValue, tleCharacterIndex: number): Promise<Completion.Item[]> {
+    private async getFunctionCallCompletions(tleValue: TLE.FunctionCallValue, tleCharacterIndex: number): Promise<Completion.Item[]> {
         if (tleValue.nameToken.span.contains(tleCharacterIndex, true)) {
             // The caret is inside the TLE function's name
             const functionNameStartIndex: number = tleValue.nameToken.span.startIndex;

@@ -3,6 +3,7 @@
 // ----------------------------------------------------------------------------
 
 import * as assert from "assert";
+import { CachedValue } from "./CachedValue";
 import * as Json from "./JSON";
 import { OutputDefinition } from "./OutputDefinition";
 
@@ -10,7 +11,7 @@ import { OutputDefinition } from "./OutputDefinition";
  * This class represents the definition of a user-defined function in a deployment template.
  */
 export class UserFunctionDefinition {
-    private _output: OutputDefinition;
+    private _output: CachedValue<OutputDefinition | null> = new CachedValue<OutputDefinition | null>();
 
     constructor(private _name: Json.StringValue, private _value: Json.ObjectValue) {
         assert(_name);
@@ -21,19 +22,19 @@ export class UserFunctionDefinition {
         return this._name;
     }
 
-    public get output(): OutputDefinition | undefined {
-        if (!this._output) {
+    public get output(): OutputDefinition | null {
+        return this._output.getOrCacheValue(() => {
             let output = Json.asObjectValue(this._value.getPropertyValue("output"));
             if (output) {
-                this._output = new OutputDefinition(output);
+                return new OutputDefinition(output);
             }
-        }
 
-        return this._output;
+            return null;
+        });
     }
 
-    // TODO: parameters
-    // TODO: output
+    // asdf: parameters
+    // asdf: output
 
     //    public get description(): string {
 

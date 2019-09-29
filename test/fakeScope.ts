@@ -5,17 +5,14 @@
 import { TLE } from "../extension.bundle";
 import { Property } from "../src/JSON";
 import { ParameterDefinition } from "../src/ParameterDefinition";
-import { ITemplateScope } from "../src/TemplateScope";
+import { ITemplateScope, ScopeContext } from "../src/TemplateScope";
 import { UserFunctionNamespaceDefinition } from "../src/UserFunctionNamespaceDefinition";
 
 export class FakeScope implements ITemplateScope {
     public parameterDefinitions: ParameterDefinition[] = [];
     public variableDefinitions: Property[] = [];
     public namespaceDefinitions: UserFunctionNamespaceDefinition[] = [];
-
-    // public isInUserFunction(): boolean {
-    //     return false;
-    // }
+    public scopeContext: ScopeContext = ScopeContext.Default;
 }
 
 export function parse(stringValue: string): TLE.ParseResult {

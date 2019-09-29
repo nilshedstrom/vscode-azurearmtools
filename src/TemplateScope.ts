@@ -7,10 +7,17 @@ import * as Json from "./JSON";
 import { ParameterDefinition } from "./ParameterDefinition";
 import { UserFunctionNamespaceDefinition } from "./UserFunctionNamespaceDefinition";
 
+export enum ScopeContext {
+    Default = "Default",
+    ParameterDefaultValue = "ParameterDefaultValue"
+}
+
 export interface ITemplateScope {
     parameterDefinitions: ParameterDefinition[];
     variableDefinitions: Json.Property[];
     namespaceDefinitions: UserFunctionNamespaceDefinition[];
+
+    scopeContext: ScopeContext;
 }
 
 export class TemplateScope implements ITemplateScope {
@@ -27,14 +34,17 @@ export class TemplateScope implements ITemplateScope {
      * the "parameters" and "variables" properties, or else null if none
      * (if the deployment template is malformed, there may be no top-level object)
      */
-    constructor(private _scopeObjectValue: Json.ObjectValue | null, private _owner?: ITemplateScope) {
+    constructor(
+        private _scopeObjectValue: Json.ObjectValue | null,
+        public scopeContext: ScopeContext,
+        private _owner: ITemplateScope | null) {
     }
 
     public get parameterDefinitions(): ParameterDefinition[] {
         return this._parameterDefinitions.getOrCacheValue(() => {
             const parameterDefinitions: ParameterDefinition[] = []; //testpoint
 
-            // asdf Merge with outer scope?
+            // asdf Merge with outer scope?  No
             if (this._scopeObjectValue) {
                 const parameters: Json.ObjectValue | null = Json.asObjectValue(this._scopeObjectValue.getPropertyValue("parameters")); //testpoint
                 if (parameters) {
