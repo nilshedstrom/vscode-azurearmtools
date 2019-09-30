@@ -92,7 +92,6 @@ suite("UserFunctionNamespaceDefinition", () => {
                 assert.equal(userNs.members.length, 2);
                 assert(userNs.getMemberDefinition("function2"));
                 assert.equal(userNs.getMemberDefinition("function2")!.name, "Function2");
-                //assert.equal(pd.members[0].parameterDefinitions]);
             });
         });
     });
