@@ -115,7 +115,7 @@ export class StringValue extends Value {
         return this.isBuiltinFunctionArgument("variables");
     }
 
-    private isBuiltinFunctionArgument(functionName: string): boolean {
+    private isBuiltinFunctionArgument(functionName: string): boolean { //asdf document
         const parent: Value | null = this.parent;
         return !!parent &&
             parent instanceof FunctionCallValue &&
@@ -1267,7 +1267,7 @@ export class ParseResult {
         private _expression: Value | null,
         private _rightSquareBracketToken: Token | null,
         private _errors: language.Issue[],
-        _scope: TemplateScope //asdf
+        public readonly scope: TemplateScope
     ) {
         assert(_errors);
     }

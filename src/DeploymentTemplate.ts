@@ -118,7 +118,7 @@ export class DeploymentTemplate {
 
             for (let param of this.parameterDefinitions) {
                 if (param.defaultValue) {
-                    parseExpressionsByScope(param.defaultValue, paramDefaultValuesScope);
+                    parseExpressionsByScope(param.defaultValue, paramDefaultValuesScope); //testpoint
                 }
             }
 
@@ -233,7 +233,7 @@ export class DeploymentTemplate {
                             const tleUndefinedParameterAndVariableVisitor =
                                 TLE.UndefinedParameterAndVariableVisitor.visit(
                                     tleExpression,
-                                    this.topLevelScope); //asdf
+                                    tleParseResult.scope); //asdf
                             for (const error of tleUndefinedParameterAndVariableVisitor.errors) {
                                 parseErrors.push(error.translate(jsonTokenStartIndex));
                             }
@@ -497,7 +497,7 @@ export class DeploymentTemplate {
         return result ? result : null;
     }
 
-    public findReferences(referenceType: Reference.ReferenceKind, referenceName: string): Reference.List {
+    public findReferences(referenceType: Reference.ReferenceKind, referenceName: string): Reference.List { //asdf need scope
         const result: Reference.List = new Reference.List(referenceType);
 
         if (referenceName) {
