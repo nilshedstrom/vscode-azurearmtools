@@ -73,7 +73,7 @@ export class Token {
      * Convenient way of seeing what this token represents in the debugger, shouldn't be used for production code
      */
     public get debugDisplay(): string {
-        return this.toString();
+        return `<${this.toString()}>`;
     }
 }
 
@@ -132,6 +132,15 @@ export class Tokenizer implements utilities.Iterator<Token> {
 
     constructor(private _text: string) {
         this._textLength = _text ? _text.length : 0;
+    }
+
+    /**
+     * Convenient way of seeing what this object represents in the debugger, shouldn't be used for production code
+     */
+    public get debugDisplay(): string {
+        const charactersBeforeCurrent = 25;
+        const charactersAfterCurrent = 50;
+        return `${this._text.slice(this._textIndex - charactersBeforeCurrent, this._textIndex)}<<${this._currentToken ? this._currentToken.toString() : ''}>>${this._text.slice(this._textIndex + 1, this._textIndex + 1 + charactersAfterCurrent)}`;
     }
 
     /**

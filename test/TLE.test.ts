@@ -15,7 +15,7 @@ suite("TLE", () => {
 
     function parseWithScope(stringValue: string, scope?: TemplateScope): TLE.ParseResult {
         scope = scope ? scope : emptyScope;
-        const result = TLE.Parser.parse("\"[concat]\"", scope);
+        const result = TLE.Parser.parse(stringValue, scope);
         return result;
     }
 

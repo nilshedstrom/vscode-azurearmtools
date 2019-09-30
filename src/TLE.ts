@@ -260,7 +260,7 @@ export class FunctionCallValue extends ParentValue {
         private _nameToken: Token,
         private _leftParenthesisToken: Token | null,
         private _commaTokens: Token[],
-        private _argumentExpressions: (Value | null)[],
+        private _argumentExpressions: (Value | null)[], // Missing args are null
         private _rightParenthesisToken: Token | null
     ) {
         super();
@@ -295,7 +295,7 @@ export class FunctionCallValue extends ParentValue {
     }
 
     public get fullName(): string {
-        let result = this._nameToken.stringValue; //breakpoint
+        let result = this._nameToken.stringValue; //testpoint
         if (this._namespaceToken) {
             result = `${this._namespaceToken.stringValue}.${this._nameToken.stringValue}`;
         }
@@ -307,12 +307,12 @@ export class FunctionCallValue extends ParentValue {
      * Returns true if this is a function call to the built-in function with the given name
      */
     public isBuiltin(functionName: string): boolean {
-        return this.doesNameMatch(null, functionName); //breakpoint
+        return this.doesNameMatch(null, functionName); //testpoint
     }
 
     public doesNameMatch(namespaceName: string | null, name: string): boolean {
         // tslint:disable-next-line: strict-boolean-expressions
-        namespaceName = namespaceName || ''; //breakpoint
+        namespaceName = namespaceName || ''; //testpoint
         assert(!!name);
 
         let thisNamespace = this._namespaceToken ? this._namespaceToken.stringValue : '';
@@ -1139,21 +1139,21 @@ export class Parser {
         // Check for <namespace>.<functionname>
         if (tokenizer.current && tokenizer.current.getType() === TokenType.Period) {
             // It's a user-defined function because it has a namespace before the function name
-            let periodToken = tokenizer.current; //breakpoint
+            let periodToken = tokenizer.current; //testpoint
             namespaceToken = firstToken;
             tokenizer.next();
 
             // Get the function name following the period
             if (tokenizer.hasCurrent() && tokenizer.current.getType() === TokenType.Literal) {
-                nameToken = tokenizer.current; //breakpoint
+                nameToken = tokenizer.current; //testpoint
                 tokenizer.next();
             } else {
-                errors.push(new language.Issue(periodToken.span, "Expected user-defined function name.")); //breakpoint
+                errors.push(new language.Issue(periodToken.span, "Expected user-defined function name.")); //testpoint
                 // Badly formed, but we need at least a nameToken, so pretend the period isn't there
                 [namespaceToken, nameToken] = [null, firstToken];
             }
         } else {
-            nameToken = firstToken; //breakpoint
+            nameToken = firstToken; //testpoint
         }
 
         let leftParenthesisToken: Token | null = null;
@@ -1338,10 +1338,14 @@ export class ParseResult {
  */
 export class Tokenizer {
     private _basicTokenizer: basic.Tokenizer;
+    private _text: string;
 
     private _current: Token | null;
     // This offset (+1) is because we trimmed off the initial quote character.
     private _currentTokenStartIndex: number = 1;
+
+    private constructor() {
+    }
 
     public static fromString(stringValue: string): Tokenizer {
         assert(stringValue);
@@ -1354,7 +1358,21 @@ export class Tokenizer {
 
         const tt = new Tokenizer();
         tt._basicTokenizer = new basic.Tokenizer(trimmedString);
+        tt._text = stringValue;
         return tt;
+    }
+
+    /**
+     * Convenient way of seeing what this object represents in the debugger, shouldn't be used for production code
+     */
+    public get debugDisplay(): string {
+        const charactersBeforeCurrent = 25;
+        const charactersAfterCurrent = 50;
+        const before = this._text.slice(this._currentTokenStartIndex - charactersBeforeCurrent, this._currentTokenStartIndex);
+        const currentTokenEnd = this._currentTokenStartIndex + (this._current ? this._current.length : 0);
+        const currentToken = this._current ? this._current.stringValue : '';
+        const after = this._text.slice(currentTokenEnd, currentTokenEnd + charactersAfterCurrent);
+        return `${before}<<${currentToken}>>${after}`;
     }
 
     public hasStarted(): boolean {

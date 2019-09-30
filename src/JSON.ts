@@ -1037,7 +1037,7 @@ export class ParseResult {
 
     /* asdf
     public getScopeAtCharacterIndex(characterIndex: number): Value {
-        assert(0 <= characterIndex, `characterIndex (${characterIndex}) cannot be negative.`);//breakpoint
+        assert(0 <= characterIndex, `characterIndex (${characterIndex}) cannot be negative.`);//testpoint
 
         let result: Value | null = null;
 

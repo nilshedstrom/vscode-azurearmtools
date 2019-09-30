@@ -14,10 +14,10 @@ export class OutputDefinition {
     }
 
     public get outputType(): Json.StringValue | null {
-        return Json.asStringValue(this._value.getPropertyValue("type")); //breakpoint
+        return Json.asStringValue(this._value.getPropertyValue("type")); //testpoint
     }
 
     public get value(): Json.StringValue | null {
-        return Json.asStringValue(this._value.getPropertyValue("value")); //breakpoint
+        return Json.asStringValue(this._value.getPropertyValue("value")); //testpoint
     }
 }
