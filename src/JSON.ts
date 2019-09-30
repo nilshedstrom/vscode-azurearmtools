@@ -580,7 +580,7 @@ export abstract class Value {
 /**
  * A JSON object that contains properties.
  */
-export class ObjectValue extends Value {
+export class ObjectValue extends Value { // asdf turn into real map
     private _propertyMap: { [key: string]: Value | null } | undefined;
 
     constructor(span: language.Span, private _properties: Property[]) {

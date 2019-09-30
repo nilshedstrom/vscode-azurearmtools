@@ -7,15 +7,15 @@ import { CachedPromise } from "./CachedPromise";
 import { CachedValue } from "./CachedValue";
 import { assert } from "./fixed_assert";
 import { Histogram } from "./Histogram";
+import { IParameterDefinition } from "./IParameterDefinition";
 import * as Json from "./JSON";
 import * as language from "./Language";
 import { ParameterDefinition } from "./ParameterDefinition";
 import { PositionContext } from "./PositionContext";
 import * as Reference from "./Reference";
 import { isArmSchema } from "./supported";
-import { ITemplateScope, ScopeContext, TemplateScope } from "./TemplateScope";
+import { ScopeContext, TemplateScope } from "./TemplateScope";
 import * as TLE from "./TLE";
-import { UserFunctionDefinition } from "./UserFunctionDefinition";
 import { UserFunctionNamespaceDefinition } from "./UserFunctionNamespaceDefinition";
 import * as Utilities from "./Utilities";
 import { GenericStringVisitor } from "./visitors/GenericStringVisitor";
@@ -26,7 +26,7 @@ export class DeploymentTemplate {
     private _jsonParseResult: Json.ParseResult;
 
     // The top-level parameters and variables (as opposed to those in user functions and deployment resources)
-    private _topLevelScope: ITemplateScope;
+    private _topLevelScope: TemplateScope;
 
     // asdf
     private _topLevelValue: Json.ObjectValue | null;
@@ -57,10 +57,16 @@ export class DeploymentTemplate {
 
         this._jsonParseResult = Json.parse(_documentText);
         this._topLevelValue = Json.asObjectValue(this._jsonParseResult.value);
-        this._topLevelScope = new TemplateScope(this._topLevelValue, ScopeContext.Default, null);
+
+        this._topLevelScope = new TemplateScope(
+            ScopeContext.TopLevel,
+            this.getTopLevelParameterDefinitions(),
+            this.getTopLevelVariableDefinitions(),
+            this.getTopLevelNamespaceDefinitions(),
+            'Top-level scope');
     }
 
-    public get topLevelScope(): ITemplateScope {
+    public get topLevelScope(): TemplateScope {
         return this._topLevelScope;
     }
 
@@ -102,10 +108,34 @@ export class DeploymentTemplate {
         return this._quotedStringToTleParseResultMap.getOrCacheValue(() => {
             const quotedStringToTleParseResultMap = new Map<string, TLE.ParseResult>();
 
-            const paramDefaultValuesScope = new TemplateScope(this._topLevelValue, ScopeContext.ParameterDefaultValue, this._topLevelScope); //asdf
+            const paramDefaultValuesScope = new TemplateScope(
+                ScopeContext.ParameterDefaultValue,
+                this._topLevelScope.parameterDefinitions,
+                this.topLevelScope.variableDefinitions,
+                this.topLevelScope.namespaceDefinitions,
+                'Top-level parameter default value scope'
+            ); //asdf
+
             for (let param of this.parameterDefinitions) {
                 if (param.defaultValue) {
                     parseExpressionsByScope(param.defaultValue, paramDefaultValuesScope);
+                }
+            }
+
+            for (let ns of this.namespaceDefinitions) {
+                for (let member of ns.members) {
+                    if (member.output) {
+                        const userFunctionScope = new TemplateScope(
+                            ScopeContext.UserFunction, //asdf?
+                            // User functions can only use their own parameters, they do
+                            //   not have access to top-level parameters
+                            member.parameterDefinitions,
+                            undefined, // variable references not supported
+                            undefined, // nested user functions not supported
+                            `Scope for user function ${member.name.toString()}`
+                        );
+                        parseExpressionsByScope(member.output.value, userFunctionScope);
+                    }
                 }
             }
 
@@ -121,7 +151,7 @@ export class DeploymentTemplate {
 
             return quotedStringToTleParseResultMap;
 
-            function parseExpressionsByScope(value: Json.Value | null, scope: ITemplateScope): void {
+            function parseExpressionsByScope(value: Json.Value | null, scope: TemplateScope): void {
                 if (value) {
                     GenericStringVisitor.visit(
                         value,
@@ -203,14 +233,13 @@ export class DeploymentTemplate {
                             const tleUndefinedParameterAndVariableVisitor =
                                 TLE.UndefinedParameterAndVariableVisitor.visit(
                                     tleExpression,
-                                    this,
                                     this.topLevelScope); //asdf
                             for (const error of tleUndefinedParameterAndVariableVisitor.errors) {
                                 parseErrors.push(error.translate(jsonTokenStartIndex));
                             }
 
                             // Unrecognized function calls
-                            const tleUnrecognizedFunctionVisitor = TLE.UnrecognizedFunctionVisitor.visit(this, tleExpression, functions);
+                            const tleUnrecognizedFunctionVisitor = TLE.UnrecognizedFunctionVisitor.visit(this._topLevelScope/*asdf?*/, tleExpression, functions);
                             for (const error of tleUnrecognizedFunctionVisitor.errors) {
                                 parseErrors.push(error.translate(jsonTokenStartIndex));
                             }
@@ -222,7 +251,7 @@ export class DeploymentTemplate {
                             }
 
                             // Undefined variable properties
-                            const tleUndefinedVariablePropertyVisitor = TLE.UndefinedVariablePropertyVisitor.visit(tleExpression, this);
+                            const tleUndefinedVariablePropertyVisitor = TLE.UndefinedVariablePropertyVisitor.visit(tleExpression, this._topLevelScope/*asdf?*/);
                             for (const error of tleUndefinedVariablePropertyVisitor.errors) {
                                 parseErrors.push(error.translate(jsonTokenStartIndex));
                             }
@@ -338,145 +367,86 @@ export class DeploymentTemplate {
         return this._jsonParseResult.maxCharacterIndex;
     }
 
-    public get parameterDefinitions(): ParameterDefinition[] {
+    public get parameterDefinitions(): IParameterDefinition[] { //asdf remove
         return this._topLevelScope.parameterDefinitions;
     }
 
-    public get variableDefinitions(): Json.Property[] {
+    public get variableDefinitions(): Json.Property[] { //asdf remove
         return this._topLevelScope.variableDefinitions;
     }
 
-    public get namespaceDefinitions(): UserFunctionNamespaceDefinition[] {
+    public get namespaceDefinitions(): UserFunctionNamespaceDefinition[] { //asdf remove
         return this._topLevelScope.namespaceDefinitions;
     }
 
-    // asdf move to scope
-    public getParameterDefinition(parameterName: string): ParameterDefinition | null {
-        assert(parameterName, "parameterName cannot be null, undefined, or empty");
+    private getTopLevelParameterDefinitions(): ParameterDefinition[] {
+        const parameterDefinitions: ParameterDefinition[] = [];
 
-        const unquotedParameterName = Utilities.unquote(parameterName);
-        let parameterNameLC = unquotedParameterName.toLowerCase();
-
-        // Find the last definition that matches, because that's what Azure does
-        for (let i = this.parameterDefinitions.length - 1; i >= 0; --i) {
-            let pd = this.parameterDefinitions[i];
-            if (pd.name.toString().toLowerCase() === parameterNameLC) {
-                return pd;
-            }
-        }
-        return null;
-    }
-
-    public getFunctionNamespaceDefinition(namespaceName: string): UserFunctionNamespaceDefinition | undefined {
-        assert(!!namespaceName, "namespaceName cannot be null, undefined, or empty");
-        let namespaceNameLC = namespaceName.toLowerCase();
-        return this.namespaceDefinitions.find((nd: UserFunctionNamespaceDefinition) => nd.namespaceName.toString().toLowerCase() === namespaceNameLC);
-    }
-
-    public getFunctionDefinition(namespaceName: string, functionName: string): UserFunctionDefinition | null {
-        assert(!!functionName, "functionName cannot be null, undefined, or empty");
-        let nd = this.getFunctionNamespaceDefinition(namespaceName);
-        if (nd) {
-            let result = nd.getMemberDefinition(functionName);
-            return result ? result : null;
-        }
-
-        return null;
-    }
-
-    // asdf: move to scope
-    public getVariableDefinition(variableName: string): Json.Property | null {
-        assert(variableName, "variableName cannot be null, undefined, or empty");
-
-        const unquotedVariableName = Utilities.unquote(variableName);
-        const variableNameLC = unquotedVariableName.toLowerCase();
-
-        // Find the last definition that matches, because that's what Azure does
-        for (let i = this.variableDefinitions.length - 1; i >= 0; --i) {
-            let vd = this.variableDefinitions[i];
-            if (vd.name.toString().toLowerCase() === variableNameLC) {
-                return vd;
-            }
-        }
-
-        return null;
-    }
-
-    // asdf: findNamespaceDefinitionsWithPrefix
-
-    /**
-     * If the function call is a variables() reference, return the related variable definition
-     */
-    public getVariableDefinitionFromFunctionCall(tleFunction: TLE.FunctionCallValue): Json.Property | null {
-        let result: Json.Property | null = null;
-
-        if (tleFunction.isBuiltin("variables")) { // asdf
-            const variableName: TLE.StringValue | null = TLE.asStringValue(tleFunction.argumentExpressions[0]);
-            if (variableName) {
-                result = this.getVariableDefinition(variableName.toString());
-            }
-        }
-
-        return result;
-    }
-
-    /**
-     * If the function call is a parameters() reference, return the related parameter definition
-     */
-    public getParameterDefinitionFromFunctionCall(tleFunction: TLE.FunctionCallValue): ParameterDefinition | null {
-        assert(tleFunction);
-
-        let result: ParameterDefinition | null = null;
-
-        if (tleFunction.nameToken.stringValue === "parameters") {
-            const propertyName: TLE.StringValue | null = TLE.asStringValue(tleFunction.argumentExpressions[0]);
-            if (propertyName) {
-                result = this.getParameterDefinition(propertyName.toString());
-            }
-        }
-
-        return result;
-    }
-
-    public findParameterDefinitionsWithPrefix(parameterNamePrefix: string): ParameterDefinition[] {
-        assert(parameterNamePrefix !== null, "parameterNamePrefix cannot be null");
-        assert(parameterNamePrefix !== undefined, "parameterNamePrefix cannot be undefined");
-
-        let result: ParameterDefinition[] = [];
-
-        if (parameterNamePrefix !== "") {
-            let lowerCasedPrefix = parameterNamePrefix.toLowerCase();
-            for (let parameterDefinition of this.parameterDefinitions) {
-                if (parameterDefinition.name.toString().toLowerCase().startsWith(lowerCasedPrefix)) {
-                    result.push(parameterDefinition);
+        if (this._topLevelValue) {
+            const parameters: Json.ObjectValue | null = Json.asObjectValue(this._topLevelValue.getPropertyValue("parameters")); //testpoint
+            if (parameters) {
+                for (const parameter of parameters.properties) {
+                    parameterDefinitions.push(new ParameterDefinition(parameter)); //testpoint
                 }
             }
-        } else {
-            result = this.parameterDefinitions;
         }
 
-        return result;
+        return parameterDefinitions;
     }
 
-    public findVariableDefinitionsWithPrefix(variableNamePrefix: string): Json.Property[] {
-        assert(variableNamePrefix !== null, "variableNamePrefix cannot be null");
-        assert(variableNamePrefix !== undefined, "variableNamePrefix cannot be undefined");
-
-        let result: Json.Property[];
-        if (variableNamePrefix) {
-            result = [];
-
-            const lowerCasedPrefix = variableNamePrefix.toLowerCase();
-            for (const variableDefinition of this.variableDefinitions) {
-                if (variableDefinition.name.toString().toLowerCase().startsWith(lowerCasedPrefix)) {
-                    result.push(variableDefinition);
-                }
+    private getTopLevelVariableDefinitions(): Json.Property[] {
+        if (this._topLevelValue) {
+            // The "variables" section is only valid at the top level of the deployment
+            const variables: Json.ObjectValue | null = Json.asObjectValue(this._topLevelValue.getPropertyValue("variables")); //testpoint
+            if (variables) {
+                return variables.properties; //testpoint
             }
-        } else {
-            result = this.variableDefinitions;
         }
 
-        return result;
+        return []; //testpoint
+    }
+
+    private getTopLevelNamespaceDefinitions(): UserFunctionNamespaceDefinition[] {
+        const namespaceDefinitions: UserFunctionNamespaceDefinition[] = [];
+
+        // Example:
+        //
+        // "functions": [
+        //     { << This is a UserFunctionNamespaceDefinition
+        //       "namespace": "<namespace-for-functions>",
+        //       "members": { << This is a UserFunctionDefinition
+        //         "<function-name>": {
+        //           "parameters": [
+        //             {
+        //               "name": "<parameter-name>",
+        //               "type": "<type-of-parameter-value>"
+        //             }
+        //           ],
+        //           "output": {
+        //             "type": "<type-of-output-value>",
+        //             "value": "<function-return-value>"
+        //           }
+        //         }
+        //       }
+        //     }
+        //   ],
+
+        if (this._topLevelValue) {
+            const functionNamespacesArray: Json.ArrayValue | null = Json.asArrayValue(this._topLevelValue.getPropertyValue("functions"));
+            if (functionNamespacesArray) {
+                for (let namespaceElement of functionNamespacesArray.elements) {
+                    const namespaceObject = Json.asObjectValue(namespaceElement);
+                    if (namespaceObject) {
+                        let namespace = UserFunctionNamespaceDefinition.createIfValid(namespaceObject);
+                        if (namespace) {
+                            namespaceDefinitions.push(namespace);
+                        }
+                    }
+                }
+            }
+        }
+
+        return namespaceDefinitions;
     }
 
     public getDocumentCharacterIndex(documentLineIndex: number, documentColumnIndex: number): number {
@@ -496,11 +466,11 @@ export class DeploymentTemplate {
     }
 
     public getContextFromDocumentLineAndColumnIndexes(documentLineIndex: number, documentColumnIndex: number): PositionContext {
-        return PositionContext.fromDocumentLineAndColumnIndexes(this, documentLineIndex, documentColumnIndex);
+        return PositionContext.fromDocumentLineAndColumnIndexes(this, this.topLevelScope/*asdf?*/, documentLineIndex, documentColumnIndex);
     }
 
     public getContextFromDocumentCharacterIndex(documentCharacterIndex: number): PositionContext {
-        return PositionContext.fromDocumentCharacterIndex(this, documentCharacterIndex);
+        return PositionContext.fromDocumentCharacterIndex(this, this.topLevelScope/*asdf?*/, documentCharacterIndex);
     }
 
     public getTLEParseResultFromJSONToken(jsonToken: Json.Token | null): TLE.ParseResult | null {
@@ -533,14 +503,14 @@ export class DeploymentTemplate {
         if (referenceName) {
             switch (referenceType) {
                 case Reference.ReferenceKind.Parameter:
-                    const parameterDefinition: ParameterDefinition | null = this.getParameterDefinition(referenceName);
+                    const parameterDefinition: IParameterDefinition | null = this.topLevelScope.getParameterDefinition(referenceName); //asdf
                     if (parameterDefinition) {
                         result.add(parameterDefinition.name.unquotedSpan);
                     }
                     break;
 
                 case Reference.ReferenceKind.Variable:
-                    const variableDefinition: Json.Property | null = this.getVariableDefinition(referenceName);
+                    const variableDefinition: Json.Property | null = this.topLevelScope.getVariableDefinition(referenceName); //asdf
                     if (variableDefinition) {
                         result.add(variableDefinition.name.unquotedSpan);
                     }

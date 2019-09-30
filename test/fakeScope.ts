@@ -12,7 +12,7 @@ export class FakeScope implements ITemplateScope {
     public parameterDefinitions: ParameterDefinition[] = [];
     public variableDefinitions: Property[] = [];
     public namespaceDefinitions: UserFunctionNamespaceDefinition[] = [];
-    public scopeContext: ScopeContext = ScopeContext.Default;
+    public scopeContext: ScopeContext = ScopeContext.TopLevel;
 }
 
 export function parse(stringValue: string): TLE.ParseResult {

@@ -6,12 +6,14 @@ import * as assert from "assert";
 import { CachedValue } from "./CachedValue";
 import * as Json from "./JSON";
 import { OutputDefinition } from "./OutputDefinition";
+import { UserFunctionParameterDefinition } from "./UserFunctionParameterDefinition";
 
 /**
  * This class represents the definition of a user-defined function in a deployment template.
  */
 export class UserFunctionDefinition {
     private _output: CachedValue<OutputDefinition | null> = new CachedValue<OutputDefinition | null>();
+    private _parameterDefinitions: CachedValue<UserFunctionParameterDefinition[]> = new CachedValue<UserFunctionParameterDefinition[]>();
 
     constructor(private _name: Json.StringValue, private _value: Json.ObjectValue) {
         assert(_name);
@@ -33,25 +35,25 @@ export class UserFunctionDefinition {
         });
     }
 
-    // asdf: parameters
-    // asdf: output
+    public get parameterDefinitions(): UserFunctionParameterDefinition[] { //asdf extract?
+        return this._parameterDefinitions.getOrCacheValue(() => {
+            const parameterDefinitions: UserFunctionParameterDefinition[] = [];
 
-    //    public get description(): string {
+            // User-function parameters are an ordered array, not an object
+            const parametersArray: Json.ArrayValue | null = Json.asArrayValue(this._value.getPropertyValue("parameters")); //testpoint
+            if (parametersArray) {
+                for (const parameter of parametersArray.elements) {
+                    const parameterObject = Json.asObjectValue(parameter);
+                    if (parameterObject) {
+                        const parameterDefinition = UserFunctionParameterDefinition.createIfValid(parameterObject);
+                        if (parameterDefinition) {
+                            parameterDefinitions.push(parameterDefinition); //testpoint
+                        }
+                    }
+                }
+            }
 
-    // if (this._description === undefined) {
-    //     this._description = null;
-
-    //     const parameterDefinition: Json.ObjectValue = Json.asObjectValue(this._property.value);
-    //     if (parameterDefinition) {
-    //         const metadata: Json.ObjectValue = Json.asObjectValue(parameterDefinition.getPropertyValue("metadata"));
-    //         if (metadata) {
-    //             const description: Json.StringValue = Json.asStringValue(metadata.getPropertyValue("description"));
-    //             if (description) {
-    //                 this._description = description.toString();
-    //             }
-    //         }
-    //     }
-    // }
-    // return this._description;
-    // }
+            return parameterDefinitions;
+        });
+    }
 }

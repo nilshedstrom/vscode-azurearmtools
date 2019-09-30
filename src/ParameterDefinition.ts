@@ -4,13 +4,14 @@
 
 import { CachedValue } from "./CachedValue";
 import { assert } from './fixed_assert';
+import { IParameterDefinition } from "./IParameterDefinition";
 import * as Json from "./JSON";
 import * as language from "./Language";
 
 /**
- * This class represents the definition of a parameter in a deployment template.
+ * This class represents the definition of a top-level parameter in a deployment template.
  */
-export class ParameterDefinition {
+export class ParameterDefinition implements IParameterDefinition {
     private _description: CachedValue<string | null> = new CachedValue<string | null>();
     private _defaultValue: CachedValue<Json.Value | null> = new CachedValue<Json.Value | null>();
 
@@ -26,6 +27,7 @@ export class ParameterDefinition {
         return this._property.span;
     }
 
+    public get supportsDescription(): boolean { return true; }
     public get description(): string | null {
         return this._description.getOrCacheValue(() => {
             const parameterDefinition: Json.ObjectValue | null = Json.asObjectValue(this._property.value);
@@ -43,6 +45,7 @@ export class ParameterDefinition {
         });
     }
 
+    public get supportsDefaultValue(): boolean { return true; }
     public get defaultValue(): Json.Value | null {
         return this._defaultValue.getOrCacheValue(() => {
             const parameterDefinition: Json.ObjectValue | null = Json.asObjectValue(this._property.value);

@@ -11,10 +11,12 @@ import * as Completion from "./Completion";
 import { DeploymentTemplate } from "./DeploymentTemplate";
 import { assert } from './fixed_assert';
 import * as Hover from "./Hover";
+import { IParameterDefinition } from "./IParameterDefinition";
 import * as Json from "./JSON";
 import * as language from "./Language";
 import { ParameterDefinition } from "./ParameterDefinition";
 import * as Reference from "./Reference";
+import { TemplateScope } from "./TemplateScope";
 import * as TLE from "./TLE";
 
 /**
@@ -22,7 +24,8 @@ import * as TLE from "./TLE";
  * that can be parsed and analyzed about it
  */
 export class PositionContext {
-    private _deploymentTemplate: DeploymentTemplate;
+    private _deploymentTemplate: DeploymentTemplate; //asdf needed?
+    private _scope: TemplateScope;
     private _givenDocumentPosition?: language.Position;
     private _documentPosition: CachedValue<language.Position> = new CachedValue<language.Position>();
     private _givenDocumentCharacterIndex?: number;
@@ -32,12 +35,12 @@ export class PositionContext {
     private _tleInfo: CachedValue<TleInfo | null> = new CachedValue<TleInfo | null>();
     private _hoverInfo: CachedPromise<Hover.Info | null> = new CachedPromise<Hover.Info | null>();
     private _completionItems: CachedPromise<Completion.Item[]> = new CachedPromise<Completion.Item[]>();
-    private _parameterDefinition: CachedValue<ParameterDefinition | null> = new CachedValue<ParameterDefinition | null>();
+    private _parameterDefinition: CachedValue<IParameterDefinition | null> = new CachedValue<ParameterDefinition | null>();
     private _variableDefinition: CachedValue<Json.Property | null> = new CachedValue<Json.Property | null>();
     private _references: CachedValue<Reference.List | null> = new CachedValue<Reference.List | null>();
     private _signatureHelp: CachedPromise<TLE.FunctionSignatureHelp | null> = new CachedPromise<TLE.FunctionSignatureHelp | null>();
 
-    public static fromDocumentLineAndColumnIndexes(deploymentTemplate: DeploymentTemplate, documentLineIndex: number, documentColumnIndex: number): PositionContext {
+    public static fromDocumentLineAndColumnIndexes(deploymentTemplate: DeploymentTemplate, scope: TemplateScope, documentLineIndex: number, documentColumnIndex: number): PositionContext {
         assert(deploymentTemplate !== null, "deploymentTemplate cannot be null");
         assert(deploymentTemplate !== undefined, "deploymentTemplate cannot be undefined");
         assert(documentLineIndex !== null, "documentLineIndex cannot be null");
@@ -48,23 +51,28 @@ export class PositionContext {
         assert(documentColumnIndex !== undefined, "documentColumnIndex cannot be undefined");
         assert(documentColumnIndex >= 0, "documentColumnIndex cannot be negative");
         assert(documentColumnIndex <= deploymentTemplate.getMaxColumnIndex(documentLineIndex), `documentColumnIndex (${documentColumnIndex}) cannot be greater than the line's maximum index (${deploymentTemplate.getMaxColumnIndex(documentLineIndex)})`);
+        assert(scope);
 
+        // asdf refactor with private constructor
         let context = new PositionContext();
         context._deploymentTemplate = deploymentTemplate;
+        context._scope = scope;
         context._givenDocumentPosition = new language.Position(documentLineIndex, documentColumnIndex);
         return context;
-    }
 
-    public static fromDocumentCharacterIndex(deploymentTemplate: DeploymentTemplate, documentCharacterIndex: number): PositionContext {
+    }
+    public static fromDocumentCharacterIndex(deploymentTemplate: DeploymentTemplate, scope: TemplateScope, documentCharacterIndex: number): PositionContext {
         assert(deploymentTemplate !== null, "deploymentTemplate cannot be null");
         assert(deploymentTemplate !== undefined, "deploymentTemplate cannot be undefined");
         assert(documentCharacterIndex !== null, "documentCharacterIndex cannot be null");
         assert(documentCharacterIndex !== undefined, "documentCharacterIndex cannot be undefined");
         assert(documentCharacterIndex >= 0, "documentCharacterIndex cannot be negative");
         assert(documentCharacterIndex <= deploymentTemplate.maxCharacterIndex, `documentCharacterIndex (${documentCharacterIndex}) cannot be greater than the maximum character index (${deploymentTemplate.maxCharacterIndex})`);
+        assert(scope);
 
         let context = new PositionContext();
         context._deploymentTemplate = deploymentTemplate;
+        context._scope = scope;
         context._givenDocumentCharacterIndex = documentCharacterIndex;
         return context;
     }
@@ -160,13 +168,13 @@ export class PositionContext {
                     }
                 } else if (tleValue instanceof TLE.StringValue) {
                     if (tleValue.isParametersArgument()) {
-                        const parameterDefinition: ParameterDefinition | null = this._deploymentTemplate.getParameterDefinition(tleValue.toString());
+                        const parameterDefinition: IParameterDefinition | null = this._scope.getParameterDefinition(tleValue.toString());
                         if (parameterDefinition) {
                             const hoverSpan: language.Span = tleValue.getSpan().translate(this.jsonTokenStartIndex);
                             return new Hover.ParameterReferenceInfo(parameterDefinition.name.toString(), parameterDefinition.description, hoverSpan);
                         }
                     } else if (tleValue.isVariablesArgument()) {
-                        const variableDefinition: Json.Property | null = this._deploymentTemplate.getVariableDefinition(tleValue.toString());
+                        const variableDefinition: Json.Property | null = this._scope.getVariableDefinition(tleValue.toString());
                         if (variableDefinition) {
                             const hoverSpan: language.Span = tleValue.getSpan().translate(this.jsonTokenStartIndex);
                             return new Hover.VariableReferenceInfo(variableDefinition.name.toString(), hoverSpan);
@@ -265,8 +273,8 @@ export class PositionContext {
                 propertyPrefix = propertyNameToken.stringValue.substring(0, tleCharacterIndex - propertyNameToken.span.startIndex).toLowerCase();
             }
 
-            const variableProperty: Json.Property | null = this._deploymentTemplate.getVariableDefinitionFromFunctionCall(functionSource);
-            const parameterProperty: ParameterDefinition | null = this._deploymentTemplate.getParameterDefinitionFromFunctionCall(functionSource);
+            const variableProperty: Json.Property | null = this._scope.getVariableDefinitionFromFunctionCall(functionSource);
+            const parameterProperty: IParameterDefinition | null = this._scope.getParameterDefinitionFromFunctionCall(functionSource);
             const sourcesNameStack: string[] = tleValue.sourcesNameStack;
             if (variableProperty) {
                 // If the variable's value is an object...
@@ -400,11 +408,11 @@ export class PositionContext {
                 if (jsonStringValue) {
                     referenceName = jsonStringValue.toString();
 
-                    const parameterDefinition: ParameterDefinition | null = this._deploymentTemplate.getParameterDefinition(referenceName);
+                    const parameterDefinition: IParameterDefinition | null = this._scope.getParameterDefinition(referenceName);
                     if (parameterDefinition && parameterDefinition.name === jsonStringValue) {
                         referenceType = Reference.ReferenceKind.Parameter;
                     } else {
-                        const variableDefinition: Json.Property | null = this._deploymentTemplate.getVariableDefinition(referenceName);
+                        const variableDefinition: Json.Property | null = this._scope.getVariableDefinition(referenceName);
                         if (variableDefinition && variableDefinition.name === jsonStringValue) {
                             referenceType = Reference.ReferenceKind.Variable;
                         }
@@ -461,11 +469,11 @@ export class PositionContext {
      * If this PositionContext is currently at a parameter reference (inside 'parameterName' in
      * [parameters('parameterName')]), get the definition of the parameter that is being referenced.
      */
-    public get parameterDefinition(): ParameterDefinition | null {
+    public get parameterDefinition(): IParameterDefinition | null {
         return this._parameterDefinition.getOrCacheValue(() => {
             const tleValue: TLE.Value | null = this.tleInfo && this.tleInfo.tleValue;
             if (tleValue && tleValue instanceof TLE.StringValue && tleValue.isParametersArgument()) {
-                return this._deploymentTemplate.getParameterDefinition(tleValue.toString());
+                return this._scope.getParameterDefinition(tleValue.toString());
             }
 
             return null;
@@ -480,7 +488,7 @@ export class PositionContext {
         return this._variableDefinition.getOrCacheValue(() => {
             const tleValue: TLE.Value | null = this.tleInfo && this.tleInfo.tleValue;
             if (tleValue && tleValue instanceof TLE.StringValue && tleValue.isVariablesArgument()) {
-                return this._deploymentTemplate.getVariableDefinition(tleValue.toString());
+                return this._scope.getVariableDefinition(tleValue.toString());
             }
 
             return null;
@@ -519,7 +527,7 @@ export class PositionContext {
         const replaceSpanInfo: ReplaceSpanInfo = this.getReplaceSpanInfo(tleValue, tleCharacterIndex);
 
         const parameterCompletions: Completion.Item[] = [];
-        const parameterDefinitionMatches: ParameterDefinition[] = this._deploymentTemplate.findParameterDefinitionsWithPrefix(prefix);
+        const parameterDefinitionMatches: IParameterDefinition[] = this._scope.findParameterDefinitionsWithPrefix(prefix);
         for (const parameterDefinition of parameterDefinitionMatches) {
             const name: string = `'${parameterDefinition.name}'`;
             parameterCompletions.push(
@@ -539,7 +547,7 @@ export class PositionContext {
         const replaceSpanInfo: ReplaceSpanInfo = this.getReplaceSpanInfo(tleValue, tleCharacterIndex);
 
         const variableCompletions: Completion.Item[] = [];
-        const variableDefinitionMatches: Json.Property[] = this._deploymentTemplate.findVariableDefinitionsWithPrefix(prefix);
+        const variableDefinitionMatches: Json.Property[] = this._scope.findVariableDefinitionsWithPrefix(prefix);
         for (const variableDefinition of variableDefinitionMatches) {
             const variableName: string = `'${variableDefinition.name.toString()}'`;
             variableCompletions.push(new Completion.Item(variableName, `${variableName}${replaceSpanInfo.includeRightParenthesisInCompletion ? ")" : ""}$0`, replaceSpanInfo.replaceSpan, `(variable)`, "", Completion.CompletionKind.Variable));

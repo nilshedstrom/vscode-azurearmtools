@@ -10,7 +10,6 @@
 // tslint:disable:max-classes-per-file // Grandfathered in
 
 import * as assets from "./AzureRMAssets";
-import { DeploymentTemplate } from "./DeploymentTemplate";
 import { assert } from "./fixed_assert";
 import { Histogram } from "./Histogram";
 import { IncorrectArgumentsCountIssue } from "./IncorrectArgumentsCountIssue";
@@ -18,7 +17,7 @@ import * as Json from "./JSON";
 import * as language from "./Language";
 import { PositionContext } from "./PositionContext";
 import * as Reference from "./Reference";
-import { ITemplateScope } from "./TemplateScope";
+import { TemplateScope } from "./TemplateScope";
 import * as basic from "./Tokenizer";
 import { UnrecognizedBuiltinFunctionIssue, UnrecognizedUserFunctionIssue, UnrecognizedUserNamespaceIssue } from "./UnrecognizedFunctionIssues";
 import * as Utilities from "./Utilities";
@@ -656,11 +655,10 @@ export class FunctionCountVisitor extends Visitor {
 export class UndefinedParameterAndVariableVisitor extends Visitor {
     private _errors: language.Issue[] = [];
 
-    constructor(private _deploymentTemplate: DeploymentTemplate, _scope: ITemplateScope) { //asdf
+    constructor(private _scope: TemplateScope) { //asdf
         super();
 
-        assert(_deploymentTemplate !== null, "_deploymentTemplate cannot be null");
-        assert(_deploymentTemplate !== undefined, "_deploymentTemplate cannot be undefined");
+        assert(_scope);
     }
 
     public get errors(): language.Issue[] {
@@ -672,7 +670,7 @@ export class UndefinedParameterAndVariableVisitor extends Visitor {
 
         const quotedStringValue: string = tleString.token.stringValue;
 
-        if (tleString.isParametersArgument() && !this._deploymentTemplate.getParameterDefinition(quotedStringValue)) {
+        if (tleString.isParametersArgument() && !this._scope.getParameterDefinition(quotedStringValue)) {
             this._errors.push(new language.Issue(tleString.token.span, `Undefined parameter reference: ${quotedStringValue}`));
         }
 
@@ -684,14 +682,14 @@ export class UndefinedParameterAndVariableVisitor extends Visitor {
             //             'variables',
             //             "Variables are not accessible inside of a user-defined function")); //asdf
             // else
-            if (!this._deploymentTemplate.getVariableDefinition(quotedStringValue)) {
+            if (!this._scope.getVariableDefinition(quotedStringValue)) {
                 this._errors.push(new language.Issue(tleString.token.span, `Undefined variable reference: ${quotedStringValue}`));
             }
         }
     }
 
-    public static visit(tleValue: Value | null, deploymentTemplate: DeploymentTemplate, scope: ITemplateScope): UndefinedParameterAndVariableVisitor { //asdf
-        const visitor = new UndefinedParameterAndVariableVisitor(deploymentTemplate, scope);
+    public static visit(tleValue: Value | null, scope: TemplateScope): UndefinedParameterAndVariableVisitor { //asdf
+        const visitor = new UndefinedParameterAndVariableVisitor(scope);
         if (tleValue) {
             tleValue.accept(visitor);
         }
@@ -705,7 +703,7 @@ export class UndefinedParameterAndVariableVisitor extends Visitor {
 export class UnrecognizedFunctionVisitor extends Visitor {
     private _errors: language.Issue[] = [];
 
-    constructor(private _deploymentTemplate: DeploymentTemplate, private _tleFunctions: assets.FunctionsMetadata) {
+    constructor(private _scope: TemplateScope, private _tleFunctions: assets.FunctionsMetadata) { //testpoint
         super();
     }
 
@@ -721,7 +719,7 @@ export class UnrecognizedFunctionVisitor extends Visitor {
             const namespaceName: string = tleFunction.namespaceToken.stringValue;
             const namespaceSpan: language.Span = tleFunction.namespaceToken.span;
 
-            let namespaceDefinition = this._deploymentTemplate.getFunctionNamespaceDefinition(namespaceName);
+            let namespaceDefinition = this._scope.getFunctionNamespaceDefinition(namespaceName);
             if (!namespaceDefinition) {
                 // Namespace not found
                 this._errors.push(new UnrecognizedUserNamespaceIssue(namespaceSpan, namespaceName)); //testpoint
@@ -744,11 +742,11 @@ export class UnrecognizedFunctionVisitor extends Visitor {
     }
 
     public static visit(
-        deploymentTemplate: DeploymentTemplate,
+        scope: TemplateScope,
         tleValue: Value | null,
         tleFunctions: assets.FunctionsMetadata
     ): UnrecognizedFunctionVisitor {
-        let visitor = new UnrecognizedFunctionVisitor(deploymentTemplate, tleFunctions);
+        let visitor = new UnrecognizedFunctionVisitor(scope, tleFunctions); //testpoint
         if (tleValue) {
             tleValue.accept(visitor);
         }
@@ -842,7 +840,7 @@ export class IncorrectFunctionArgumentCountVisitor extends Visitor {
 export class UndefinedVariablePropertyVisitor extends Visitor {
     private _errors: language.Issue[] = [];
 
-    constructor(private _deploymentTemplate: DeploymentTemplate) {
+    constructor(private _scope: TemplateScope) {
         super();
     }
 
@@ -854,7 +852,7 @@ export class UndefinedVariablePropertyVisitor extends Visitor {
         if (tlePropertyAccess.nameToken) {
             const functionSource: FunctionCallValue | null = tlePropertyAccess.functionSource;
             if (functionSource) {
-                const variableProperty: Json.Property | null = this._deploymentTemplate.getVariableDefinitionFromFunctionCall(functionSource);
+                const variableProperty: Json.Property | null = this._scope.getVariableDefinitionFromFunctionCall(functionSource);
                 if (variableProperty) {
                     const variableDefinition: Json.ObjectValue | null = Json.asObjectValue(variableProperty.value);
                     const sourcesNameStack: string[] = tlePropertyAccess.sourcesNameStack;
@@ -883,8 +881,8 @@ export class UndefinedVariablePropertyVisitor extends Visitor {
             new language.Issue(span, `Property "${propertyName}" is not a defined property of "${sourceString}".`));
     }
 
-    public static visit(tleValue: Value | null, deploymentTemplate: DeploymentTemplate): UndefinedVariablePropertyVisitor {
-        const visitor = new UndefinedVariablePropertyVisitor(deploymentTemplate);
+    public static visit(tleValue: Value | null, scope: TemplateScope): UndefinedVariablePropertyVisitor {
+        const visitor = new UndefinedVariablePropertyVisitor(scope);
         if (tleValue) {
             tleValue.accept(visitor);
         }
@@ -965,7 +963,7 @@ export class FunctionSignatureHelp {
  */
 export class Parser {
     // Handles any JSON string, not just those that are actually TLE expressions beginning with bracket
-    public static parse(stringValue: string, scope: ITemplateScope): ParseResult {
+    public static parse(stringValue: string, scope: TemplateScope): ParseResult {
         assert(stringValue, "TLE strings cannot be null.");
         assert(1 <= stringValue.length, "TLE strings must be at least 1 character.");
         assert(Utilities.isQuoteCharacter(stringValue[0]), "The first character in a TLE string must be a quote character.");
@@ -1269,7 +1267,7 @@ export class ParseResult {
         private _expression: Value | null,
         private _rightSquareBracketToken: Token | null,
         private _errors: language.Issue[],
-        _scope: ITemplateScope //asdf
+        _scope: TemplateScope //asdf
     ) {
         assert(_errors);
     }

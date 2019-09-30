@@ -15,6 +15,7 @@ import { sources, testDiagnostics } from "./support/diagnostics";
 import { stringify } from "./support/stringify";
 import { testWithLanguageServer } from "./support/testWithLanguageServer";
 import { DISABLE_SLOW_TESTS } from "./testConstants";
+import { IParameterDefinition } from "../src/IParameterDefinition";
 
 suite("DeploymentTemplate", () => {
     suite("constructor(string)", () => {
@@ -60,10 +61,10 @@ suite("DeploymentTemplate", () => {
             const dt = new DeploymentTemplate("{ 'parameters': { 'num': { 'type': 'number' } } }", "id");
             assert.deepStrictEqual("{ 'parameters': { 'num': { 'type': 'number' } } }", dt.documentText);
             assert.deepStrictEqual("id", dt.documentId);
-            const parameterDefinitions: ParameterDefinition[] = dt.parameterDefinitions;
+            const parameterDefinitions: IParameterDefinition[] = dt.parameterDefinitions;
             assert(parameterDefinitions);
             assert.deepStrictEqual(parameterDefinitions.length, 1);
-            const pd0: ParameterDefinition = parameterDefinitions[0];
+            const pd0: IParameterDefinition = parameterDefinitions[0];
             assert(pd0);
             assert.deepStrictEqual(pd0.name.toString(), "num");
             assert.deepStrictEqual(pd0.description, null);
