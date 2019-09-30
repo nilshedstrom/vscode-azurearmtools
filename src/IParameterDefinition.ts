@@ -12,9 +12,11 @@ export interface IParameterDefinition {
     name: Json.StringValue;
     span: language.Span;
 
+    // We don't currently need access to the parameter's "type" or other properties
+
     supportsDescription: boolean;
     description: string | null;
 
-    supportsDefaultValue: boolean;
+    supportsDefaultValue: boolean; //asdf?
     defaultValue: Json.Value | null;
 }

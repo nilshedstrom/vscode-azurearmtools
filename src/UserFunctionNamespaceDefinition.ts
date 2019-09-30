@@ -2,6 +2,7 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 // ----------------------------------------------------------------------------
 
+import { CachedValue } from './CachedValue';
 import { assert } from './fixed_assert';
 import * as Json from "./JSON";
 import * as language from "./Language";
@@ -14,7 +15,7 @@ export class UserFunctionNamespaceDefinition {
     /* Example:
 
             "functions": [
-                {
+                {  <<<<  call createIfValid on this object
                     "namespace": "contoso",
                     "members": {
                         "uniqueName": {
@@ -34,16 +35,16 @@ export class UserFunctionNamespaceDefinition {
             ],
         */
 
-    private _members: UserFunctionDefinition[] | undefined;
+    private _members: CachedValue<UserFunctionDefinition[]> = new CachedValue<UserFunctionDefinition[]>();
 
     private constructor(private _value: Json.ObjectValue, private _name: Json.StringValue) {
         assert(_value);
     }
 
-    public static createIfValid(value: Json.ObjectValue): UserFunctionNamespaceDefinition | null { //asdf
-        let nameValue: Json.StringValue | null = Json.asStringValue(value.getPropertyValue("namespace"));
+    public static createIfValid(functionValue: Json.ObjectValue): UserFunctionNamespaceDefinition | null { //asdf
+        let nameValue: Json.StringValue | null = Json.asStringValue(functionValue.getPropertyValue("namespace"));
         if (nameValue && nameValue.toString()) {
-            return new UserFunctionNamespaceDefinition(value, nameValue);
+            return new UserFunctionNamespaceDefinition(functionValue, nameValue);
         }
 
         return null;
@@ -58,8 +59,8 @@ export class UserFunctionNamespaceDefinition {
     }
 
     public get members(): UserFunctionDefinition[] {
-        if (!this._members) {
-            this._members = [];
+        return this._members.getOrCacheValue(() => {
+            const membersResult: UserFunctionDefinition[] = [];
 
             const members: Json.ObjectValue | null = Json.asObjectValue(this._value.getPropertyValue("members"));
             if (members) {
@@ -68,13 +69,13 @@ export class UserFunctionNamespaceDefinition {
                     let value = Json.asObjectValue(member.value);
                     if (value) {
                         let func = new UserFunctionDefinition(name, value);
-                        this._members.push(func);
+                        membersResult.push(func);
                     }
                 }
             }
-        }
 
-        return this._members;
+            return membersResult;
+        });
     }
 
     public getMemberDefinition(functionName: string): UserFunctionDefinition | undefined {

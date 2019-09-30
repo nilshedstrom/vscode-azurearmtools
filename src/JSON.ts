@@ -12,6 +12,7 @@
 // Because the JSON/ARM parsers catch these errors, it doesn't make too much difference for the end user
 //   so might not be worth fixing.
 
+import { CachedValue } from "./CachedValue";
 import { assert } from "./fixed_assert";
 import * as language from "./Language";
 import * as basic from "./Tokenizer";
@@ -581,7 +582,8 @@ export abstract class Value {
  * A JSON object that contains properties.
  */
 export class ObjectValue extends Value { // asdf turn into real map
-    private _propertyMap: { [key: string]: Value | null } | undefined;
+    // Last set with the same (case-insensitive) key wins (just like in Azure template deployment)
+    private _caseInsensitivePropertyMap: CachedValue<Map<string, Value | null>> = new CachedValue<Map<string, Value | null>>();
 
     constructor(span: language.Span, private _properties: Property[]) {
         super(span);
@@ -596,17 +598,18 @@ export class ObjectValue extends Value { // asdf turn into real map
      * Get the map of property names to property values for this ObjectValue. This mapping is
      * created lazily.
      */
-    private get propertyMap(): { [key: string]: Value | null } {
-        if (!this._propertyMap) {
-            this._propertyMap = {};
+    private get propertyMap(): Map<string, Value | null> {
+        return this._caseInsensitivePropertyMap.getOrCacheValue(() => {
+            const caseInsensitivePropertyMap = new Map<string, Value | null>();
 
             if (this._properties.length > 0) {
                 for (const property of this._properties) {
-                    this._propertyMap[property.name.toString()] = property.value;
+                    caseInsensitivePropertyMap.set(property.name.toString().toLowerCase(), property.value);
                 }
             }
-        }
-        return this._propertyMap;
+
+            return caseInsensitivePropertyMap;
+        });
     }
 
     public get properties(): Property[] {
@@ -617,7 +620,7 @@ export class ObjectValue extends Value { // asdf turn into real map
      * Get whether a property with the provided propertyName is defined or not on this ObjectValue.
      */
     public hasProperty(propertyName: string): boolean {
-        return this.getPropertyValue(propertyName) !== undefined;
+        return !!this.getPropertyValue(propertyName);
     }
 
     /**
@@ -625,7 +628,8 @@ export class ObjectValue extends Value { // asdf turn into real map
      * provided name, then undefined will be returned.
      */
     public getPropertyValue(propertyName: string): Value | null {
-        return this.propertyMap[propertyName]; //asdf case insensitivity
+        const result = this.propertyMap.get(propertyName.toLowerCase());
+        return result ? result : null;
     }
 
     /**
@@ -653,7 +657,7 @@ export class ObjectValue extends Value { // asdf turn into real map
      * Get the property names
      */
     public get propertyNames(): string[] {
-        return Object.keys(this.propertyMap);
+        return Object.keys(this.propertyMap); // asdf return duplicates?
     }
 
     public accept(visitor: Visitor): void {
