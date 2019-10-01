@@ -50,12 +50,12 @@ export class TemplateScope {
         return this._variableDefinitions || [];
     }
 
-    // asdf just repeat those from the owner
     public get namespaceDefinitions(): UserFunctionNamespaceDefinition[] {
         // tslint:disable-next-line: strict-boolean-expressions
         return this._namespaceDefinitions || [];
     }
 
+    // parameterName can be surrounded with single quotes or not.  Search is case-insensitive
     public getParameterDefinition(parameterName: string): IParameterDefinition | null {
         assert(parameterName, "parameterName cannot be null, undefined, or empty");
 
@@ -72,12 +72,14 @@ export class TemplateScope {
         return null;
     }
 
+    // Search is case-insensitive
     public getFunctionNamespaceDefinition(namespaceName: string): UserFunctionNamespaceDefinition | undefined {
         assert(!!namespaceName, "namespaceName cannot be null, undefined, or empty");
         let namespaceNameLC = namespaceName.toLowerCase();
         return this.namespaceDefinitions.find((nd: UserFunctionNamespaceDefinition) => nd.namespaceName.toString().toLowerCase() === namespaceNameLC);
     }
 
+    // Search is case-insensitive
     public getFunctionDefinition(namespaceName: string, functionName: string): UserFunctionDefinition | null {
         assert(!!functionName, "functionName cannot be null, undefined, or empty");
         let nd = this.getFunctionNamespaceDefinition(namespaceName);
@@ -89,6 +91,7 @@ export class TemplateScope {
         return null;
     }
 
+    // variableName can be surrounded with single quotes or not.  Search is case-insensitive
     public getVariableDefinition(variableName: string): Json.Property | null {
         assert(variableName, "variableName cannot be null, undefined, or empty");
 

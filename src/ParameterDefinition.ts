@@ -56,4 +56,11 @@ export class ParameterDefinition implements IParameterDefinition {
             return null;
         });
     }
+
+    /**
+     * Convenient way of seeing what this object represents in the debugger, shouldn't be used for production code
+     */
+    public get debugDisplay(): string {
+        return this.name.toString();
+    }
 }

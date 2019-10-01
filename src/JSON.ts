@@ -657,7 +657,7 @@ export class ObjectValue extends Value { // asdf turn into real map
      * Get the property names
      */
     public get propertyNames(): string[] {
-        return Object.keys(this.propertyMap); // asdf return duplicates?
+        return [...this.propertyMap.keys()]; // asdf return duplicates differing only by case?
     }
 
     public accept(visitor: Visitor): void {
@@ -666,6 +666,10 @@ export class ObjectValue extends Value { // asdf turn into real map
 
     public toFriendlyString(): string {
         return "(object)";
+    }
+
+    public get debugDisplay(): string {
+        return `{ ${this.properties.map(pv => pv.name.toString() + ': ' + (pv.value instanceof Value ? pv.value.debugDisplay : String(pv.value))).join(", ")} }`
     }
 }
 

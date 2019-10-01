@@ -1229,7 +1229,7 @@ suite("PositionContext", () => {
                 };
             }
 
-            suite("Parameter defaultValue deep completion for objects", () => {
+            suite("Parameter defaultValue deep completion for objects", () => { //asdf add user functions
                 let { documentText, tokens } = getDocumentAndMarkers({
                     parameters: {
                         a: {

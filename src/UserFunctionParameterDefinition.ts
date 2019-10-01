@@ -37,4 +37,10 @@ export class UserFunctionParameterDefinition implements IParameterDefinition {
     public readonly supportsDefaultValue: boolean = false;
     public readonly defaultValue: Json.Value | null = null;
 
+    /**
+     * Convenient way of seeing what this object represents in the debugger, shouldn't be used for production code
+     */
+    public get debugDisplay(): string {
+        return this.name.toString();
+    }
 }

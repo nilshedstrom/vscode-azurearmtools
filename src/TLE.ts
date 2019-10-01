@@ -63,6 +63,13 @@ export abstract class Value {
     public abstract toString(): string;
 
     public abstract accept(visitor: Visitor): void;
+
+    /**
+     * Convenient way of seeing what this object represents in the debugger, shouldn't be used for production code
+     */
+    public get debugDisplay(): string {
+        return this.toString();
+    }
 }
 
 export abstract class ParentValue extends Value {
