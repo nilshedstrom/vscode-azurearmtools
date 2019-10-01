@@ -54,6 +54,21 @@ export interface IDeploymentOutput {
     value: number | unknown[] | string | {};
 }
 
+export interface IDeploymentNamespaceDefinition {
+    namespace: string;
+    members: {
+        [key: string]: {
+            parameters?:
+            {
+                name: string;
+                // tslint:disable-next-line: no-reserved-keywords
+                type: string;
+            }[];
+            output?: IDeploymentOutput;
+        };
+    };
+}
+
 export interface IDeploymentTemplate {
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#" | "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#";
     contentVersion: string;
@@ -67,20 +82,7 @@ export interface IDeploymentTemplate {
     outputs?: {
         [key: string]: IDeploymentOutput;
     };
-    functions?: {
-        namespace: string;
-        members: {
-            [key: string]: {
-                parameters?:
-                {
-                    name: string;
-                    // tslint:disable-next-line: no-reserved-keywords
-                    type: string;
-                }[];
-                output?: IDeploymentOutput;
-            };
-        };
-    }[];
+    functions?: IDeploymentNamespaceDefinition[];
 }
 
 export const defaultArmSchema = "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#";
