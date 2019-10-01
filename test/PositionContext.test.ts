@@ -1209,6 +1209,8 @@ suite("PositionContext", () => {
 
             });
 
+            // Input: Takes a document with "tokens" marked by the character "!".
+            // Output: The document with the tokens removed, plus a list of the character positions of those tokens.
             function getDocumentAndMarkers(document: object | string): { documentText: string; tokens: number[] } {
                 let tokens: number[] = [];
                 document = typeof document === "string" ? document : JSON.stringify(document);

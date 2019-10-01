@@ -61,14 +61,14 @@
             ],
             "preLaunchTask": "npm: compile",
             "env": {
-                "MOCHA_grep": "", // RegExp of tests to run (empty for all)
+                "MOCHA_grep": "\\.aa\\.bb\\.<CURSOR>", // RegExp of tests to run (empty for all)
                 "MOCHA_invert": "0", // Invert the RegExp
                 "AZCODE_ARM_IGNORE_BUNDLE": "1",
                 "MOCHA_enableTimeouts": "0", // Disable time-outs
                 "DEBUGTELEMETRY": "1", // "1"=don't send, quiet + "verbose"=don't send + show in console
                 "NODE_DEBUG": "",
-                "DISABLE_LANGUAGE_SERVER_TESTS": "0",
-                "DISABLE_SLOW_TESTS": "0"
+                "DISABLE_LANGUAGE_SERVER_TESTS": "1",
+                "DISABLE_SLOW_TESTS": "1"
             }
         },
         {
