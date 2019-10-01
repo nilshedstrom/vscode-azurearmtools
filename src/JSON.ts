@@ -598,7 +598,7 @@ export class ObjectValue extends Value { // asdf turn into real map
      * Get the map of property names to property values for this ObjectValue. This mapping is
      * created lazily.
      */
-    private get propertyMap(): Map<string, Value | null> {
+    private get caseInsensitivePropertyMap(): Map<string, Value | null> {
         return this._caseInsensitivePropertyMap.getOrCacheValue(() => {
             const caseInsensitivePropertyMap = new Map<string, Value | null>();
 
@@ -628,7 +628,7 @@ export class ObjectValue extends Value { // asdf turn into real map
      * provided name, then undefined will be returned.
      */
     public getPropertyValue(propertyName: string): Value | null {
-        const result = this.propertyMap.get(propertyName.toLowerCase());
+        const result = this.caseInsensitivePropertyMap.get(propertyName.toLowerCase());
         return result ? result : null;
     }
 
@@ -657,7 +657,7 @@ export class ObjectValue extends Value { // asdf turn into real map
      * Get the property names
      */
     public get propertyNames(): string[] {
-        return [...this.propertyMap.keys()]; // asdf return duplicates differing only by case?
+        return [...this.caseInsensitivePropertyMap.keys()]; // asdf return duplicates differing only by case?
     }
 
     public accept(visitor: Visitor): void {
@@ -669,7 +669,10 @@ export class ObjectValue extends Value { // asdf turn into real map
     }
 
     public get debugDisplay(): string {
-        return `{ ${this.properties.map(pv => pv.name.toString() + ': ' + (pv.value instanceof Value ? pv.value.debugDisplay : String(pv.value))).join(", ")} }`
+        // tslint:disable-next-line: prefer-template
+        return "{ " +
+            this.properties.map(pv => pv.name.toString() + ': ' + (pv.value instanceof Value ? pv.value.debugDisplay : String(pv.value))).join(", ")
+            + " }";
     }
 }
 
