@@ -17,10 +17,9 @@ import { assertNotNull } from "./support/assertNotNull";
 suite("TLE", () => {
     const emptyScope = new TemplateScope(ScopeContext.TopLevel, [], [], [], "empty scope");
 
-    function parseWithScope(stringValue: string, scope?: TemplateScope): TLE.ParseResult {
+    function parseExpressionWithScope(stringValue: string, scope?: TemplateScope): TLE.ParseResult {
         scope = scope ? scope : emptyScope;
-        const result = TLE.Parser.parse(stringValue, scope);
-        return result;
+        return TLE.Parser.parse(stringValue, scope);
     }
 
     suite("StringValue", () => {
@@ -310,43 +309,43 @@ suite("TLE", () => {
 
         suite("getSpan()", () => {
             test("with name", () => {
-                let f = parseWithScope("\"[concat]\"").expression;
+                let f = parseExpressionWithScope("\"[concat]\"").expression;
                 assert(f instanceof TLE.FunctionCallValue);
                 assert.deepStrictEqual(new Language.Span(2, 6), f!.getSpan());
             });
 
             test("with left parenthesis", () => {
-                let f = parseWithScope("\"[concat(]\"").expression;
+                let f = parseExpressionWithScope("\"[concat(]\"").expression;
                 assert(f instanceof TLE.FunctionCallValue);
                 assert.deepStrictEqual(new Language.Span(2, 7), f!.getSpan());
             });
 
             test("with one argument and no right parenthesis", () => {
-                let f = parseWithScope("\"[concat(70").expression;
+                let f = parseExpressionWithScope("\"[concat(70").expression;
                 assert(f instanceof TLE.FunctionCallValue);
                 assert.deepStrictEqual(new Language.Span(2, 9), f!.getSpan());
             });
 
             test("with two arguments and no right parenthesis", () => {
-                let f = parseWithScope("\"[concat(70, 3").expression;
+                let f = parseExpressionWithScope("\"[concat(70, 3").expression;
                 assert(f instanceof TLE.FunctionCallValue);
                 assert.deepStrictEqual(new Language.Span(2, 12), f!.getSpan());
             });
 
             test("with left and right parenthesis and no arguments", () => {
-                let f = parseWithScope("\"[concat()\"").expression;
+                let f = parseExpressionWithScope("\"[concat()\"").expression;
                 assert(f instanceof TLE.FunctionCallValue);
                 assert.deepStrictEqual(new Language.Span(2, 8), f!.getSpan());
             });
 
             test("with left and right parenthesis and arguments", () => {
-                let f = parseWithScope("\"[concat('hello', 'world')\"").expression;
+                let f = parseExpressionWithScope("\"[concat('hello', 'world')\"").expression;
                 assert(f instanceof TLE.FunctionCallValue);
                 assert.deepStrictEqual(new Language.Span(2, 24), f!.getSpan());
             });
 
             test("with last argument missing and no right parenthesis", () => {
-                let f = parseWithScope("\"[concat('hello',").expression;
+                let f = parseExpressionWithScope("\"[concat('hello',").expression;
                 assert(f instanceof TLE.FunctionCallValue);
                 assert.deepStrictEqual(new Language.Span(2, 15), f!.getSpan());
             });
@@ -483,15 +482,15 @@ suite("TLE", () => {
     suite("Parser", () => {
         suite("parse(string)", () => {
             test("with empty stringValue", () => {
-                assert.throws(() => { parseWithScope(""); });
+                assert.throws(() => { parseExpressionWithScope(""); });
             });
 
             test("with non-empty non-quoted stringValue", () => {
-                assert.throws(() => { parseWithScope("hello"); });
+                assert.throws(() => { parseExpressionWithScope("hello"); });
             });
 
             test("with single double-quote character", () => {
-                let pr = parseWithScope("\"");
+                let pr = parseExpressionWithScope("\"");
                 assert(pr);
                 assert.equal(null, pr.leftSquareBracketToken);
                 assert.deepStrictEqual(
@@ -502,7 +501,7 @@ suite("TLE", () => {
             });
 
             test("with empty quoted string", () => {
-                let pr = parseWithScope("\"\"");
+                let pr = parseExpressionWithScope("\"\"");
                 assert(pr);
                 assert.equal(null, pr.leftSquareBracketToken);
                 assert.deepStrictEqual(
@@ -513,7 +512,7 @@ suite("TLE", () => {
             });
 
             test("with non-empty quoted string", () => {
-                let pr = parseWithScope("\"hello\"");
+                let pr = parseExpressionWithScope("\"hello\"");
                 assert(pr);
                 assert.equal(null, pr.leftSquareBracketToken);
                 assert.deepStrictEqual(
@@ -524,7 +523,7 @@ suite("TLE", () => {
             });
 
             test("with left square bracket (but no right square bracket)", () => {
-                let pr = parseWithScope("\"[\"");
+                let pr = parseExpressionWithScope("\"[\"");
                 assert(pr);
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
                 assert.equal(null, pr.expression);
@@ -538,7 +537,7 @@ suite("TLE", () => {
             });
 
             test("with two left square brackets", () => {
-                let pr = parseWithScope("\"[[\"");
+                let pr = parseExpressionWithScope("\"[[\"");
                 assert(pr);
                 assert.equal(null, pr.leftSquareBracketToken);
                 assert.deepStrictEqual(
@@ -549,7 +548,7 @@ suite("TLE", () => {
             });
 
             test("with two left square brackets and a right square bracket", () => {
-                let pr = parseWithScope("\"[[]\"");
+                let pr = parseExpressionWithScope("\"[[]\"");
                 assert(pr);
                 assert.equal(null, pr.leftSquareBracketToken);
                 assert.deepStrictEqual(
@@ -560,7 +559,7 @@ suite("TLE", () => {
             });
 
             test("with two left square brackets and a literal", () => {
-                let pr = parseWithScope("\"[[hello\"");
+                let pr = parseExpressionWithScope("\"[[hello\"");
                 assert(pr);
                 assert.equal(null, pr.leftSquareBracketToken);
                 assert.deepStrictEqual(
@@ -571,7 +570,7 @@ suite("TLE", () => {
             });
 
             test("with left and right square brackets", () => {
-                let pr = parseWithScope("\"[]\"");
+                let pr = parseExpressionWithScope("\"[]\"");
                 assert(pr);
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
                 assert.equal(null, pr.expression);
@@ -582,7 +581,7 @@ suite("TLE", () => {
             });
 
             test("with left and right square brackets after whitespace", () => {
-                let pr = parseWithScope("\"  []\"");
+                let pr = parseExpressionWithScope("\"  []\"");
                 assert(pr);
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(3), pr.leftSquareBracketToken);
                 assert.equal(null, pr.expression);
@@ -593,7 +592,7 @@ suite("TLE", () => {
             });
 
             test("with left and right square brackets with whitespace between them", () => {
-                let pr = parseWithScope("\"[    ]\"");
+                let pr = parseExpressionWithScope("\"[    ]\"");
                 assert(pr);
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
                 assert.deepStrictEqual(null, pr.expression);
@@ -604,7 +603,7 @@ suite("TLE", () => {
             });
 
             test("with right square bracket", () => {
-                let pr = parseWithScope("\"]\"");
+                let pr = parseExpressionWithScope("\"]\"");
                 assert(pr);
                 assert.equal(null, pr.leftSquareBracketToken);
                 assert.deepStrictEqual(
@@ -615,7 +614,7 @@ suite("TLE", () => {
             });
 
             test("with function name without parentheses, arguments, or right square bracket", () => {
-                let pr = parseWithScope("\"[concat\"");
+                let pr = parseExpressionWithScope("\"[concat\"");
                 assert(pr);
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
                 assert.deepStrictEqual(new TLE.FunctionCallValue(null, TLE.Token.createLiteral(2, "concat"), null, [], [], null), pr.expression);
@@ -629,7 +628,7 @@ suite("TLE", () => {
             });
 
             test("with function namespace and period but no function name", () => {
-                let pr = parseWithScope("\"[concat.\"");
+                let pr = parseExpressionWithScope("\"[concat.\"");
                 assert(pr);
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
                 assert.deepStrictEqual(new TLE.FunctionCallValue(null, TLE.Token.createLiteral(2, "concat"), null, [], [], null), pr.expression);
@@ -644,7 +643,7 @@ suite("TLE", () => {
             });
 
             test("with function name without parentheses or arguments", () => {
-                let pr = parseWithScope("\"[concat]\"");
+                let pr = parseExpressionWithScope("\"[concat]\"");
                 assert(pr);
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
                 assert.deepStrictEqual(new TLE.FunctionCallValue(null, TLE.Token.createLiteral(2, "concat"), null, [], [], null), pr.expression);
@@ -655,7 +654,7 @@ suite("TLE", () => {
             });
 
             test("with function name and left parenthesis without right square bracket", () => {
-                let pr = parseWithScope("\"[concat (\"");
+                let pr = parseExpressionWithScope("\"[concat (\"");
                 assert(pr);
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
                 assert.deepStrictEqual(
@@ -677,7 +676,7 @@ suite("TLE", () => {
             });
 
             test("with function name and left parenthesis", () => {
-                let pr = parseWithScope("\"[concat (]\"");
+                let pr = parseExpressionWithScope("\"[concat (]\"");
                 assert(pr);
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
                 assert.deepStrictEqual(
@@ -696,7 +695,7 @@ suite("TLE", () => {
             });
 
             test("with function name and right parenthesis", () => {
-                let pr = parseWithScope("\"[concat)]\"");
+                let pr = parseExpressionWithScope("\"[concat)]\"");
                 assert(pr);
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
                 assert.deepStrictEqual(
@@ -718,7 +717,7 @@ suite("TLE", () => {
             });
 
             test("with function with no arguments", () => {
-                let pr = parseWithScope("\" [ concat (    )  ]  \"");
+                let pr = parseExpressionWithScope("\" [ concat (    )  ]  \"");
                 assert(pr);
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(2), pr.leftSquareBracketToken);
                 assert.deepStrictEqual(
@@ -735,7 +734,7 @@ suite("TLE", () => {
             });
 
             test("with function with one number argument", () => {
-                let pr = parseWithScope("\"[concat(12)]\"");
+                let pr = parseExpressionWithScope("\"[concat(12)]\"");
                 assert(pr);
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
                 assert.deepStrictEqual(TLE.Token.createRightSquareBracket(12), pr.rightSquareBracketToken);
@@ -755,7 +754,7 @@ suite("TLE", () => {
             });
 
             test("with user namespace and function with one number argument", () => {
-                let pr = parseWithScope("\"[con.at(12)]\"");
+                let pr = parseExpressionWithScope("\"[con.at(12)]\"");
                 assert(pr);
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
                 assert.deepStrictEqual(TLE.Token.createRightSquareBracket(12), pr.rightSquareBracketToken);
@@ -775,7 +774,7 @@ suite("TLE", () => {
             });
 
             test("with function with no closing double quote or right square bracket", () => {
-                let pr = parseWithScope("\"[concat()");
+                let pr = parseExpressionWithScope("\"[concat()");
                 assert(pr);
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
                 assert.deepStrictEqual(
@@ -796,7 +795,7 @@ suite("TLE", () => {
             });
 
             test("with function with no closing right square bracket", () => {
-                let pr = parseWithScope("\"[concat()\"");
+                let pr = parseExpressionWithScope("\"[concat()\"");
                 assert(pr);
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
                 assert.deepStrictEqual(
@@ -817,7 +816,7 @@ suite("TLE", () => {
             });
 
             test("with function with one string argument", () => {
-                const pr: TLE.ParseResult = parseWithScope("\"[concat('test')]\"");
+                const pr: TLE.ParseResult = parseExpressionWithScope("\"[concat('test')]\"");
                 assert(pr);
                 assert.deepStrictEqual(pr.leftSquareBracketToken, TLE.Token.createLeftSquareBracket(1));
                 assert.deepStrictEqual(pr.rightSquareBracketToken, TLE.Token.createRightSquareBracket(16));
@@ -837,7 +836,7 @@ suite("TLE", () => {
             });
 
             test("with function with one string argument with square brackets", () => {
-                const pr: TLE.ParseResult = parseWithScope("\"[concat('test[]')]\"");
+                const pr: TLE.ParseResult = parseExpressionWithScope("\"[concat('test[]')]\"");
                 assert(pr);
                 assert.deepStrictEqual(pr.leftSquareBracketToken, TLE.Token.createLeftSquareBracket(1));
                 assert.deepStrictEqual(pr.rightSquareBracketToken, TLE.Token.createRightSquareBracket(18));
@@ -858,7 +857,7 @@ suite("TLE", () => {
             });
 
             test("with function with one string argument and a comma", () => {
-                const pr: TLE.ParseResult = parseWithScope("\"[concat('test',)]\"");
+                const pr: TLE.ParseResult = parseExpressionWithScope("\"[concat('test',)]\"");
                 assert(pr);
                 assert.deepStrictEqual(pr.leftSquareBracketToken, TLE.Token.createLeftSquareBracket(1));
                 assert.deepStrictEqual(pr.rightSquareBracketToken, TLE.Token.createRightSquareBracket(17));
@@ -889,7 +888,7 @@ suite("TLE", () => {
             });
 
             test("with function with missing first argument and string second argument", () => {
-                const pr: TLE.ParseResult = parseWithScope("\"[concat(,'test')]\"");
+                const pr: TLE.ParseResult = parseExpressionWithScope("\"[concat(,'test')]\"");
                 assert(pr);
                 assert.deepStrictEqual(pr.leftSquareBracketToken, TLE.Token.createLeftSquareBracket(1));
                 assert.deepStrictEqual(pr.rightSquareBracketToken, TLE.Token.createRightSquareBracket(17));
@@ -920,7 +919,7 @@ suite("TLE", () => {
             });
 
             test("with function with one missing argument and no right parenthesis", () => {
-                let pr = parseWithScope("\"[concat('a1',");
+                let pr = parseExpressionWithScope("\"[concat('a1',");
                 assert(pr);
                 assert.deepStrictEqual(pr.leftSquareBracketToken, TLE.Token.createLeftSquareBracket(1));
                 assert.deepStrictEqual(pr.rightSquareBracketToken, null);
@@ -952,7 +951,7 @@ suite("TLE", () => {
             });
 
             test("with function with three missing arguments", () => {
-                let pr = parseWithScope("\"[concat(,,)]\"");
+                let pr = parseExpressionWithScope("\"[concat(,,)]\"");
                 assert(pr);
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
                 assert.deepStrictEqual(
@@ -979,7 +978,7 @@ suite("TLE", () => {
             });
 
             test("with function with two arguments", () => {
-                const pr: TLE.ParseResult = parseWithScope("\"[concat('a', 'b')]\"");
+                const pr: TLE.ParseResult = parseExpressionWithScope("\"[concat('a', 'b')]\"");
                 assert(pr);
                 assert.deepStrictEqual(pr.leftSquareBracketToken, TLE.Token.createLeftSquareBracket(1));
                 assert.deepStrictEqual(pr.rightSquareBracketToken, TLE.Token.createRightSquareBracket(18));
@@ -1008,7 +1007,7 @@ suite("TLE", () => {
             });
 
             test("with function with three arguments", () => {
-                const pr: TLE.ParseResult = parseWithScope("\"[concat('a', 'b', 3)]\"");
+                const pr: TLE.ParseResult = parseExpressionWithScope("\"[concat('a', 'b', 3)]\"");
                 assert(pr);
                 assert.deepStrictEqual(pr.leftSquareBracketToken, TLE.Token.createLeftSquareBracket(1));
                 assert.deepStrictEqual(pr.rightSquareBracketToken, TLE.Token.createRightSquareBracket(21));
@@ -1042,7 +1041,7 @@ suite("TLE", () => {
             });
 
             test("with function with function argument", () => {
-                const pr: TLE.ParseResult = parseWithScope("\"[concat('a', add(5, 7), 3)]\"");
+                const pr: TLE.ParseResult = parseExpressionWithScope("\"[concat('a', add(5, 7), 3)]\"");
                 assert(pr);
                 assert.deepStrictEqual(pr.leftSquareBracketToken, TLE.Token.createLeftSquareBracket(1));
                 assert.deepStrictEqual(pr.rightSquareBracketToken, TLE.Token.createRightSquareBracket(27));
@@ -1092,7 +1091,7 @@ suite("TLE", () => {
             });
 
             test("with function with single single-quote argument", () => {
-                const pr: TLE.ParseResult = parseWithScope("\"[concat(')]\"");
+                const pr: TLE.ParseResult = parseExpressionWithScope("\"[concat(')]\"");
                 assert(pr);
                 assert.deepStrictEqual(pr.leftSquareBracketToken, TLE.Token.createLeftSquareBracket(1));
                 assert.deepStrictEqual(pr.rightSquareBracketToken, null);
@@ -1118,7 +1117,7 @@ suite("TLE", () => {
             });
 
             test("with function with missing comma between two arguments", () => {
-                const pr: TLE.ParseResult = parseWithScope("\"[concat('world'12)]\"");
+                const pr: TLE.ParseResult = parseExpressionWithScope("\"[concat('world'12)]\"");
                 assert(pr);
                 assert.deepStrictEqual(pr.leftSquareBracketToken, TLE.Token.createLeftSquareBracket(1));
                 assert.deepStrictEqual(pr.rightSquareBracketToken, TLE.Token.createRightSquareBracket(19));
@@ -1143,7 +1142,7 @@ suite("TLE", () => {
             });
 
             test("with function with missing comma between three arguments", () => {
-                const pr: TLE.ParseResult = parseWithScope("\"[concat('world'12'again')]\"");
+                const pr: TLE.ParseResult = parseExpressionWithScope("\"[concat('world'12'again')]\"");
                 assert(pr);
                 assert.deepStrictEqual(pr.leftSquareBracketToken, TLE.Token.createLeftSquareBracket(1));
                 assert.deepStrictEqual(pr.rightSquareBracketToken, TLE.Token.createRightSquareBracket(26));
@@ -1169,7 +1168,7 @@ suite("TLE", () => {
             });
 
             test("with property access", () => {
-                const pr: TLE.ParseResult = parseWithScope("\"[resourceGroup().name]\"");
+                const pr: TLE.ParseResult = parseExpressionWithScope("\"[resourceGroup().name]\"");
                 assert(pr);
                 assert.deepStrictEqual(pr.leftSquareBracketToken, TLE.Token.createLeftSquareBracket(1));
                 assert.deepStrictEqual(pr.rightSquareBracketToken, TLE.Token.createRightSquareBracket(22));
@@ -1191,7 +1190,7 @@ suite("TLE", () => {
             });
 
             test("with property access with missing period", () => {
-                let pr = parseWithScope("\"[resourceGroup()name]\"");
+                let pr = parseExpressionWithScope("\"[resourceGroup()name]\"");
                 assert(pr);
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
                 assert.deepStrictEqual(
@@ -1208,7 +1207,7 @@ suite("TLE", () => {
             });
 
             test("with quoted string instead of literal for property access", () => {
-                const pr = parseWithScope("\"[resourceGroup().'name']\"");
+                const pr = parseExpressionWithScope("\"[resourceGroup().'name']\"");
                 assert(pr);
                 assert.deepStrictEqual(pr.leftSquareBracketToken, TLE.Token.createLeftSquareBracket(1));
                 assert.deepStrictEqual(pr.rightSquareBracketToken, TLE.Token.createRightSquareBracket(24));
@@ -1234,7 +1233,7 @@ suite("TLE", () => {
             });
 
             test("with property access with missing property name", () => {
-                const pr: TLE.ParseResult = parseWithScope("\"[resourceGroup().]\"");
+                const pr: TLE.ParseResult = parseExpressionWithScope("\"[resourceGroup().]\"");
                 assert(pr);
                 assert.deepStrictEqual(pr.leftSquareBracketToken, TLE.Token.createLeftSquareBracket(1));
                 assert.deepStrictEqual(pr.rightSquareBracketToken, TLE.Token.createRightSquareBracket(18));
@@ -1260,7 +1259,7 @@ suite("TLE", () => {
             });
 
             test("with a two-deep property access", () => {
-                const pr: TLE.ParseResult = parseWithScope("\"[resourceGroup().name.length]\"");
+                const pr: TLE.ParseResult = parseExpressionWithScope("\"[resourceGroup().name.length]\"");
                 assert(pr);
                 assert.deepStrictEqual(pr.leftSquareBracketToken, TLE.Token.createLeftSquareBracket(1));
                 assert.deepStrictEqual(pr.rightSquareBracketToken, TLE.Token.createRightSquareBracket(29));
@@ -1287,7 +1286,7 @@ suite("TLE", () => {
             });
 
             test("with array access", () => {
-                const pr: TLE.ParseResult = parseWithScope("\"[variables('a')[15]]\"");
+                const pr: TLE.ParseResult = parseExpressionWithScope("\"[variables('a')[15]]\"");
                 assert(pr);
                 assert.deepStrictEqual(pr.leftSquareBracketToken, TLE.Token.createLeftSquareBracket(1));
                 assert.deepStrictEqual(pr.rightSquareBracketToken, TLE.Token.createRightSquareBracket(20));
@@ -1315,7 +1314,7 @@ suite("TLE", () => {
             });
 
             test("with two array accesses", () => {
-                const pr: TLE.ParseResult = parseWithScope("\"[variables('a')[15]['fido']]\"");
+                const pr: TLE.ParseResult = parseExpressionWithScope("\"[variables('a')[15]['fido']]\"");
                 assert(pr);
                 assert.deepStrictEqual(pr.leftSquareBracketToken, TLE.Token.createLeftSquareBracket(1));
                 assert.deepStrictEqual(pr.rightSquareBracketToken, TLE.Token.createRightSquareBracket(28));
@@ -1353,7 +1352,7 @@ suite("TLE", () => {
             });
 
             test("with array access with function index", () => {
-                const pr: TLE.ParseResult = parseWithScope("\"[variables('a')[add(12,3)]]\"");
+                const pr: TLE.ParseResult = parseExpressionWithScope("\"[variables('a')[add(12,3)]]\"");
                 assert(pr);
                 assert.deepStrictEqual(pr.leftSquareBracketToken, TLE.Token.createLeftSquareBracket(1));
                 assert.deepStrictEqual(pr.rightSquareBracketToken, TLE.Token.createRightSquareBracket(27));
@@ -1395,7 +1394,7 @@ suite("TLE", () => {
             });
 
             test("with function after string", () => {
-                let pr = parseWithScope("\"[hello()'world']\"");
+                let pr = parseExpressionWithScope("\"[hello()'world']\"");
                 assert(pr);
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
                 assert.deepStrictEqual(
@@ -1412,7 +1411,7 @@ suite("TLE", () => {
             });
 
             test("with function after string", () => {
-                let pr = parseWithScope("\"[hello'world'()]\"");
+                let pr = parseExpressionWithScope("\"[hello'world'()]\"");
                 assert(pr);
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
                 assert.deepStrictEqual(
@@ -1429,7 +1428,7 @@ suite("TLE", () => {
             });
 
             test("with string followed by literal", () => {
-                let pr = parseWithScope("\"['world'hello]\"");
+                let pr = parseExpressionWithScope("\"['world'hello]\"");
                 assert(pr);
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
                 assert.deepStrictEqual(
@@ -1451,7 +1450,7 @@ suite("TLE", () => {
             });
 
             test("with literal followed by string", () => {
-                let pr = parseWithScope("\"[hello'world']\"");
+                let pr = parseExpressionWithScope("\"[hello'world']\"");
                 assert(pr);
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
                 assert.deepStrictEqual(
@@ -1473,7 +1472,7 @@ suite("TLE", () => {
             });
 
             test(`with "[concat(parameters('_artifactsLocation'), '/', '/scripts/azuremysql.sh', parameters('_artifactsLocationSasToken'))], )]"`, () => {
-                const pr = parseWithScope(`"[concat(parameters('_artifactsLocation'), '/', '/scripts/azuremysql.sh', parameters('_artifactsLocationSasToken'))], )]"`);
+                const pr = parseExpressionWithScope(`"[concat(parameters('_artifactsLocation'), '/', '/scripts/azuremysql.sh', parameters('_artifactsLocationSasToken'))], )]"`);
                 assert.deepStrictEqual(
                     pr.errors,
                     [
@@ -2011,7 +2010,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
             test("with concat() with zero arguments", () => {
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
-                        const concat: TLE.Value = assertNotNull(parseWithScope(`"[concat()]"`).expression);
+                        const concat: TLE.Value = assertNotNull(parseExpressionWithScope(`"[concat()]"`).expression);
                         const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(visitor.errors, []);
@@ -2021,7 +2020,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
             test("with concat() with one argument", () => {
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
-                        const concat: TLE.Value = assertNotNull(parseWithScope(`"[concat(12)]"`).expression);
+                        const concat: TLE.Value = assertNotNull(parseExpressionWithScope(`"[concat(12)]"`).expression);
                         const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(visitor.errors, []);
@@ -2031,7 +2030,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
             test("with concat() with two arguments", () => {
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
-                        const concat: TLE.Value = assertNotNull(parseWithScope(`"[concat(12, 'test')]"`).expression);
+                        const concat: TLE.Value = assertNotNull(parseExpressionWithScope(`"[concat(12, 'test')]"`).expression);
                         const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(visitor.errors, []);
@@ -2041,7 +2040,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
             test("with add() with zero arguments", () => {
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
-                        const concat: TLE.Value = assertNotNull(parseWithScope(`"[add()]"`).expression);
+                        const concat: TLE.Value = assertNotNull(parseExpressionWithScope(`"[add()]"`).expression);
                         const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(
@@ -2053,7 +2052,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
             test("with add() with one argument", () => {
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
-                        const concat: TLE.Value = assertNotNull(parseWithScope(`"[add(5)]"`).expression);
+                        const concat: TLE.Value = assertNotNull(parseExpressionWithScope(`"[add(5)]"`).expression);
                         const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(
@@ -2065,7 +2064,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
             test("with add() with two arguments", () => {
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
-                        const concat: TLE.Value = assertNotNull(parseWithScope(`"[add(5, 6)]"`).expression);
+                        const concat: TLE.Value = assertNotNull(parseExpressionWithScope(`"[add(5, 6)]"`).expression);
                         const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(visitor.errors, []);
@@ -2075,7 +2074,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
             test("with add() with three arguments", () => {
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
-                        const concat: TLE.Value = assertNotNull(parseWithScope(`"[add(5, 6, 7)]"`).expression);
+                        const concat: TLE.Value = assertNotNull(parseExpressionWithScope(`"[add(5, 6, 7)]"`).expression);
                         const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(
@@ -2087,7 +2086,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
             test("with add() with three arguments and different casing", () => {
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
-                        const concat: TLE.Value = assertNotNull(parseWithScope(`"[Add(5, 6, 7)]"`).expression);
+                        const concat: TLE.Value = assertNotNull(parseExpressionWithScope(`"[Add(5, 6, 7)]"`).expression);
                         const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(
@@ -2099,7 +2098,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
             test("with resourceId() with zero arguments", () => {
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
-                        const concat: TLE.Value = assertNotNull(parseWithScope(`"[resourceId()]"`).expression);
+                        const concat: TLE.Value = assertNotNull(parseExpressionWithScope(`"[resourceId()]"`).expression);
                         const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(
@@ -2112,7 +2111,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
             test("with resourceId() with one argument", () => {
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
-                        const concat: TLE.Value = assertNotNull(parseWithScope(`"[resourceId(5)]"`).expression);
+                        const concat: TLE.Value = assertNotNull(parseExpressionWithScope(`"[resourceId(5)]"`).expression);
                         const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(
@@ -2125,7 +2124,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
             test("with resourceId() with two arguments", () => {
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
-                        const concat: TLE.Value = assertNotNull(parseWithScope(`"[resourceId(5, 6)]"`).expression);
+                        const concat: TLE.Value = assertNotNull(parseExpressionWithScope(`"[resourceId(5, 6)]"`).expression);
                         const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(visitor.errors, []);
@@ -2135,7 +2134,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
             test("with resourceId() with three arguments", () => {
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
-                        const concat: TLE.Value = assertNotNull(parseWithScope(`"[resourceId(5, 6, 7)]"`).expression);
+                        const concat: TLE.Value = assertNotNull(parseExpressionWithScope(`"[resourceId(5, 6, 7)]"`).expression);
                         const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(visitor.errors, []);
@@ -2145,7 +2144,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
             test("with substring() with zero arguments", () => {
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
-                        const concat: TLE.Value = assertNotNull(parseWithScope(`"[substring()]"`).expression);
+                        const concat: TLE.Value = assertNotNull(parseExpressionWithScope(`"[substring()]"`).expression);
                         const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(
@@ -2157,7 +2156,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
             test("with substring() with one argument", () => {
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
-                        const concat: TLE.Value = assertNotNull(parseWithScope(`"[substring('abc')]"`).expression);
+                        const concat: TLE.Value = assertNotNull(parseExpressionWithScope(`"[substring('abc')]"`).expression);
                         const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(visitor.errors, []);
@@ -2167,7 +2166,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
             test("with substring() with two arguments", () => {
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
-                        const concat: TLE.Value = assertNotNull(parseWithScope(`"[substring('abc', 1)]"`).expression);
+                        const concat: TLE.Value = assertNotNull(parseExpressionWithScope(`"[substring('abc', 1)]"`).expression);
                         const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(visitor.errors, []);
@@ -2177,7 +2176,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
             test("with substring() with three arguments", () => {
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
-                        const concat: TLE.Value = assertNotNull(parseWithScope(`"[substring('abc', 1, 1)]"`).expression);
+                        const concat: TLE.Value = assertNotNull(parseExpressionWithScope(`"[substring('abc', 1, 1)]"`).expression);
                         const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(visitor.errors, []);
@@ -2187,7 +2186,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
             test("with substring() with four arguments", () => {
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
-                        const concat: TLE.Value = assertNotNull(parseWithScope(`"[substring('abc', 1, 1, 'blah')]"`).expression);
+                        const concat: TLE.Value = assertNotNull(parseExpressionWithScope(`"[substring('abc', 1, 1, 'blah')]"`).expression);
                         const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(
@@ -2196,19 +2195,16 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
                     });
             });
 
-            //asdf
-            // test("user function with name matching a built-in, with zero arguments", async () => {
-            //     const functions: FunctionsMetadata = await AzureRMAssets.getFunctionsMetadata();
-            //     const concat: TLE.Value = assertNotNull(parseWithFakeScope(`"[Contoso.resourceId()]"`).expression);
-            //     const scope:FakeScope = new FakeScope();
-            //     scope.
-            //     const visitor = TLE.IncorrectFunctionArgumentCountVisitor.visit(concat, functions);
-            //     assert(visitor);
-            //     assert.deepStrictEqual(
-            //         visitor.errors,
-            //         // tslint:disable-next-line:no-any
-            //         [new IncorrectArgumentsCountIssue(new Language.Span(2, 12), "The function 'resourceId' takes at least 2 arguments.", "resourceId", 0, 2, <any>null)]);
-            // });
+            test("user function with name matching a built-in, with zero arguments", async () => {
+                const functions: FunctionsMetadata = await AzureRMAssets.getFunctionsMetadata();
+                const concat: TLE.Value = assertNotNull(parseExpressionWithScope(`"[Contoso.resourceId()]"`).expression);
+                const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
+                assert(visitor);
+                assert.deepStrictEqual(
+                    visitor.errors,
+                    []
+                );
+            });
         });
     });
 
@@ -2264,7 +2260,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
             });
 
             test("with TLE", () => {
-                const pr: TLE.ParseResult = parseWithScope(`"[parameters('pName')]"`);
+                const pr: TLE.ParseResult = parseExpressionWithScope(`"[parameters('pName')]"`);
                 const visitor = FindReferencesVisitor.visit(pr.expression, Reference.ReferenceKind.Parameter, "pName");
                 assert(visitor);
                 assert.deepStrictEqual(
