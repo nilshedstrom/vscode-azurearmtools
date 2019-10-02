@@ -60,7 +60,7 @@ export class ParameterDefinition implements IParameterDefinition {
     /**
      * Convenient way of seeing what this object represents in the debugger, shouldn't be used for production code
      */
-    public get debugDisplay(): string {
+    public get __debugDisplay(): string {
         return this.name.toString();
     }
 }

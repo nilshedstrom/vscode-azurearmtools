@@ -11,6 +11,7 @@ import * as TLE from "../TLE";
 /**
  * Finds all spans that represent a call to "reference()" inside of a variable definition
  */
+// CONSIDER: This should be generalized
 export class ReferenceInVariableDefinitionsVisitor extends Json.Visitor {
     private _referenceSpans: language.Span[] = [];
 
@@ -40,10 +41,7 @@ export class ReferenceInVariableDefinitionsVisitor extends Json.Visitor {
     }
 }
 
-/**
- * asdf
- */
-class ReferenceInVariableDefinitionTLEVisitor extends TLE.Visitor { //asdf
+class ReferenceInVariableDefinitionTLEVisitor extends TLE.Visitor {
     private _referenceSpans: language.Span[] = [];
 
     public get referenceSpans(): language.Span[] {

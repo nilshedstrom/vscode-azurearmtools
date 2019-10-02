@@ -22,6 +22,7 @@ export class UndefinedVariablePropertyVisitor extends Visitor {
         if (tlePropertyAccess.nameToken) {
             const functionSource: FunctionCallValue | null = tlePropertyAccess.functionSource;
             if (functionSource) {
+                // Get the definition for the variable that's being referenced via a variables('v') call
                 const variableProperty: Json.Property | null = this._scope.getVariableDefinitionFromFunctionCall(functionSource);
                 if (variableProperty) {
                     const variableDefinition: Json.ObjectValue | null = Json.asObjectValue(variableProperty.value);

@@ -5,52 +5,13 @@
 // tslint:disable:no-unused-expression max-func-body-length promise-function-async max-line-length no-unnecessary-class
 // tslint:disable:no-non-null-assertion object-literal-key-quotes variable-name
 
-import { DeploymentTemplate } from "../src/DeploymentTemplate";
 import { assert } from "../src/fixed_assert";
-import { Issue } from "../src/Language";
-import { IDeploymentNamespaceDefinition } from "./support/diagnostics";
-import { stringify } from "./support/stringify";
+import { parseTemplateAndValidateErrors } from "./support/parseTemplate";
 
-suite("DeploymentTemplate - User functions", () => {
-
-    //#region Support
-
-    async function parseDeploymentTemplate(template: string | {}, expectedErrors?: string[]): Promise<DeploymentTemplate> {
-        const json = typeof template === "string" ? template : stringify(template);
-        const dt = new DeploymentTemplate(json, "id");
-
-        if (expectedErrors) {
-            const errors: Issue[] = await dt.errors;
-            const errorMessages = errors.map(e => e.message);
-            assert.deepStrictEqual(errorMessages, expectedErrors);
-        }
-
-        return dt;
-    }
-
-    const namespace_udf_odd: IDeploymentNamespaceDefinition = {
-        "namespace": "udf",
-        "members": {
-            "odd": {
-                "parameters": [
-                    {
-                        "name": "number",
-                        "type": "Int"
-                    }
-                ],
-                "output": {
-                    "type": "bool",
-                    "value": "[equals(mod(parameters('number'), 2), 1)]"
-                }
-            }
-        }
-    };
-
-    //#endregion Support
+suite("User functions", () => {
 
     // #region
-
-    suite("Malformed functions", () => {
+    suite("Malformed", () => {
         test("missing namespace name", async () => {
             const template = {
                 "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
@@ -75,7 +36,7 @@ suite("DeploymentTemplate - User functions", () => {
                 ]
             };
 
-            const dt = await parseDeploymentTemplate(template, [
+            const dt = await parseTemplateAndValidateErrors(template, [
                 // Since the function isn't valid, the parameter show as missing
                 "Undefined parameter reference: 'number'"
             ]);
@@ -106,19 +67,48 @@ suite("DeploymentTemplate - User functions", () => {
                 }
             ]`;
 
-            const dt = await parseDeploymentTemplate(template, [
-                // Since the function isn't valid, the parameter show as missing
+            const dt = await parseTemplateAndValidateErrors(template, [
+                // Since the function isn't valid, the parameter shows as missing
+                "Undefined parameter reference: 'number'"
+            ]);
+            assert.equal(0, dt.topLevelScope.namespaceDefinitions.length);
+        });
+
+        test("No top-level object value", async () => {
+            const template = [{
+                "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                "contentVersion": "1.0.0.0",
+                "functions": [
+                    {
+                        "members": {
+                            "odd": {
+                                "parameters": [
+                                    {
+                                        "name": "number",
+                                        "type": "Int"
+                                    }
+                                ],
+                                "output": {
+                                    "type": "bool",
+                                    "value": "[equals(mod(parameters('number'), 2), 1)]"
+                                }
+                            }
+                        }
+                    }
+                ]
+            }];
+
+            const dt = await parseTemplateAndValidateErrors(template, [
+                // Since the function (and entire deployment) isn't valid, the parameter shows as missing
                 "Undefined parameter reference: 'number'"
             ]);
             assert.equal(0, dt.topLevelScope.namespaceDefinitions.length);
         });
 
     });
-
     // #endregion
 
     // #region
-
     suite("Function definitions", () => {
         test("simple function definition", async () => {
             const template = {
@@ -133,17 +123,35 @@ suite("DeploymentTemplate - User functions", () => {
                 }]
             };
 
-            await parseDeploymentTemplate(template, []);
+            await parseTemplateAndValidateErrors(template, []);
         });
 
         test("function definition with local parameter reference in output", async () => {
             const template = {
                 "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
                 "contentVersion": "1.0.0.0",
-                "functions": [namespace_udf_odd]
+                "functions": [
+                    {
+                        "namespace": "udf",
+                        "members": {
+                            "odd": {
+                                "parameters": [
+                                    {
+                                        "name": "number",
+                                        "type": "Int"
+                                    }
+                                ],
+                                "output": {
+                                    "type": "bool",
+                                    "value": "[equals(mod(parameters('number'), 2), 1)]"
+                                }
+                            }
+                        }
+                    }
+                ]
             };
 
-            await parseDeploymentTemplate(template, []);
+            await parseTemplateAndValidateErrors(template, []);
         });
 
         test("Case insensitive keys in definition", async () => {
@@ -173,7 +181,7 @@ suite("DeploymentTemplate - User functions", () => {
                 ]
             };
 
-            const dt = await parseDeploymentTemplate(template); //asdf, []);
+            const dt = await parseTemplateAndValidateErrors(template, []);
             assert.equal(dt.topLevelScope.parameterDefinitions.length, 0);
             assert(!dt.topLevelScope.getParameterDefinition('notfound'));
             assert.equal(dt.topLevelScope.namespaceDefinitions.length, 1);
@@ -188,10 +196,26 @@ suite("DeploymentTemplate - User functions", () => {
             const template = {
                 "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
                 "contentVersion": "1.0.0.0",
-                "functions": [namespace_udf_odd]
+                "functions": [{
+                    "namespace": "udf",
+                    "members": {
+                        "odd": {
+                            "parameters": [
+                                {
+                                    "name": "number",
+                                    "type": "Int"
+                                }
+                            ],
+                            "output": {
+                                "type": "bool",
+                                "value": "[equals(mod(parameters('number'), 2), 1)]"
+                            }
+                        }
+                    }
+                }]
             };
 
-            await parseDeploymentTemplate(template, []);
+            await parseTemplateAndValidateErrors(template, []);
         });
 
         test("function definition can't access parameter from outer scope", async () => {
@@ -223,12 +247,42 @@ suite("DeploymentTemplate - User functions", () => {
                 }]
             };
 
-            await parseDeploymentTemplate(template, [
+            await parseTemplateAndValidateErrors(template, [
                 "Undefined parameter reference: 'outerParam'"
             ]);
         });
 
-        test("function definition can't access variables"); //asdf
+        // CONSIDER: Better error message
+        // Right now we get:
+        //   Template validation failed: The template function 'a' at line '11' and column '22' is not valid. These function calls are not supported in a function definition: 'variables'. Please see https://aka.ms/arm-template/#functions for usage details.
+        //   Undefined variable reference: 'var1'
+        test("function definition can't access variables", async () => {
+            const template = {
+                "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                "contentVersion": "1.0.0.0",
+                "functions": [
+                    {
+                        "namespace": "udf",
+                        "members": {
+                            "a": {
+                                "output": {
+                                    "value": "[variables('var1')]",
+                                    "type": "int"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "resources": [],
+                "variables": {
+                    "var1": 1
+                }
+            };
+
+            await parseTemplateAndValidateErrors(template, [
+                "Undefined variable reference: 'var1'"
+            ]);
+        });
 
         test("function definition output can't access parameter from outer scope", async () => {
             const template = {
@@ -259,7 +313,7 @@ suite("DeploymentTemplate - User functions", () => {
                 }]
             };
 
-            await parseDeploymentTemplate(template, [
+            await parseTemplateAndValidateErrors(template, [
                 "Undefined parameter reference: 'outerParam'"
             ]);
         });
@@ -293,41 +347,7 @@ suite("DeploymentTemplate - User functions", () => {
                 }]
             };
 
-            await parseDeploymentTemplate(template, [
-                "Undefined parameter reference: 'outerParam'"
-            ]);
-        });
-
-        test("function can't access parameter from outer scope", async () => {
-            const template = {
-                "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-                "contentVersion": "1.0.0.0",
-                "parameters": {
-                    "outerParam": {
-                        "name": "number",
-                        "type": "Int"
-                    }
-                },
-                "functions": [{
-                    "namespace": "udf",
-                    "members": {
-                        "odd": {
-                            "parameters": [
-                                {
-                                    "name": "number",
-                                    "type": "Int"
-                                }
-                            ],
-                            "output": {
-                                "type": "bool",
-                                "value": "[parameters('outerParam')]"
-                            }
-                        }
-                    }
-                }]
-            };
-
-            await parseDeploymentTemplate(template, [
+            await parseTemplateAndValidateErrors(template, [
                 "Undefined parameter reference: 'outerParam'"
             ]);
         });
@@ -355,7 +375,7 @@ suite("DeploymentTemplate - User functions", () => {
                 }]
             };
 
-            await parseDeploymentTemplate(template, []);
+            await parseTemplateAndValidateErrors(template, []);
         });
 
     });
@@ -382,7 +402,7 @@ suite("DeploymentTemplate - User functions", () => {
                 }]
             };
 
-            await parseDeploymentTemplate(template, []);
+            await parseTemplateAndValidateErrors(template, []);
         });
 
         test("Calling function with no parameters", async () => {
@@ -405,7 +425,7 @@ suite("DeploymentTemplate - User functions", () => {
                 }]
             };
 
-            await parseDeploymentTemplate(template, []);
+            await parseTemplateAndValidateErrors(template, []);
         });
 
         test("Calling function with no parameters, with extra arg", async () => {
@@ -428,7 +448,7 @@ suite("DeploymentTemplate - User functions", () => {
                 }]
             };
 
-            await parseDeploymentTemplate(template, [
+            await parseTemplateAndValidateErrors(template, [
                 'The function \'udf.nothing\' takes 0 arguments.'
             ]);
         });
@@ -449,7 +469,7 @@ suite("DeploymentTemplate - User functions", () => {
                 }]
             };
 
-            await parseDeploymentTemplate(template, [
+            await parseTemplateAndValidateErrors(template, [
                 'Unrecognized function name \'boo\' in user-defined namespace \'udf\'.'
             ]);
         });
@@ -470,7 +490,7 @@ suite("DeploymentTemplate - User functions", () => {
                 }]
             };
 
-            await parseDeploymentTemplate(template, [
+            await parseTemplateAndValidateErrors(template, [
                 'Unrecognized user-defined function namespace \'ufo\'.'
             ]);
         });
@@ -491,7 +511,7 @@ suite("DeploymentTemplate - User functions", () => {
                 }]
             };
 
-            await parseDeploymentTemplate(template, [
+            await parseTemplateAndValidateErrors(template, [
                 'Missing function argument list.'
             ]);
         });
@@ -512,7 +532,7 @@ suite("DeploymentTemplate - User functions", () => {
                 }]
             };
 
-            await parseDeploymentTemplate(template, [
+            await parseTemplateAndValidateErrors(template, [
                 'Expected a right parenthesis (\')\').',
                 'Unrecognized user-defined function namespace \'ufo\'.'
             ]);
@@ -544,7 +564,7 @@ suite("DeploymentTemplate - User functions", () => {
                 }]
             };
 
-            await parseDeploymentTemplate(template, []);
+            await parseTemplateAndValidateErrors(template, []);
         });
 
         test("Calling function with one parameter, only giving one argument", async () => {
@@ -573,7 +593,7 @@ suite("DeploymentTemplate - User functions", () => {
                 }]
             };
 
-            await parseDeploymentTemplate(template, [
+            await parseTemplateAndValidateErrors(template, [
                 "The function 'udf.odd' takes 1 argument."
             ]);
         });
@@ -604,7 +624,7 @@ suite("DeploymentTemplate - User functions", () => {
                 }]
             };
 
-            await parseDeploymentTemplate(template, [
+            await parseTemplateAndValidateErrors(template, [
                 "The function 'udf.odd' takes 1 argument."
             ]);
         });
@@ -642,7 +662,7 @@ suite("DeploymentTemplate - User functions", () => {
                 }]
             };
 
-            await parseDeploymentTemplate(template, []);
+            await parseTemplateAndValidateErrors(template, []);
         });
 
         test("Calling function with two parameters", async () => {
@@ -678,7 +698,7 @@ suite("DeploymentTemplate - User functions", () => {
                 }]
             };
 
-            await parseDeploymentTemplate(template, []);
+            await parseTemplateAndValidateErrors(template, []);
         });
 
         test("Namespaces are case insensitive", async () => {
@@ -697,7 +717,7 @@ suite("DeploymentTemplate - User functions", () => {
                 }]
             };
 
-            await parseDeploymentTemplate(template, []);
+            await parseTemplateAndValidateErrors(template, []);
         });
 
         test("Function names are case insensitive", async () => {
@@ -716,10 +736,43 @@ suite("DeploymentTemplate - User functions", () => {
                 }]
             };
 
-            await parseDeploymentTemplate(template, []);
+            await parseTemplateAndValidateErrors(template, []);
         });
 
-        test("User function can't call another user function"); //asdf
+        // CONSIDER: Give better error message.  Right now we get this:
+        //  Template validation failed: The template function 'b' at line '15' and column '22' is not valid. These function calls are not supported in a function definition: 'udf.a'. Please see https://aka.ms/arm-template/#functions for usage details.
+
+        if (false) {
+            test("User function can't call another user function", async () => {
+                const template = {
+                    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "functions": [
+                        {
+                            "namespace": "udf",
+                            "members": {
+                                "a": {
+                                    "output": {
+                                        "value": {
+                                        },
+                                        "type": "Object"
+                                    }
+                                },
+                                "b": {
+                                    "output": {
+                                        "type": "int",
+                                        "value": "[udf.a()]"
+                                    }
+                                }
+                            }
+                        }
+                    ],
+                    "resources": []
+                };
+
+                await parseTemplateAndValidateErrors(template, []);
+            });
+        }
 
         test("Calling user function with same name as built-in function", async () => {
             const template = {
@@ -737,8 +790,7 @@ suite("DeploymentTemplate - User functions", () => {
                 }]
             };
 
-            await parseDeploymentTemplate(template, []);
-
+            await parseTemplateAndValidateErrors(template, []);
         });
 
         test("Calling user function with namespace name same as built-in function", async () => {
@@ -757,7 +809,7 @@ suite("DeploymentTemplate - User functions", () => {
                 }]
             };
 
-            await parseDeploymentTemplate(template, []);
+            await parseTemplateAndValidateErrors(template, []);
 
         });
 
@@ -777,7 +829,7 @@ suite("DeploymentTemplate - User functions", () => {
                 }]
             };
 
-            await parseDeploymentTemplate(template, []);
+            await parseTemplateAndValidateErrors(template, []);
         });
 
     });

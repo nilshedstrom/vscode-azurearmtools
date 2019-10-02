@@ -104,7 +104,7 @@ export class Token extends Segment {
     /**
      * Convenient way of seeing what this token represents in the debugger, shouldn't be used for production code
      */
-    public get debugDisplay(): string {
+    public get __debugDisplay(): string {
         return this.toString();
     }
 }
@@ -573,7 +573,7 @@ export abstract class Value {
     /**
      * Convenient way of seeing what this token represents in the debugger, shouldn't be used for production code
      */
-    public get debugDisplay(): string {
+    public get __debugDisplay(): string {
         return this.toString();
     }
 }
@@ -668,11 +668,11 @@ export class ObjectValue extends Value { // asdf turn into real map
         return "(object)";
     }
 
-    public get debugDisplay(): string {
+    public get __debugDisplay(): string {
         // tslint:disable-next-line: prefer-template
-        return "{ " +
-            this.properties.map(pv => pv.name.toString() + ': ' + (pv.value instanceof Value ? pv.value.debugDisplay : String(pv.value))).join(", ")
-            + " }";
+        return "{" +
+            this.properties.map(pv => pv.name.toString() + ':' + (pv.value instanceof Value ? pv.value.__debugDisplay : String(pv.value))).join(",")
+            + "}";
     }
 }
 
@@ -708,6 +708,11 @@ export class Property extends Value {
 
     public toFriendlyString(): string {
         return "(property)";
+    }
+
+    public get __debugDisplay(): string {
+        // tslint:disable-next-line: prefer-template
+        return this._name.toString() + ":" + (this.value instanceof Value ? this.value.__debugDisplay : String(this.value));
     }
 }
 
@@ -753,11 +758,11 @@ export class ArrayValue extends Value {
         return "(array)";
     }
 
-    public get debugDisplay(): string {
+    public get __debugDisplay(): string {
         // tslint:disable-next-line: prefer-template
-        return "[ " +
-            this.elements.map(e => e.debugDisplay).join(", ")
-            + " ]";
+        return "[" +
+            this.elements.map(e => e.__debugDisplay).join(",")
+            + "]";
     }
 }
 

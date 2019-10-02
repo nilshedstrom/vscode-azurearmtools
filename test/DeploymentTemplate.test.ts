@@ -13,6 +13,7 @@ import { IParameterDefinition } from "../src/IParameterDefinition";
 import { UnrecognizedUserFunctionIssue, UnrecognizedUserNamespaceIssue } from "../src/UnrecognizedFunctionIssues";
 import { ReferenceInVariableDefinitionsVisitor } from "../src/visitors/ReferenceInVariableDefinitionsVisitor";
 import { sources, testDiagnostics } from "./support/diagnostics";
+import { parseTemplateAndValidateErrors } from "./support/parseTemplate";
 import { stringify } from "./support/stringify";
 import { testWithLanguageServer } from "./support/testWithLanguageServer";
 import { DISABLE_SLOW_TESTS } from "./testConstants";
@@ -364,6 +365,39 @@ suite("DeploymentTemplate", () => {
                     [new Language.Issue(new Language.Span(24, 9), "reference() cannot be invoked inside of a variable definition.")]
                 );
             });
+        });
+
+        test("Calling user function with name 'reference' okay in variables", async () => {
+            const template = {
+                "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                "contentVersion": "1.0.0.0",
+                "functions": [
+                    {
+                        "namespace": "udf",
+                        "members": {
+                            "reference": {
+                                "output": {
+                                    "value": true,
+                                    "type": "BOOL"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "resources": [
+                ],
+                "variables": {
+                    "v1": "[udf.reference()]"
+                },
+                "outputs": {
+                    "v1Output": {
+                        "type": "bool",
+                        "value": "[variables('v1')]"
+                    }
+                }
+            };
+
+            await parseTemplateAndValidateErrors(template, []);
         });
 
         test("with reference() call inside a different expression in a variable definition", () => {

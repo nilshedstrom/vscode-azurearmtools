@@ -63,7 +63,7 @@ export abstract class Value {
     /**
      * Convenient way of seeing what this object represents in the debugger, shouldn't be used for production code
      */
-    public get debugDisplay(): string {
+    public get __debugDisplay(): string {
         return this.toString();
     }
 }
@@ -315,7 +315,7 @@ export class FunctionCallValue extends ParentValue {
 
     public doesNameMatch(namespaceName: string | null, name: string): boolean {
         // tslint:disable-next-line: strict-boolean-expressions
-        namespaceName = namespaceName || ''; //testpoint
+        namespaceName = namespaceName || '';
         assert(!!name);
 
         let thisNamespace = this._namespaceToken ? this._namespaceToken.stringValue : '';
@@ -1041,7 +1041,7 @@ export class Tokenizer {
     /**
      * Convenient way of seeing what this object represents in the debugger, shouldn't be used for production code
      */
-    public get debugDisplay(): string {
+    public get __debugDisplay(): string {
         const charactersBeforeCurrent = 25;
         const charactersAfterCurrent = 50;
         const before = this._text.slice(this._currentTokenStartIndex - charactersBeforeCurrent, this._currentTokenStartIndex);

@@ -21,7 +21,7 @@ export class UnrecognizedFunctionVisitor extends Visitor {
     }
     public visitFunctionCall(tleFunction: FunctionCallValue): void {
         const functionName: string = tleFunction.nameToken.stringValue;
-        if (tleFunction.namespaceToken) {
+        if (tleFunction.namespaceToken) {//asdf method to find namespace+function name
             // User-defined function reference
             const namespaceName: string = tleFunction.namespaceToken.stringValue;
             const namespaceSpan: language.Span = tleFunction.namespaceToken.span;
