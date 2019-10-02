@@ -489,11 +489,12 @@ export class DeploymentTemplate {
         return result;
     }
 
+    // asdf be lazy?
     // Note: I don't think this should ever return null (unless not a string), but being defensive for now
     private getTLEParseResultFromString(value: string): TLE.ParseResult | null {
         assert(typeof value === "string");
         const result: TLE.ParseResult | undefined = this.quotedStringToTleParseResultMap.get(value);
-        //asdf assert(result); // asdf why would this be null?  - probably best to be safe and remove this assert
+        assert(result); // asdf why would this be null?  - probably best to be safe and remove this assert
         return result ? result : null;
     }
 

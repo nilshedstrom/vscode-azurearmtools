@@ -752,6 +752,13 @@ export class ArrayValue extends Value {
     public toFriendlyString(): string {
         return "(array)";
     }
+
+    public get debugDisplay(): string {
+        // tslint:disable-next-line: prefer-template
+        return "[ " +
+            this.elements.map(e => e.debugDisplay).join(", ")
+            + " ]";
+    }
 }
 
 /**
