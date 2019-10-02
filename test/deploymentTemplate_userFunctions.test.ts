@@ -408,6 +408,31 @@ suite("DeploymentTemplate - User functions", () => {
             await parseDeploymentTemplate(template, []);
         });
 
+        test("Calling function with no parameters, with extra arg", async () => {
+            const template = {
+                "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                "contentVersion": "1.0.0.0",
+                "variables": {
+                    tooManyArgs: "[udf.nothing('this arg doesn't belong here')]"
+                },
+                "functions": [{
+                    "namespace": "udf",
+                    "members": {
+                        "nothing": {
+                            "output": {
+                                "type": "bool",
+                                "value": true
+                            }
+                        }
+                    }
+                }]
+            };
+
+            await parseDeploymentTemplate(template, [
+                'asdf: too many args'
+            ]);
+        });
+
         test("Unrecognized function name", async () => {
             const template = {
                 "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
@@ -508,15 +533,11 @@ suite("DeploymentTemplate - User functions", () => {
                                 {
                                     "name": "number",
                                     "type": "Int"
-                                },
-                                {
-                                    "name": "sum",
-                                    "type": "int"
                                 }
                             ],
                             "output": {
                                 "type": "bool",
-                                "value": "[equals(mod(add(parameters('number'),parameters('sum')), 2), 0)]"
+                                "value": "[equals(mod(parameters('number'), 2), 0)]"
                             }
                         }
                     }
@@ -524,6 +545,68 @@ suite("DeploymentTemplate - User functions", () => {
             };
 
             await parseDeploymentTemplate(template, []);
+        });
+
+        test("Calling function with one parameter, only giving one argument", async () => {
+            const template = {
+                "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                "contentVersion": "1.0.0.0",
+                "variables": {
+                    notEnoughArgs: "[udf.odd()]"
+                },
+                "functions": [{
+                    "namespace": "udf",
+                    "members": {
+                        "odd": {
+                            "parameters": [
+                                {
+                                    "name": "number",
+                                    "type": "Int"
+                                }
+                            ],
+                            "output": {
+                                "type": "bool",
+                                "value": "[equals(mod(parameters('number'), 2), 0)]"
+                            }
+                        }
+                    }
+                }]
+            };
+
+            await parseDeploymentTemplate(template, [
+                "The function 'udf.odd' takes 1 argument."
+            ]);
+        });
+
+        test("Calling function with one parameter, giving an extra argument", async () => {
+            const template = {
+                "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                "contentVersion": "1.0.0.0",
+                "variables": {
+                    tooManyArgs: "[udf.odd()]"
+                },
+                "functions": [{
+                    "namespace": "udf",
+                    "members": {
+                        "odd": {
+                            "parameters": [
+                                {
+                                    "name": "number",
+                                    "type": "Int"
+                                }
+                            ],
+                            "output": {
+                                "type": "bool",
+                                "value": "[equals(mod(parameters('number'), 2), 0)]"
+                            }
+                        }
+                    }
+                }]
+            };
+
+            await parseDeploymentTemplate(template, [
+                "The function 'udf.odd' takes 1 argument."
+            ]);
         });
 
         test("Calling function with two parameters", async () => {
@@ -590,6 +673,44 @@ suite("DeploymentTemplate - User functions", () => {
                                 "type": "bool",
                                 "value": "[equals(mod(add(parameters('number'),parameters('sum')), 2), 0)]"
                             }
+                        }
+                    }
+                }]
+            };
+
+            await parseDeploymentTemplate(template, []);
+        });
+
+        test("Namespaces are case insensitive", async () => {
+            const template = {
+                "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                "contentVersion": "1.0.0.0",
+                "variables": {
+                    v1: "[udF.boo()]"
+                },
+                "functions": [{
+                    "namespace": "UDF",
+                    "members": {
+                        "boo": {
+                        }
+                    }
+                }]
+            };
+
+            await parseDeploymentTemplate(template, []);
+        });
+
+        test("Function names are case insensitive", async () => {
+            const template = {
+                "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                "contentVersion": "1.0.0.0",
+                "variables": {
+                    v1: "[udf.bOO()]"
+                },
+                "functions": [{
+                    "namespace": "udf",
+                    "members": {
+                        "Boo": {
                         }
                     }
                 }]
