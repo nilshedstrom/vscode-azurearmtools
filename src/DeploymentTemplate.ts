@@ -231,6 +231,8 @@ export class DeploymentTemplate {
 
                         const tleParseResult: TLE.ParseResult | null = this.getTLEParseResultFromJSONToken(jsonQuotedStringToken);
                         if (tleParseResult) {
+                            const expressionScope: TemplateScope = tleParseResult.scope;
+
                             for (const error of tleParseResult.errors) {
                                 parseErrors.push(error.translate(jsonTokenStartIndex));
                             }
@@ -253,13 +255,13 @@ export class DeploymentTemplate {
                             }
 
                             // Incorrect number of function arguments
-                            const tleIncorrectArgumentCountVisitor = IncorrectFunctionArgumentCountVisitor.IncorrectFunctionArgumentCountVisitor.visit(tleExpression, functions, tleParseResult.scope);
+                            const tleIncorrectArgumentCountVisitor = IncorrectFunctionArgumentCountVisitor.IncorrectFunctionArgumentCountVisitor.visit(tleExpression, functions, expressionScope);
                             for (const error of tleIncorrectArgumentCountVisitor.errors) {
                                 parseErrors.push(error.translate(jsonTokenStartIndex));
                             }
 
                             // Undefined variable properties
-                            const tleUndefinedVariablePropertyVisitor = UndefinedVariablePropertyVisitor.UndefinedVariablePropertyVisitor.visit(tleExpression, this._topLevelScope/*asdf?*/);
+                            const tleUndefinedVariablePropertyVisitor = UndefinedVariablePropertyVisitor.UndefinedVariablePropertyVisitor.visit(tleExpression, expressionScope);
                             for (const error of tleUndefinedVariablePropertyVisitor.errors) {
                                 parseErrors.push(error.translate(jsonTokenStartIndex));
                             }

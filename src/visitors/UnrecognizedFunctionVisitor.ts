@@ -28,25 +28,25 @@ export class UnrecognizedFunctionVisitor extends Visitor {
             let namespaceDefinition = this._scope.getFunctionNamespaceDefinition(namespaceName);
             if (!namespaceDefinition) {
                 // Namespace not found
-                this._errors.push(new UnrecognizedUserNamespaceIssue(namespaceSpan, namespaceName)); //testpoint
+                this._errors.push(new UnrecognizedUserNamespaceIssue(namespaceSpan, namespaceName));
             } else {
                 // Name not found within namespace
                 let funcDefinition = namespaceDefinition.getMemberDefinition(functionName);
                 if (!funcDefinition) {
-                    this._errors.push(new UnrecognizedUserFunctionIssue(tleFunction.nameToken.span, namespaceName, functionName)); //testpoint
+                    this._errors.push(new UnrecognizedUserFunctionIssue(tleFunction.nameToken.span, namespaceName, functionName));
                 }
             }
         } else {
             // Built-in function
             const functionMetadata: assets.FunctionMetadata | undefined = this._tleFunctions.findbyName(functionName);
             if (!functionMetadata) {
-                this._errors.push(new UnrecognizedBuiltinFunctionIssue(tleFunction.nameToken.span, functionName)); //testpoint
+                this._errors.push(new UnrecognizedBuiltinFunctionIssue(tleFunction.nameToken.span, functionName));
             }
         }
         super.visitFunctionCall(tleFunction);
     }
     public static visit(scope: TemplateScope, tleValue: Value | null, tleFunctions: assets.FunctionsMetadata): UnrecognizedFunctionVisitor {
-        let visitor = new UnrecognizedFunctionVisitor(scope, tleFunctions); //testpoint
+        let visitor = new UnrecognizedFunctionVisitor(scope, tleFunctions);
         if (tleValue) {
             tleValue.accept(visitor);
         }

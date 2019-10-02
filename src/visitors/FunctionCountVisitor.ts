@@ -18,12 +18,13 @@ export class FunctionCountVisitor extends Visitor {
         return this._functionCounts;
     }
     public visitFunctionCall(tleFunction: FunctionCallValue): void {
-        // Log count for both "func" and "func(<args-count>)"
         assert(tleFunction.argumentExpressions);
+        // Log count for both "func" and "func(<args-count>)"
+
         // tslint:disable-next-line: strict-boolean-expressions
         let args = tleFunction.argumentExpressions || [];
         let argsCount = args.length;
-        let functionName = tleFunction.nameToken.stringValue;
+        let functionName = tleFunction.fullName;
         let functionNameWithArgs = `${functionName}(${argsCount})`;
         this._functionCounts.add(functionName);
         this._functionCounts.add(functionNameWithArgs);
