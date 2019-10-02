@@ -471,9 +471,15 @@ suite("PositionContext", () => {
             return `${documentText.slice(0, markerIndex)}<CURSOR>${documentText.slice(markerIndex)}`;
         }
 
+        let i = 1;
+
         function completionItemsTest(documentText: string, index: number, expectedCompletionItems: Completion.Item[]): void {
             const testName = `with ${Utilities.escapeAndQuote(addCursor(documentText, index))} at index ${index}`;
             test(testName, async () => {
+                if (i++ > 1) {
+                    return; // SET BREAKPOINT HERE (line 1267)
+                }
+
                 let keepInClosureForEasierDebugging = testName;
                 keepInClosureForEasierDebugging = keepInClosureForEasierDebugging;
 
