@@ -2,13 +2,13 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 // ----------------------------------------------------------------------------
 
-import * as Json from '../Json';
+import * as Json from '../JSON';
 import * as language from "../Language";
 import { TemplateScope } from "../TemplateScope";
 import { FunctionCallValue, PropertyAccess, Value, Visitor } from "../TLE";
 
 /**
- * A TLE visitor that finds references to variable properties that haven't been defined.
+ * A TLE visitor that finds references to variable properties that aren't defined in the variable's value
  */
 export class UndefinedVariablePropertyVisitor extends Visitor {
     private _errors: language.Issue[] = [];
