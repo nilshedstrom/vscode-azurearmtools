@@ -8,6 +8,10 @@
 import * as assert from "assert";
 import { AzureRMAssets, DeploymentTemplate, FunctionsMetadata, IncorrectArgumentsCountIssue, Language, PositionContext, Reference, TLE } from "../extension.bundle";
 import { ScopeContext, TemplateScope } from "../src/TemplateScope";
+import { FindReferencesVisitor } from "../src/visitors/FindReferencesVisitor";
+import { IncorrectFunctionArgumentCountVisitor } from "../src/visitors/IncorrectFunctionArgumentCountVisitor";
+import { UndefinedParameterAndVariableVisitor } from "../src/visitors/UndefinedParameterAndVariableVisitor";
+import { UndefinedVariablePropertyVisitor } from "../src/visitors/UndefinedVariablePropertyVisitor";
 import { assertNotNull } from "./support/assertNotNull";
 
 suite("TLE", () => {
@@ -400,17 +404,17 @@ suite("TLE", () => {
         suite("constructor(DeploymentTemplate)", () => {
             test("with null", () => {
                 // tslint:disable-next-line:no-any
-                assert.throws(() => { new TLE.UndefinedParameterAndVariableVisitor(<any>null); });
+                assert.throws(() => { new UndefinedParameterAndVariableVisitor(<any>null); });
             });
 
             test("with undefined", () => {
                 // tslint:disable-next-line:no-any
-                assert.throws(() => { new TLE.UndefinedParameterAndVariableVisitor(<any>undefined); });
+                assert.throws(() => { new UndefinedParameterAndVariableVisitor(<any>undefined); });
             });
 
             test("with deployment template", () => {
                 const dt = new DeploymentTemplate("\"{}\"", "id");
-                const visitor = new TLE.UndefinedParameterAndVariableVisitor(dt.topLevelScope);
+                const visitor = new UndefinedParameterAndVariableVisitor(dt.topLevelScope);
                 assert.deepStrictEqual(visitor.errors, []);
             });
         });
@@ -418,21 +422,21 @@ suite("TLE", () => {
         suite("visitString(StringValue)", () => {
             test("with null", () => {
                 const dt = new DeploymentTemplate("\"{}\"", "id");
-                const visitor = new TLE.UndefinedParameterAndVariableVisitor(dt.topLevelScope);
+                const visitor = new UndefinedParameterAndVariableVisitor(dt.topLevelScope);
                 // tslint:disable-next-line:no-any
                 assert.throws(() => { visitor.visitString(<any>null); });
             });
 
             test("with undefined", () => {
                 const dt = new DeploymentTemplate("\"{}\"", "id");
-                const visitor = new TLE.UndefinedParameterAndVariableVisitor(dt.topLevelScope);
+                const visitor = new UndefinedParameterAndVariableVisitor(dt.topLevelScope);
                 // tslint:disable-next-line:no-any
                 assert.throws(() => { visitor.visitString(<any>undefined); });
             });
 
             test("with empty StringValue in parameters() function", () => {
                 const dt = new DeploymentTemplate("\"{}\"", "id");
-                const visitor = new TLE.UndefinedParameterAndVariableVisitor(dt.topLevelScope);
+                const visitor = new UndefinedParameterAndVariableVisitor(dt.topLevelScope);
 
                 const stringValue = new TLE.StringValue(TLE.Token.createQuotedString(17, "''"));
                 stringValue.parent = new TLE.FunctionCallValue(
@@ -454,7 +458,7 @@ suite("TLE", () => {
 
             test("with empty StringValue in variables() function", () => {
                 const dt = new DeploymentTemplate("\"{}\"", "id");
-                const visitor = new TLE.UndefinedParameterAndVariableVisitor(dt.topLevelScope);
+                const visitor = new UndefinedParameterAndVariableVisitor(dt.topLevelScope);
 
                 const stringValue = new TLE.StringValue(TLE.Token.createQuotedString(17, "''"));
                 stringValue.parent = new TLE.FunctionCallValue(
@@ -1979,7 +1983,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
             test("with null value", () => {
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
-                        const visitor = TLE.IncorrectFunctionArgumentCountVisitor.visit(null, functions);
+                        const visitor = IncorrectFunctionArgumentCountVisitor.visit(null, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(visitor.errors, []);
                     });
@@ -1989,7 +1993,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
                         // tslint:disable-next-line:no-any
-                        const visitor = TLE.IncorrectFunctionArgumentCountVisitor.visit(<any>undefined, functions);
+                        const visitor = IncorrectFunctionArgumentCountVisitor.visit(<any>undefined, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(visitor.errors, []);
                     });
@@ -1998,7 +2002,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
             test("with number value", () => {
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
-                        const visitor = TLE.IncorrectFunctionArgumentCountVisitor.visit(new TLE.NumberValue(TLE.Token.createNumber(17, "3")), functions);
+                        const visitor = IncorrectFunctionArgumentCountVisitor.visit(new TLE.NumberValue(TLE.Token.createNumber(17, "3")), functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(visitor.errors, []);
                     });
@@ -2008,7 +2012,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
                         const concat: TLE.Value = assertNotNull(parseWithScope(`"[concat()]"`).expression);
-                        const visitor = TLE.IncorrectFunctionArgumentCountVisitor.visit(concat, functions);
+                        const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(visitor.errors, []);
                     });
@@ -2018,7 +2022,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
                         const concat: TLE.Value = assertNotNull(parseWithScope(`"[concat(12)]"`).expression);
-                        const visitor = TLE.IncorrectFunctionArgumentCountVisitor.visit(concat, functions);
+                        const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(visitor.errors, []);
                     });
@@ -2028,7 +2032,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
                         const concat: TLE.Value = assertNotNull(parseWithScope(`"[concat(12, 'test')]"`).expression);
-                        const visitor = TLE.IncorrectFunctionArgumentCountVisitor.visit(concat, functions);
+                        const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(visitor.errors, []);
                     });
@@ -2038,7 +2042,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
                         const concat: TLE.Value = assertNotNull(parseWithScope(`"[add()]"`).expression);
-                        const visitor = TLE.IncorrectFunctionArgumentCountVisitor.visit(concat, functions);
+                        const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(
                             visitor.errors,
@@ -2050,7 +2054,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
                         const concat: TLE.Value = assertNotNull(parseWithScope(`"[add(5)]"`).expression);
-                        const visitor = TLE.IncorrectFunctionArgumentCountVisitor.visit(concat, functions);
+                        const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(
                             visitor.errors,
@@ -2062,7 +2066,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
                         const concat: TLE.Value = assertNotNull(parseWithScope(`"[add(5, 6)]"`).expression);
-                        const visitor = TLE.IncorrectFunctionArgumentCountVisitor.visit(concat, functions);
+                        const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(visitor.errors, []);
                     });
@@ -2072,7 +2076,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
                         const concat: TLE.Value = assertNotNull(parseWithScope(`"[add(5, 6, 7)]"`).expression);
-                        const visitor = TLE.IncorrectFunctionArgumentCountVisitor.visit(concat, functions);
+                        const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(
                             visitor.errors,
@@ -2084,7 +2088,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
                         const concat: TLE.Value = assertNotNull(parseWithScope(`"[Add(5, 6, 7)]"`).expression);
-                        const visitor = TLE.IncorrectFunctionArgumentCountVisitor.visit(concat, functions);
+                        const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(
                             visitor.errors,
@@ -2096,7 +2100,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
                         const concat: TLE.Value = assertNotNull(parseWithScope(`"[resourceId()]"`).expression);
-                        const visitor = TLE.IncorrectFunctionArgumentCountVisitor.visit(concat, functions);
+                        const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(
                             visitor.errors,
@@ -2109,7 +2113,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
                         const concat: TLE.Value = assertNotNull(parseWithScope(`"[resourceId(5)]"`).expression);
-                        const visitor = TLE.IncorrectFunctionArgumentCountVisitor.visit(concat, functions);
+                        const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(
                             visitor.errors,
@@ -2122,7 +2126,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
                         const concat: TLE.Value = assertNotNull(parseWithScope(`"[resourceId(5, 6)]"`).expression);
-                        const visitor = TLE.IncorrectFunctionArgumentCountVisitor.visit(concat, functions);
+                        const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(visitor.errors, []);
                     });
@@ -2132,7 +2136,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
                         const concat: TLE.Value = assertNotNull(parseWithScope(`"[resourceId(5, 6, 7)]"`).expression);
-                        const visitor = TLE.IncorrectFunctionArgumentCountVisitor.visit(concat, functions);
+                        const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(visitor.errors, []);
                     });
@@ -2142,7 +2146,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
                         const concat: TLE.Value = assertNotNull(parseWithScope(`"[substring()]"`).expression);
-                        const visitor = TLE.IncorrectFunctionArgumentCountVisitor.visit(concat, functions);
+                        const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(
                             visitor.errors,
@@ -2154,7 +2158,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
                         const concat: TLE.Value = assertNotNull(parseWithScope(`"[substring('abc')]"`).expression);
-                        const visitor = TLE.IncorrectFunctionArgumentCountVisitor.visit(concat, functions);
+                        const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(visitor.errors, []);
                     });
@@ -2164,7 +2168,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
                         const concat: TLE.Value = assertNotNull(parseWithScope(`"[substring('abc', 1)]"`).expression);
-                        const visitor = TLE.IncorrectFunctionArgumentCountVisitor.visit(concat, functions);
+                        const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(visitor.errors, []);
                     });
@@ -2174,7 +2178,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
                         const concat: TLE.Value = assertNotNull(parseWithScope(`"[substring('abc', 1, 1)]"`).expression);
-                        const visitor = TLE.IncorrectFunctionArgumentCountVisitor.visit(concat, functions);
+                        const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(visitor.errors, []);
                     });
@@ -2184,7 +2188,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
                 return AzureRMAssets.getFunctionsMetadata()
                     .then((functions: FunctionsMetadata) => {
                         const concat: TLE.Value = assertNotNull(parseWithScope(`"[substring('abc', 1, 1, 'blah')]"`).expression);
-                        const visitor = TLE.IncorrectFunctionArgumentCountVisitor.visit(concat, functions);
+                        const visitor = IncorrectFunctionArgumentCountVisitor.visit(concat, functions, emptyScope);
                         assert(visitor);
                         assert.deepStrictEqual(
                             visitor.errors,
@@ -2213,21 +2217,21 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
             test("with child property access from undefined variable reference", () => {
                 const dt = new DeploymentTemplate(`{ "a": "[variables('v1').apples]" }`, "id");
                 const context: PositionContext = dt.getContextFromDocumentCharacterIndex(`{ "a": "[variables('v1').app`.length);
-                const visitor = TLE.UndefinedVariablePropertyVisitor.visit(context.tleInfo!.tleValue, dt.topLevelScope);
+                const visitor = UndefinedVariablePropertyVisitor.visit(context.tleInfo!.tleValue, dt.topLevelScope);
                 assert.deepStrictEqual(visitor.errors, [], "No errors should be reported for a property access to an undefined variable, because the top priority error for the developer to address is the undefined variable reference.");
             });
 
             test("with grandchild property access from undefined variable reference", () => {
                 const dt = new DeploymentTemplate(`{ "a": "[variables('v1').apples.bananas]" }`, "id");
                 const context: PositionContext = dt.getContextFromDocumentCharacterIndex(`{ "a": "[variables('v1').apples.ban`.length);
-                const visitor = TLE.UndefinedVariablePropertyVisitor.visit(context.tleInfo!.tleValue, dt.topLevelScope);
+                const visitor = UndefinedVariablePropertyVisitor.visit(context.tleInfo!.tleValue, dt.topLevelScope);
                 assert.deepStrictEqual(visitor.errors, [], "No errors should be reported for a property access to an undefined variable, because the top priority error for the developer to address is the undefined variable reference.");
             });
 
             test("with child property access from variable reference to non-object variable", () => {
                 const dt = new DeploymentTemplate(`{ "variables": { "v1": "blah" }, "a": "[variables('v1').apples]" }`, "id");
                 const context: PositionContext = dt.getContextFromDocumentCharacterIndex(`{ "variables": { "v1": "blah" }, "a": "[variables('v1').app`.length);
-                const visitor = TLE.UndefinedVariablePropertyVisitor.visit(context.tleInfo!.tleValue, dt.topLevelScope);
+                const visitor = UndefinedVariablePropertyVisitor.visit(context.tleInfo!.tleValue, dt.topLevelScope);
                 assert.deepStrictEqual(
                     visitor.errors,
                     [new Language.Issue(new Language.Span(18, 6), `Property "apples" is not a defined property of "variables('v1')".`)]);
@@ -2236,7 +2240,7 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
             test("with grandchild property access from variable reference to non-object variable", () => {
                 const dt = new DeploymentTemplate(`{ "variables": { "v1": "blah" }, "a": "[variables('v1').apples.bananas]" }`, "id");
                 const context: PositionContext = dt.getContextFromDocumentCharacterIndex(`{ "variables": { "v1": "blah" }, "a": "[variables('v1').apples.ban`.length);
-                const visitor = TLE.UndefinedVariablePropertyVisitor.visit(context.tleInfo!.tleValue, dt.topLevelScope);
+                const visitor = UndefinedVariablePropertyVisitor.visit(context.tleInfo!.tleValue, dt.topLevelScope);
                 assert.deepStrictEqual(
                     visitor.errors,
                     [new Language.Issue(new Language.Span(18, 6), `Property "apples" is not a defined property of "variables('v1')".`)]);
@@ -2247,21 +2251,21 @@ const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionM
     suite("FindReferencesVisitor", () => {
         suite("visit(tle.Value,string,string)", () => {
             test("with null TLE", () => {
-                const visitor = TLE.FindReferencesVisitor.visit(null, Reference.ReferenceKind.Parameter, "pName");
+                const visitor = FindReferencesVisitor.visit(null, Reference.ReferenceKind.Parameter, "pName");
                 assert(visitor);
                 assert.deepStrictEqual(visitor.references, new Reference.List(Reference.ReferenceKind.Parameter));
             });
 
             test("with undefined TLE", () => {
                 // tslint:disable-next-line:no-any
-                const visitor = TLE.FindReferencesVisitor.visit(<any>undefined, Reference.ReferenceKind.Parameter, "pName");
+                const visitor = FindReferencesVisitor.visit(<any>undefined, Reference.ReferenceKind.Parameter, "pName");
                 assert(visitor);
                 assert.deepStrictEqual(visitor.references, new Reference.List(Reference.ReferenceKind.Parameter));
             });
 
             test("with TLE", () => {
                 const pr: TLE.ParseResult = parseWithScope(`"[parameters('pName')]"`);
-                const visitor = TLE.FindReferencesVisitor.visit(pr.expression, Reference.ReferenceKind.Parameter, "pName");
+                const visitor = FindReferencesVisitor.visit(pr.expression, Reference.ReferenceKind.Parameter, "pName");
                 assert(visitor);
                 assert.deepStrictEqual(
                     visitor.references,

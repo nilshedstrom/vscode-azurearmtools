@@ -413,7 +413,7 @@ suite("DeploymentTemplate - User functions", () => {
                 "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
                 "contentVersion": "1.0.0.0",
                 "variables": {
-                    tooManyArgs: "[udf.nothing('this arg doesn't belong here')]"
+                    tooManyArgs: "[udf.nothing('this arg doesn''t belong here')]"
                 },
                 "functions": [{
                     "namespace": "udf",
@@ -429,7 +429,7 @@ suite("DeploymentTemplate - User functions", () => {
             };
 
             await parseDeploymentTemplate(template, [
-                'asdf: too many args'
+                'The function \'udf.nothing\' takes 0 arguments.'
             ]);
         });
 
@@ -698,6 +698,67 @@ suite("DeploymentTemplate - User functions", () => {
             };
 
             await parseDeploymentTemplate(template, []);
+        });
+
+        test("Function names are case insensitive", async () => {
+            const template = {
+                "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                "contentVersion": "1.0.0.0",
+                "variables": {
+                    v1: "[udf.bOO()]"
+                },
+                "functions": [{
+                    "namespace": "udf",
+                    "members": {
+                        "Boo": {
+                        }
+                    }
+                }]
+            };
+
+            await parseDeploymentTemplate(template, []);
+        });
+
+        test("User function can't call another user function"); //asdf
+
+        test("Calling user function with same name as built-in function", async () => {
+            const template = {
+                "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                "contentVersion": "1.0.0.0",
+                "variables": {
+                    v1: "[udf.add()]"
+                },
+                "functions": [{
+                    "namespace": "udf",
+                    "members": {
+                        "add": {
+                        }
+                    }
+                }]
+            };
+
+            await parseDeploymentTemplate(template, []);
+
+        });
+
+        test("Calling user function with namespace name same as built-in function", async () => {
+            const template = {
+                "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                "contentVersion": "1.0.0.0",
+                "variables": {
+                    v1: "[add.add()]"
+                },
+                "functions": [{
+                    "namespace": "add",
+                    "members": {
+                        "add": {
+                        }
+                    }
+                }]
+            };
+
+            await parseDeploymentTemplate(template, []);
+
         });
 
         test("Function names are case insensitive", async () => {

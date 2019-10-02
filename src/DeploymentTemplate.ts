@@ -18,8 +18,14 @@ import { ScopeContext, TemplateScope } from "./TemplateScope";
 import * as TLE from "./TLE";
 import { UserFunctionNamespaceDefinition } from "./UserFunctionNamespaceDefinition";
 import * as Utilities from "./Utilities";
+import * as FindReferencesVisitor from "./visitors/FindReferencesVisitor";
+import * as FunctionCountVisitor from "./visitors/FunctionCountVisitor";
 import { GenericStringVisitor } from "./visitors/GenericStringVisitor";
+import * as IncorrectFunctionArgumentCountVisitor from "./visitors/IncorrectFunctionArgumentCountVisitor";
 import { ReferenceInVariableDefinitionsVisitor } from "./visitors/ReferenceInVariableDefinitionsVisitor";
+import { UndefinedParameterAndVariableVisitor } from "./visitors/UndefinedParameterAndVariableVisitor";
+import * as UndefinedVariablePropertyVisitor from "./visitors/UndefinedVariablePropertyVisitor";
+import * as UnrecognizedFunctionVisitor from "./visitors/UnrecognizedFunctionVisitor";
 
 export class DeploymentTemplate {
     // Parse result for the template JSON document as a whole
@@ -218,6 +224,8 @@ export class DeploymentTemplate {
                 try {
                     let functions: FunctionsMetadata = await AzureRMAssets.getFunctionsMetadata();
                     const parseErrors: language.Issue[] = [];
+
+                    // Loop through each string in the template
                     for (const jsonQuotedStringToken of this.jsonQuotedStringTokens) {
                         const jsonTokenStartIndex: number = jsonQuotedStringToken.span.startIndex;
 
@@ -231,27 +239,27 @@ export class DeploymentTemplate {
 
                             // Undefined parameter/variable references
                             const tleUndefinedParameterAndVariableVisitor =
-                                TLE.UndefinedParameterAndVariableVisitor.visit(
+                                UndefinedParameterAndVariableVisitor.visit(
                                     tleExpression,
-                                    tleParseResult.scope); //asdf
+                                    tleParseResult.scope); // asdf better error message?
                             for (const error of tleUndefinedParameterAndVariableVisitor.errors) {
                                 parseErrors.push(error.translate(jsonTokenStartIndex));
                             }
 
                             // Unrecognized function calls
-                            const tleUnrecognizedFunctionVisitor = TLE.UnrecognizedFunctionVisitor.visit(this._topLevelScope/*asdf?*/, tleExpression, functions);
+                            const tleUnrecognizedFunctionVisitor = UnrecognizedFunctionVisitor.UnrecognizedFunctionVisitor.visit(this._topLevelScope/*asdf?*/, tleExpression, functions);
                             for (const error of tleUnrecognizedFunctionVisitor.errors) {
                                 parseErrors.push(error.translate(jsonTokenStartIndex));
                             }
 
                             // Incorrect number of function arguments
-                            const tleIncorrectArgumentCountVisitor = TLE.IncorrectFunctionArgumentCountVisitor.visit(tleExpression, functions);
+                            const tleIncorrectArgumentCountVisitor = IncorrectFunctionArgumentCountVisitor.IncorrectFunctionArgumentCountVisitor.visit(tleExpression, functions, tleParseResult.scope);
                             for (const error of tleIncorrectArgumentCountVisitor.errors) {
                                 parseErrors.push(error.translate(jsonTokenStartIndex));
                             }
 
                             // Undefined variable properties
-                            const tleUndefinedVariablePropertyVisitor = TLE.UndefinedVariablePropertyVisitor.visit(tleExpression, this._topLevelScope/*asdf?*/);
+                            const tleUndefinedVariablePropertyVisitor = UndefinedVariablePropertyVisitor.UndefinedVariablePropertyVisitor.visit(tleExpression, this._topLevelScope/*asdf?*/);
                             for (const error of tleUndefinedVariablePropertyVisitor.errors) {
                                 parseErrors.push(error.translate(jsonTokenStartIndex));
                             }
@@ -331,7 +339,7 @@ export class DeploymentTemplate {
                 (stringValue: Json.StringValue): void => {
                     const tleParseResult = this.getTLEParseResultFromJSONStringValue(stringValue);
                     if (tleParseResult) {
-                        let tleFunctionCountVisitor = TLE.FunctionCountVisitor.visit(tleParseResult.expression);
+                        let tleFunctionCountVisitor = FunctionCountVisitor.FunctionCountVisitor.visit(tleParseResult.expression);
                         functionCounts.add(tleFunctionCountVisitor.functionCounts);
                     }
                 });
@@ -525,7 +533,7 @@ export class DeploymentTemplate {
             for (const jsonStringToken of this.jsonQuotedStringTokens) {
                 const tleParseResult: TLE.ParseResult | null = this.getTLEParseResultFromJSONToken(jsonStringToken);
                 if (tleParseResult && tleParseResult.expression) {
-                    const visitor = TLE.FindReferencesVisitor.visit(tleParseResult.expression, referenceType, referenceName);
+                    const visitor = FindReferencesVisitor.FindReferencesVisitor.visit(tleParseResult.expression, referenceType, referenceName);
                     result.addAll(visitor.references.translate(jsonStringToken.span.startIndex));
                 }
             }
