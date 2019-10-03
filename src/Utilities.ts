@@ -1,8 +1,8 @@
-import { assert } from "./fixed_assert";
-
 // ----------------------------------------------------------------------------
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 // ----------------------------------------------------------------------------
+
+import { assert } from "./fixed_assert";
 
 /**
  * Create a deep copy of the provided value.

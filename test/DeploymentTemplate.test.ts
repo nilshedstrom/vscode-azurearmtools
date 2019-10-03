@@ -13,7 +13,7 @@ import { IParameterDefinition } from "../src/IParameterDefinition";
 import { UnrecognizedUserFunctionIssue, UnrecognizedUserNamespaceIssue } from "../src/UnrecognizedFunctionIssues";
 import { ReferenceInVariableDefinitionsVisitor } from "../src/visitors/ReferenceInVariableDefinitionsVisitor";
 import { sources, testDiagnostics } from "./support/diagnostics";
-import { parseTemplateAndValidateErrors } from "./support/parseTemplate";
+import { parseTemplate } from "./support/parseTemplate";
 import { stringify } from "./support/stringify";
 import { testWithLanguageServer } from "./support/testWithLanguageServer";
 import { DISABLE_SLOW_TESTS } from "./testConstants";
@@ -397,7 +397,7 @@ suite("DeploymentTemplate", () => {
                 }
             };
 
-            await parseTemplateAndValidateErrors(template, []);
+            await parseTemplate(template, []);
         });
 
         test("with reference() call inside a different expression in a variable definition", () => {
@@ -1004,19 +1004,19 @@ suite("DeploymentTemplate", () => {
         test("with null type", () => {
             const dt = new DeploymentTemplate("", "id");
             // tslint:disable-next-line:no-any
-            assert.throws(() => { dt.findReferences(<any>null, "rName"); });
+            assert.throws(() => { dt.findReferences(<any>null, "rName", dt.topLevelScope); });
         });
 
         test("with undefined type", () => {
             const dt = new DeploymentTemplate("", "id");
             // tslint:disable-next-line:no-any
-            assert.throws(() => { dt.findReferences(<any>undefined, "rName"); });
+            assert.throws(() => { dt.findReferences(<any>undefined, "rName", dt.topLevelScope); });
         });
 
         test("with null name", () => {
             const dt = new DeploymentTemplate("", "id");
             // tslint:disable-next-line:no-any
-            const list: Reference.List = dt.findReferences(Reference.ReferenceKind.Parameter, <any>null);
+            const list: Reference.List = dt.findReferences(Reference.ReferenceKind.Parameter, <any>null, dt.topLevelScope);
             assert(list);
             assert.deepStrictEqual(list.kind, Reference.ReferenceKind.Parameter);
             assert.deepStrictEqual(list.spans, []);
@@ -1025,7 +1025,7 @@ suite("DeploymentTemplate", () => {
         test("with undefined name", () => {
             const dt = new DeploymentTemplate("", "id");
             // tslint:disable-next-line:no-any
-            const list: Reference.List = dt.findReferences(Reference.ReferenceKind.Parameter, <any>undefined);
+            const list: Reference.List = dt.findReferences(Reference.ReferenceKind.Parameter, <any>undefined, dt.topLevelScope);
             assert(list);
             assert.deepStrictEqual(list.kind, Reference.ReferenceKind.Parameter);
             assert.deepStrictEqual(list.spans, []);
@@ -1033,7 +1033,7 @@ suite("DeploymentTemplate", () => {
 
         test("with empty name", () => {
             const dt = new DeploymentTemplate("", "id");
-            const list: Reference.List = dt.findReferences(Reference.ReferenceKind.Parameter, "");
+            const list: Reference.List = dt.findReferences(Reference.ReferenceKind.Parameter, "", dt.topLevelScope);
             assert(list);
             assert.deepStrictEqual(list.kind, Reference.ReferenceKind.Parameter);
             assert.deepStrictEqual(list.spans, []);
@@ -1041,7 +1041,7 @@ suite("DeploymentTemplate", () => {
 
         test("with parameter type and no matching parameter definition", () => {
             const dt = new DeploymentTemplate(`{ "parameters": { "pName": {} } }`, "id");
-            const list: Reference.List = dt.findReferences(Reference.ReferenceKind.Parameter, "dontMatchMe");
+            const list: Reference.List = dt.findReferences(Reference.ReferenceKind.Parameter, "dontMatchMe", dt.topLevelScope);
             assert(list);
             assert.deepStrictEqual(list.kind, Reference.ReferenceKind.Parameter);
             assert.deepStrictEqual(list.spans, []);
@@ -1049,7 +1049,7 @@ suite("DeploymentTemplate", () => {
 
         test("with parameter type and matching parameter definition", () => {
             const dt = new DeploymentTemplate(`{ "parameters": { "pName": {} } }`, "id");
-            const list: Reference.List = dt.findReferences(Reference.ReferenceKind.Parameter, "pName");
+            const list: Reference.List = dt.findReferences(Reference.ReferenceKind.Parameter, "pName", dt.topLevelScope);
             assert(list);
             assert.deepStrictEqual(list.kind, Reference.ReferenceKind.Parameter);
             assert.deepStrictEqual(list.spans, [new Language.Span(19, 5)]);
@@ -1057,7 +1057,7 @@ suite("DeploymentTemplate", () => {
 
         test("with variable type and no matching variable definition", () => {
             const dt = new DeploymentTemplate(`{ "variables": { "vName": {} } }`, "id");
-            const list: Reference.List = dt.findReferences(Reference.ReferenceKind.Variable, "dontMatchMe");
+            const list: Reference.List = dt.findReferences(Reference.ReferenceKind.Variable, "dontMatchMe", dt.topLevelScope);
             assert(list);
             assert.deepStrictEqual(list.kind, Reference.ReferenceKind.Variable);
             assert.deepStrictEqual(list.spans, []);
@@ -1065,61 +1065,11 @@ suite("DeploymentTemplate", () => {
 
         test("with variable type and matching variable definition", () => {
             const dt = new DeploymentTemplate(`{ "variables": { "vName": {} } }`, "id");
-            const list: Reference.List = dt.findReferences(Reference.ReferenceKind.Variable, "vName");
+            const list: Reference.List = dt.findReferences(Reference.ReferenceKind.Variable, "vName", dt.topLevelScope);
             assert(list);
             assert.deepStrictEqual(list.kind, Reference.ReferenceKind.Variable);
             assert.deepStrictEqual(list.spans, [new Language.Span(18, 5)]);
         });
-
-        suite("User functions", () => {
-
-            const userFuncsTemplate1 =
-            {
-                "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-                "contentVersion": "1.0.0.0",
-                "Functions": [
-                    {
-                        "namespace": "udf",
-                        "members": {
-                            "date": {
-                                "parameters": [
-                                    {
-                                        "name": "year",
-                                        "type": "Int"
-                                    },
-                                    {
-                                        "name": "month",
-                                        "type": "Int"
-                                    },
-                                    {
-                                        "name": "day",
-                                        "type": "Int"
-                                    }
-                                ],
-                                "output": {
-                                    "type": "string",
-                                    "value": "[concat(string(parameters('YEAR')), '-', string(parameters('Month')), '-', string(parameters('day')))]"
-                                }
-                            }
-                        }
-                    }
-                ],
-                "Resources": [
-                    {
-                        "type": "Microsoft.Storage/storageAccounts",
-                        "name": "[parameters('year')]"
-                    }
-                ]
-            };
-
-            test("Reference to parameter in user function expression does not find outer scope parameter", async () => {
-                const dt = await parseTemplateAndValidateErrors(userFuncsTemplate1, []);
-                const list: Reference.List = dt.findReferences(Reference.ReferenceKind.Variable, "vName", emptyScope);
-                assert(list);
-                assert.deepStrictEqual(list.kind, Reference.ReferenceKind.Variable);
-                assert.deepStrictEqual(list.spans, [new Language.Span(18, 5)]);
-            });
-        }); // end suite User functions
     }); // findReferences
 
     suite("ReferenceInVariableDefinitionJSONVisitor", () => {
@@ -1452,4 +1402,5 @@ suite("DeploymentTemplate", () => {
                 await exercisePositionContextAtRandomPointsInTheDoc(template, 0.1);
             }
         });
-    });
+    }); //Incomplete JSON shouldn't cause crash
+});

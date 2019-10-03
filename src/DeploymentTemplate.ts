@@ -138,7 +138,7 @@ export class DeploymentTemplate {
                             member.parameterDefinitions,
                             undefined, // variable references not supported
                             undefined, // nested user functions not supported
-                            `Scope for user function ${ns.namespaceName.toString()}.${member.name.toString()}`
+                            `User function '${ns.namespaceName.toString()}.${member.name.toString()}' scope`
                         );
                         parseExpressionsByScope(member.output.value, userFunctionScope);
                     }
@@ -398,10 +398,10 @@ export class DeploymentTemplate {
         const parameterDefinitions: ParameterDefinition[] = [];
 
         if (this._topLevelValue) {
-            const parameters: Json.ObjectValue | null = Json.asObjectValue(this._topLevelValue.getPropertyValue("parameters")); //testpoint
+            const parameters: Json.ObjectValue | null = Json.asObjectValue(this._topLevelValue.getPropertyValue("parameters"));
             if (parameters) {
                 for (const parameter of parameters.properties) {
-                    parameterDefinitions.push(new ParameterDefinition(parameter)); //testpoint
+                    parameterDefinitions.push(new ParameterDefinition(parameter));
                 }
             }
         }
@@ -411,10 +411,9 @@ export class DeploymentTemplate {
 
     private getTopLevelVariableDefinitions(): Json.Property[] {
         if (this._topLevelValue) {
-            // The "variables" section is only valid at the top level of the deployment
-            const variables: Json.ObjectValue | null = Json.asObjectValue(this._topLevelValue.getPropertyValue("variables")); //testpoint
+            const variables: Json.ObjectValue | null = Json.asObjectValue(this._topLevelValue.getPropertyValue("variables"));
             if (variables) {
-                return variables.properties; //testpoint
+                return variables.properties;
             }
         }
 
@@ -513,36 +512,36 @@ export class DeploymentTemplate {
         return result ? result : null;
     }
 
-    public findReferences(referenceType: Reference.ReferenceKind, referenceName: string, scope: TemplateScope/*asdf*/): Reference.List {
+    public findReferences(referenceType: Reference.ReferenceKind, referenceName: string, scope: TemplateScope): Reference.List {
         const result: Reference.List = new Reference.List(referenceType);
 
-        if (referenceName) {
-            switch (referenceType) {
-                case Reference.ReferenceKind.Parameter:
-                    const parameterDefinition: IParameterDefinition | null = this.topLevelScope.getParameterDefinition(referenceName); //asdf
-                    if (parameterDefinition) {
-                        result.add(parameterDefinition.name.unquotedSpan);
-                    }
-                    break;
-
-                case Reference.ReferenceKind.Variable:
-                    const variableDefinition: Json.Property | null = this.topLevelScope.getVariableDefinition(referenceName); //asdf
-                    if (variableDefinition) {
-                        result.add(variableDefinition.name.unquotedSpan);
-                    }
-                    break;
-
-                default:
-                    assert.fail(`Unrecognized Reference.Kind: ${referenceType}`);
-                    break;
-            }
-
-            for (const jsonStringToken of this.jsonQuotedStringTokens) {
-                const tleParseResult: TLE.ParseResult | null = this.getTLEParseResultFromJSONToken(jsonStringToken);
-                if (tleParseResult && tleParseResult.expression) {
-                    const visitor = FindReferencesVisitor.FindReferencesVisitor.visit(tleParseResult.expression, referenceType, referenceName);
-                    result.addAll(visitor.references.translate(jsonStringToken.span.startIndex));
+        // Add the parameter/variable definition to the list
+        switch (referenceType) {
+            case Reference.ReferenceKind.Parameter:
+                const parameterDefinition: IParameterDefinition | null = scope.getParameterDefinition(referenceName);
+                if (parameterDefinition) {
+                    result.add(parameterDefinition.name.unquotedSpan);
                 }
+                break;
+
+            case Reference.ReferenceKind.Variable:
+                const variableDefinition: Json.Property | null = scope.getVariableDefinition(referenceName); //asdf
+                if (variableDefinition) {
+                    result.add(variableDefinition.name.unquotedSpan);
+                }
+                break;
+
+            default:
+                assert.fail(`Unrecognized Reference.Kind: ${referenceType}`);
+                break;
+        }
+
+        // Add references to the list
+        for (const jsonStringToken of this.jsonQuotedStringTokens) {
+            const tleParseResult: TLE.ParseResult | null = this.getTLEParseResultFromJSONToken(jsonStringToken);
+            if (tleParseResult && tleParseResult.expression && tleParseResult.scope === scope) {
+                const visitor = FindReferencesVisitor.FindReferencesVisitor.visit(tleParseResult.expression, referenceType, referenceName);
+                result.addAll(visitor.references.translate(jsonStringToken.span.startIndex));
             }
         }
 

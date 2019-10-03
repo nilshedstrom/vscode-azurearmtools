@@ -5,8 +5,11 @@
 // tslint:disable:no-unused-expression max-func-body-length promise-function-async max-line-length no-unnecessary-class
 // tslint:disable:no-non-null-assertion object-literal-key-quotes variable-name
 
+import { Reference } from "../extension.bundle";
+import { DeploymentTemplate } from "../src/DeploymentTemplate";
 import { assert } from "../src/fixed_assert";
-import { parseTemplateAndValidateErrors } from "./support/parseTemplate";
+import { IDeploymentTemplate } from "./support/diagnostics";
+import { parseTemplate, parseTemplateWithMarkers } from "./support/parseTemplate";
 
 suite("User functions", () => {
 
@@ -36,14 +39,14 @@ suite("User functions", () => {
                 ]
             };
 
-            const dt = await parseTemplateAndValidateErrors(template, [
+            const dt = await parseTemplate(template, [
                 // Since the function isn't valid, the parameter show as missing
                 "Undefined parameter reference: 'number'"
             ]);
             assert.equal(0, dt.topLevelScope.namespaceDefinitions.length);
         });
 
-        test("missing function name name", async () => {
+        test("missing function name", async () => {
             const template =
                 `"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
             "contentVersion": "1.0.0.0",
@@ -67,7 +70,7 @@ suite("User functions", () => {
                 }
             ]`;
 
-            const dt = await parseTemplateAndValidateErrors(template, [
+            const dt = await parseTemplate(template, [
                 // Since the function isn't valid, the parameter shows as missing
                 "Undefined parameter reference: 'number'"
             ]);
@@ -98,7 +101,7 @@ suite("User functions", () => {
                 ]
             }];
 
-            const dt = await parseTemplateAndValidateErrors(template, [
+            const dt = await parseTemplate(template, [
                 // Since the function (and entire deployment) isn't valid, the parameter shows as missing
                 "Undefined parameter reference: 'number'"
             ]);
@@ -123,7 +126,7 @@ suite("User functions", () => {
                 }]
             };
 
-            await parseTemplateAndValidateErrors(template, []);
+            await parseTemplate(template, []);
         });
 
         test("function definition with local parameter reference in output", async () => {
@@ -151,7 +154,7 @@ suite("User functions", () => {
                 ]
             };
 
-            await parseTemplateAndValidateErrors(template, []);
+            await parseTemplate(template, []);
         });
 
         test("Case insensitive keys in definition", async () => {
@@ -181,7 +184,7 @@ suite("User functions", () => {
                 ]
             };
 
-            const dt = await parseTemplateAndValidateErrors(template, []);
+            const dt = await parseTemplate(template, []);
             assert.equal(dt.topLevelScope.parameterDefinitions.length, 0);
             assert(!dt.topLevelScope.getParameterDefinition('notfound'));
             assert.equal(dt.topLevelScope.namespaceDefinitions.length, 1);
@@ -215,7 +218,7 @@ suite("User functions", () => {
                 }]
             };
 
-            await parseTemplateAndValidateErrors(template, []);
+            await parseTemplate(template, []);
         });
 
         test("function definition can't access parameter from outer scope", async () => {
@@ -247,7 +250,7 @@ suite("User functions", () => {
                 }]
             };
 
-            await parseTemplateAndValidateErrors(template, [
+            await parseTemplate(template, [
                 "Undefined parameter reference: 'outerParam'"
             ]);
         });
@@ -279,7 +282,7 @@ suite("User functions", () => {
                 }
             };
 
-            await parseTemplateAndValidateErrors(template, [
+            await parseTemplate(template, [
                 "Undefined variable reference: 'var1'"
             ]);
         });
@@ -313,7 +316,7 @@ suite("User functions", () => {
                 }]
             };
 
-            await parseTemplateAndValidateErrors(template, [
+            await parseTemplate(template, [
                 "Undefined parameter reference: 'outerParam'"
             ]);
         });
@@ -347,7 +350,7 @@ suite("User functions", () => {
                 }]
             };
 
-            await parseTemplateAndValidateErrors(template, [
+            await parseTemplate(template, [
                 "Undefined parameter reference: 'outerParam'"
             ]);
         });
@@ -375,7 +378,7 @@ suite("User functions", () => {
                 }]
             };
 
-            await parseTemplateAndValidateErrors(template, []);
+            await parseTemplate(template, []);
         });
 
     });
@@ -402,7 +405,7 @@ suite("User functions", () => {
                 }]
             };
 
-            await parseTemplateAndValidateErrors(template, []);
+            await parseTemplate(template, []);
         });
 
         test("Calling function with no parameters", async () => {
@@ -425,7 +428,7 @@ suite("User functions", () => {
                 }]
             };
 
-            await parseTemplateAndValidateErrors(template, []);
+            await parseTemplate(template, []);
         });
 
         test("Calling function with no parameters, with extra arg", async () => {
@@ -448,7 +451,7 @@ suite("User functions", () => {
                 }]
             };
 
-            await parseTemplateAndValidateErrors(template, [
+            await parseTemplate(template, [
                 'The function \'udf.nothing\' takes 0 arguments.'
             ]);
         });
@@ -469,7 +472,7 @@ suite("User functions", () => {
                 }]
             };
 
-            await parseTemplateAndValidateErrors(template, [
+            await parseTemplate(template, [
                 'Unrecognized function name \'boo\' in user-defined namespace \'udf\'.'
             ]);
         });
@@ -490,7 +493,7 @@ suite("User functions", () => {
                 }]
             };
 
-            await parseTemplateAndValidateErrors(template, [
+            await parseTemplate(template, [
                 'Unrecognized user-defined function namespace \'ufo\'.'
             ]);
         });
@@ -511,7 +514,7 @@ suite("User functions", () => {
                 }]
             };
 
-            await parseTemplateAndValidateErrors(template, [
+            await parseTemplate(template, [
                 'Missing function argument list.'
             ]);
         });
@@ -532,7 +535,7 @@ suite("User functions", () => {
                 }]
             };
 
-            await parseTemplateAndValidateErrors(template, [
+            await parseTemplate(template, [
                 'Expected a right parenthesis (\')\').',
                 'Unrecognized user-defined function namespace \'ufo\'.'
             ]);
@@ -582,7 +585,7 @@ suite("User functions", () => {
                     }]
             };
 
-            await parseTemplateAndValidateErrors(template, []);
+            await parseTemplate(template, []);
         });
 
         test("Calling function with one parameter", async () => {
@@ -611,7 +614,7 @@ suite("User functions", () => {
                 }]
             };
 
-            await parseTemplateAndValidateErrors(template, []);
+            await parseTemplate(template, []);
         });
 
         test("Calling function with one parameter, only giving one argument", async () => {
@@ -640,7 +643,7 @@ suite("User functions", () => {
                 }]
             };
 
-            await parseTemplateAndValidateErrors(template, [
+            await parseTemplate(template, [
                 "The function 'udf.odd' takes 1 argument."
             ]);
         });
@@ -671,7 +674,7 @@ suite("User functions", () => {
                 }]
             };
 
-            await parseTemplateAndValidateErrors(template, [
+            await parseTemplate(template, [
                 "The function 'udf.odd' takes 1 argument."
             ]);
         });
@@ -709,7 +712,7 @@ suite("User functions", () => {
                 }]
             };
 
-            await parseTemplateAndValidateErrors(template, []);
+            await parseTemplate(template, []);
         });
 
         test("Calling function with two parameters", async () => {
@@ -745,7 +748,7 @@ suite("User functions", () => {
                 }]
             };
 
-            await parseTemplateAndValidateErrors(template, []);
+            await parseTemplate(template, []);
         });
 
         test("Namespaces are case insensitive", async () => {
@@ -764,7 +767,7 @@ suite("User functions", () => {
                 }]
             };
 
-            await parseTemplateAndValidateErrors(template, []);
+            await parseTemplate(template, []);
         });
 
         test("Function names are case insensitive", async () => {
@@ -783,7 +786,7 @@ suite("User functions", () => {
                 }]
             };
 
-            await parseTemplateAndValidateErrors(template, []);
+            await parseTemplate(template, []);
         });
 
         // CONSIDER: Give better error message.  Right now we get this:
@@ -817,7 +820,7 @@ suite("User functions", () => {
                     "resources": []
                 };
 
-                await parseTemplateAndValidateErrors(template, []);
+                await parseTemplate(template, []);
             });
         }
 
@@ -837,7 +840,7 @@ suite("User functions", () => {
                 }]
             };
 
-            await parseTemplateAndValidateErrors(template, []);
+            await parseTemplate(template, []);
         });
 
         test("Calling user function with namespace name same as built-in function", async () => {
@@ -856,7 +859,7 @@ suite("User functions", () => {
                 }]
             };
 
-            await parseTemplateAndValidateErrors(template, []);
+            await parseTemplate(template, []);
 
         });
 
@@ -876,10 +879,127 @@ suite("User functions", () => {
                 }]
             };
 
-            await parseTemplateAndValidateErrors(template, []);
+            await parseTemplate(template, []);
         });
 
     });
     // #endregion
 
-});
+    suite("References", () => {
+
+        const userFuncsTemplate1: IDeploymentTemplate =
+        {
+            "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+            "contentVersion": "1.0.0.0",
+            "functions": [
+                {
+                    "namespace": "udf",
+                    "members": {
+                        "date": {
+                            "parameters": [
+                                {
+                                    "name": "<!udfYearDef!>year",
+                                    "type": "Int"
+                                },
+                                {
+                                    "name": "month",
+                                    "type": "Int"
+                                },
+                                {
+                                    "name": "day",
+                                    "type": "Int"
+                                }
+                            ],
+                            "output": {
+                                "type": "string",
+                                "value": "[concat(string(parameters('<!udfYearRef!>year')), '-', string(parameters('month')), '-', string(parameters('day')))]"
+                            }
+                        }
+                    }
+                }
+            ],
+            "resources": [
+                {
+                    "type": "Microsoft.Storage/storageAccounts",
+                    "name": "[parameters('<!yearRef!>year')]",
+                    "apiVersion": "[parameters('<!apiVersionRef!>apiVersion')]",
+                    "location": "westus"
+                }
+            ],
+            "parameters": {
+                "<!yearDef!>year": {
+                    "type": "int",
+                    "defaultValue": 2010
+                },
+                "<!apiVersionDef!>apiVersion": {
+                    "type": "int",
+                    "defaultValue": 2010
+                }
+            }
+        };
+
+        function testReferences(dt: DeploymentTemplate, cursorIndex: number, expectedReferenceIndices: number[]): void {
+            const pc = dt.getContextFromDocumentCharacterIndex(cursorIndex);
+            const references: Reference.List = pc.references!;
+            assert(references);
+
+            const indices = references.spans.map(r => r.startIndex).sort();
+            expectedReferenceIndices = expectedReferenceIndices.sort();
+
+            assert.deepStrictEqual(indices, expectedReferenceIndices);
+        }
+
+        suite("Find parameter references", () => {
+            test("At reference to top-level parameter", async () => {
+                const { dt, markers: { apiVersionDef, apiVersionRef } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+
+                // Cursor at reference to "apiVersion" inside resources
+                testReferences(dt, apiVersionRef.index, [apiVersionRef.index, apiVersionDef.index]);
+            });
+
+            test("At definition of top-level parameter", async () => {
+                const { dt, markers: { apiVersionDef, apiVersionRef } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+
+                // Cursor at definition to "apiVersion" parameter
+                testReferences(dt, apiVersionDef.index, [apiVersionDef.index, apiVersionRef.index]);
+            });
+
+            test("At reference to user function parameter", async () => {
+                const { dt, markers: { udfYearRef, udfYearDef } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+
+                // Cursor at reference to "year" inside user function output
+                testReferences(dt, udfYearRef.index, [udfYearRef.index, udfYearDef.index]);
+            });
+
+            test("At definition of user function parameter", async () => {
+                const { dt, markers: { udfYearRef, udfYearDef } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+
+                // Cursor at definition of "year" inside user function
+                testReferences(dt, udfYearDef.index, [udfYearRef.index, udfYearDef.index]);
+            });
+
+            test("At reference to parameter in user function only finds UDF scope parameter, not top-level param", async () => {
+                const { dt, markers: { udfYearRef, udfYearDef } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+
+                // Cursor at reference to "year" inside user function output
+                testReferences(dt, udfYearRef.index, [udfYearRef.index, udfYearDef.index]);
+            });
+
+            test("At definition to parameter in user function only finds UDF scope parameter, not top-level param", async () => {
+                const { dt, markers: { udfYearRef, udfYearDef } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+
+                // Cursor at definition of "year" inside user function
+                testReferences(dt, udfYearDef.index, [udfYearRef.index, udfYearDef.index]);
+            });
+
+            test("At reference to top-level parameter only finds top-level parameter definition, not param in user function", async () => {
+                const { dt, markers: { udfYearRef, udfYearDef } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+
+                // Cursor at reference to "year" inside user function output
+                testReferences(dt, udfYearRef.index, [udfYearRef.index, udfYearDef.index]);
+            });
+        });
+
+    }); // suite References
+
+}); // suite User Functions

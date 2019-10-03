@@ -10,6 +10,7 @@
 // tslint:disable:max-classes-per-file // Grandfathered in
 
 import * as assets from "./AzureRMAssets";
+import { __debugMarkSubstring } from "./debugMarkStrings";
 import { assert } from "./fixed_assert";
 import * as Json from "./JSON";
 import * as language from "./Language";
@@ -1042,13 +1043,7 @@ export class Tokenizer {
      * Convenient way of seeing what this object represents in the debugger, shouldn't be used for production code
      */
     public get __debugDisplay(): string {
-        const charactersBeforeCurrent = 25;
-        const charactersAfterCurrent = 50;
-        const before = this._text.slice(this._currentTokenStartIndex - charactersBeforeCurrent, this._currentTokenStartIndex);
-        const currentTokenEnd = this._currentTokenStartIndex + (this._current ? this._current.length : 0);
-        const currentToken = this._current ? this._current.stringValue : '';
-        const after = this._text.slice(currentTokenEnd, currentTokenEnd + charactersAfterCurrent);
-        return `${before}<<${currentToken}>>${after}`;
+        return __debugMarkSubstring(this._text, this._currentTokenStartIndex, this._current ? this._current.toString().length : 0);
     }
 
     public hasStarted(): boolean {

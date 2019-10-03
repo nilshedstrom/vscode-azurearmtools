@@ -8,6 +8,7 @@ import { AzureRMAssets, FunctionMetadata } from "./AzureRMAssets";
 import { CachedPromise } from "./CachedPromise";
 import { CachedValue } from "./CachedValue";
 import * as Completion from "./Completion";
+import { __debugMarkPositionInString } from "./debugMarkStrings";
 import { DeploymentTemplate } from "./DeploymentTemplate";
 import { assert } from './fixed_assert';
 import * as Hover from "./Hover";
@@ -73,12 +74,19 @@ export class PositionContext {
     }
 
     /**
-     * To help visualize while debugging
+     * Convenient way of seeing what this object represents in the debugger, shouldn't be used for production code
      */
-    public toString(): string {
+    public get __debugDisplay(): string {
         let docText: string = this._deploymentTemplate.documentText;
-        let text = `${docText.slice(0, this.documentCharacterIndex)}<CURSOR>${docText.slice(this.documentCharacterIndex)}`;
-        return text;
+        return __debugMarkPositionInString(docText, this.documentCharacterIndex, "<<POSITION>>");
+    }
+
+    /**
+     * Convenient way of seeing what this object represents in the debugger, shouldn't be used for production code
+     */
+    public get __debugFullDisplay(): string {
+        let docText: string = this._deploymentTemplate.documentText;
+        return __debugMarkPositionInString(docText, this.documentCharacterIndex, "<<POSITION>>", Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
     }
 
     public get documentPosition(): language.Position {
@@ -386,41 +394,47 @@ export class PositionContext {
             let referenceName: string | null = null;
             let referenceType: Reference.ReferenceKind | null = null;
 
-            // Handle variable and parameter uses inside a string expression
-            const tleStringValue: TLE.StringValue | null = TLE.asStringValue(this.tleInfo && this.tleInfo.tleValue);
-            let scope: TemplateScope | null;
+            if (this.tleInfo) {
+                // Handle variable and parameter uses inside a string expression
+                const tleStringValue: TLE.StringValue | null = TLE.asStringValue(this.tleInfo.tleValue);
+                let scope: TemplateScope | null = this.tleInfo.scope;
 
-            if (tleStringValue) { //testpoint
-                scope = this.tleInfo!.scope;
-                referenceName = tleStringValue.toString(); //testpoint
+                // Handle references for "xxx" when we're on "xxx" in a call to parameters('xxx') or references('xxx')
+                if (tleStringValue) {
+                    referenceName = tleStringValue.toString();
 
-                if (tleStringValue.isParametersArgument()) { //testpoint
-                    referenceType = Reference.ReferenceKind.Parameter; //testpoint
-                } else if (tleStringValue.isVariablesArgument()) {
-                    referenceType = Reference.ReferenceKind.Variable; //testpoint
+                    if (tleStringValue.isParametersArgument()) { //testpoint
+                        // We're inside a parameters('xxx') call
+                        referenceType = Reference.ReferenceKind.Parameter;
+                    } else if (tleStringValue.isVariablesArgument()) {
+                        // We're inside a variables('xxx') call
+                        referenceType = Reference.ReferenceKind.Variable; //testpoint
+                    }
                 }
-            }
 
-            if (referenceType === null) {
-                // Handle parameter and variable definitions
-                const jsonStringValue: Json.StringValue | null = Json.asStringValue(this.jsonValue); //testpoint
-                if (jsonStringValue) {
-                    referenceName = jsonStringValue.toString(); //testpoint
+                // Handle when we're directly on the name in parameter or variable definition
+                if (referenceType === null) {
+                    const jsonStringValue: Json.StringValue | null = Json.asStringValue(this.jsonValue); //testpoint
+                    if (jsonStringValue) {
+                        const jsonString = jsonStringValue.toString(); //testpoint
 
-                    const parameterDefinition: IParameterDefinition | null = scope.getParameterDefinition(referenceName);
-                    if (parameterDefinition && parameterDefinition.name === jsonStringValue) {
-                        referenceType = Reference.ReferenceKind.Parameter; //testpoint
-                    } else {
-                        const variableDefinition: Json.Property | null = scope.getVariableDefinition(referenceName); //testpoint
-                        if (variableDefinition && variableDefinition.name === jsonStringValue) { //testpoint
-                            referenceType = Reference.ReferenceKind.Variable; //testpoint
+                        const parameterDefinition: IParameterDefinition | null = scope.getParameterDefinition(jsonString);
+                        if (parameterDefinition && parameterDefinition.name === jsonStringValue) { //asdf?
+                            referenceName = jsonString;
+                            referenceType = Reference.ReferenceKind.Parameter; //testpoint
+                        } else {
+                            const variableDefinition: Json.Property | null = scope.getVariableDefinition(jsonString); //testpoint
+                            if (variableDefinition && variableDefinition.name === jsonStringValue) { //testpoint
+                                referenceName = jsonString;
+                                referenceType = Reference.ReferenceKind.Variable; //testpoint
+                            }
                         }
                     }
                 }
-            }
 
-            if (!!referenceName && referenceType !== null && !!scope) {
-                return this._deploymentTemplate.findReferences(referenceType, referenceName, scope); //testpoint
+                if (referenceName && referenceType !== null && scope) {
+                    return this._deploymentTemplate.findReferences(referenceType, referenceName, scope);
+                }
             }
 
             return null;
