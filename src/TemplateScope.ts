@@ -36,7 +36,7 @@ export class TemplateScope {
         private readonly _parameterDefinitions: IParameterDefinition[] | undefined, // undefined means not supported in this context
         private readonly _variableDefinitions: Json.Property[] | undefined, // undefined means not supported in this context
         private readonly _namespaceDefinitions: UserFunctionNamespaceDefinition[] | undefined, // undefined means not supported in this context
-        public readonly debugName: string // For debugging use
+        public readonly __debugDisplay: string // Convenience for debugging
     ) {
     }
 
@@ -62,7 +62,7 @@ export class TemplateScope {
         const unquotedParameterName = Utilities.unquote(parameterName);
         let parameterNameLC = unquotedParameterName.toLowerCase();
 
-        // Find the last definition that matches, because that's what Azure does
+        // Find the last definition that matches, because that's what Azure does asdf test
         for (let i = this.parameterDefinitions.length - 1; i >= 0; --i) {
             let pd = this.parameterDefinitions[i];
             if (pd.name.toString().toLowerCase() === parameterNameLC) {

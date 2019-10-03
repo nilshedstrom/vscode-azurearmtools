@@ -14,14 +14,17 @@ import { StringValue, Value, Visitor } from "../TLE";
 export class FindReferencesVisitor extends Visitor {
     private _references: Reference.List;
     private _lowerCasedName: string;
+
     constructor(private _kind: Reference.ReferenceKind, _name: string) {
         super();
         this._references = new Reference.List(_kind);
         this._lowerCasedName = Utilities.unquote(_name).toLowerCase();
     }
+
     public get references(): Reference.List {
         return this._references;
     }
+
     public visitString(tleString: StringValue | null): void {
         if (tleString && Utilities.unquote(tleString.toString()).toLowerCase() === this._lowerCasedName) {
             switch (this._kind) {

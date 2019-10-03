@@ -192,6 +192,9 @@ export class AzureRMTools {
         deploymentTemplate: DeploymentTemplate,
         stopwatch: Stopwatch
     ): void {
+        const functionsInEachNamespace = deploymentTemplate.namespaceDefinitions.map(ns => ns.members.length);
+        const userFunctionsCount = functionsInEachNamespace.reduce((sum, count) => sum + count);
+
         ext.reporter.sendTelemetryEvent(
             "Deployment Template Opened",
             {
@@ -204,7 +207,8 @@ export class AzureRMTools {
                 lineCount: deploymentTemplate.lineCount,
                 paramsCount: deploymentTemplate.parameterDefinitions.length,
                 varsCount: deploymentTemplate.variableDefinitions.length,
-                namespacesCount: deploymentTemplate.namespaceDefinitions.length
+                namespacesCount: deploymentTemplate.namespaceDefinitions.length,
+                userFunctionsCount: userFunctionsCount
             });
 
         this.logFunctionCounts(deploymentTemplate);
@@ -324,8 +328,7 @@ export class AzureRMTools {
                 functionCounts?: string;
                 unrecognized?: string;
                 incorrectArgs?: string;
-                [key: string]: string | undefined;
-            } = actionContext.telemetry.properties;
+            } & TelemetryProperties = actionContext.telemetry.properties;
 
             // Full function counts
             const functionCounts: Histogram = deploymentTemplate.getFunctionCounts();
@@ -348,12 +351,12 @@ export class AzureRMTools {
                     incorrectArgCounts.add(encodedName);
                 } //asdf user funcs?
             }
-            properties.unrecognized = AzureRMTools.setToJson(unrecognized);
-            properties.incorrectArgs = AzureRMTools.setToJson(incorrectArgCounts);
+            properties.unrecognized = AzureRMTools.convertSetToJson(unrecognized);
+            properties.incorrectArgs = AzureRMTools.convertSetToJson(incorrectArgCounts);
         });
     }
 
-    private static setToJson(s: Set<string>): string {
+    private static convertSetToJson(s: Set<string>): string {
         // tslint:disable-next-line: strict-boolean-expressions
         if (!s.size) {
             return "";
@@ -470,14 +473,14 @@ export class AzureRMTools {
                 const context: PositionContext = deploymentTemplate.getContextFromDocumentLineAndColumnIndexes(position.line, position.character);
 
                 let definitionType: string = "no definition";
-                if (context.parameterDefinition) {
+                if (context.parameterDefinitionIfAtReference) {
                     const locationUri: vscode.Uri = vscode.Uri.parse(deploymentTemplate.documentId);
-                    const definitionRange: vscode.Range = this.getVSCodeRangeFromSpan(deploymentTemplate, context.parameterDefinition.span);
+                    const definitionRange: vscode.Range = this.getVSCodeRangeFromSpan(deploymentTemplate, context.parameterDefinitionIfAtReference.span);
                     result = new vscode.Location(locationUri, definitionRange);
                     definitionType = "parameter";
-                } else if (context.variableDefinition) {
+                } else if (context.variableDefinitionIfAtReference) {
                     const locationUri: vscode.Uri = vscode.Uri.parse(deploymentTemplate.documentId);
-                    const definitionRange: vscode.Range = this.getVSCodeRangeFromSpan(deploymentTemplate, context.variableDefinition.span);
+                    const definitionRange: vscode.Range = this.getVSCodeRangeFromSpan(deploymentTemplate, context.variableDefinitionIfAtReference.span);
                     result = new vscode.Location(locationUri, definitionRange);
                     definitionType = "variable";
                 }

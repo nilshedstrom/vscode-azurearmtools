@@ -538,6 +538,53 @@ suite("User functions", () => {
             ]);
         });
 
+        test("Calling functions from two namespaces", async () => {
+            const template = {
+                "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                "contentVersion": "1.0.0.0",
+                "variables": {
+                    v1: "[udf1.oddSum(udf2.oddSum(2))]"
+                },
+                "functions": [
+                    {
+                        "namespace": "udf1",
+                        "members": {
+                            "oddSum": {
+                                "parameters": [
+                                    {
+                                        "name": "number",
+                                        "type": "Int"
+                                    }
+                                ],
+                                "output": {
+                                    "type": "bool",
+                                    "value": "[equals(mod(parameters('number'), 2), 0)]"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "namespace": "udf2",
+                        "members": {
+                            "oddSum": {
+                                "parameters": [
+                                    {
+                                        "name": "number",
+                                        "type": "Int"
+                                    }
+                                ],
+                                "output": {
+                                    "type": "bool",
+                                    "value": "[equals(mod(parameters('number'), 2), 0)]"
+                                }
+                            }
+                        }
+                    }]
+            };
+
+            await parseTemplateAndValidateErrors(template, []);
+        });
+
         test("Calling function with one parameter", async () => {
             const template = {
                 "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",

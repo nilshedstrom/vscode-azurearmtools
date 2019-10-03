@@ -124,7 +124,7 @@ export class DeploymentTemplate {
 
             for (let param of this.parameterDefinitions) {
                 if (param.defaultValue) {
-                    parseExpressionsByScope(param.defaultValue, paramDefaultValuesScope); //testpoint
+                    parseExpressionsByScope(param.defaultValue, paramDefaultValuesScope);
                 }
             }
 
@@ -138,7 +138,7 @@ export class DeploymentTemplate {
                             member.parameterDefinitions,
                             undefined, // variable references not supported
                             undefined, // nested user functions not supported
-                            `Scope for user function ${member.name.toString()}`
+                            `Scope for user function ${ns.namespaceName.toString()}.${member.name.toString()}`
                         );
                         parseExpressionsByScope(member.output.value, userFunctionScope);
                     }
@@ -157,6 +157,7 @@ export class DeploymentTemplate {
 
             return quotedStringToTleParseResultMap;
 
+            // (local function) Parse all expressions from the asdf
             function parseExpressionsByScope(value: Json.Value | null, scope: TemplateScope): void {
                 if (value) {
                     GenericStringVisitor.visit(
@@ -292,21 +293,22 @@ export class DeploymentTemplate {
     }
 
     public get warnings(): language.Issue[] {
-        // asdf do for all subscopes (user funcs, sub deployments)
         return this._warnings.getOrCacheValue(() => {
             const warnings: language.Issue[] = [];
 
+            // Find parameters that are never used
             for (const parameterDefinition of this.parameterDefinitions) {
                 const parameterReferences: Reference.List =
-                    this.findReferences(Reference.ReferenceKind.Parameter, parameterDefinition.name.toString());
+                    this.findReferences(Reference.ReferenceKind.Parameter, parameterDefinition.name.toString(), this.topLevelScope/*asdf*/);
                 if (parameterReferences.length === 1) {
                     warnings.push(
                         new language.Issue(parameterDefinition.name.span, `The parameter '${parameterDefinition.name.toString()}' is never used.`));
                 }
             }
 
+            // Find variables that are never used
             for (const variableDefinition of this.variableDefinitions) {
-                const variableReferences: Reference.List = this.findReferences(Reference.ReferenceKind.Variable, variableDefinition.name.toString());
+                const variableReferences: Reference.List = this.findReferences(Reference.ReferenceKind.Variable, variableDefinition.name.toString(), this.topLevelScope/*asdf*/);
                 if (variableReferences.length === 1) {
                     warnings.push(
                         new language.Issue(variableDefinition.name.span, `The variable '${variableDefinition.name.toString()}' is never used.`));
@@ -329,6 +331,9 @@ export class DeploymentTemplate {
         });
     }
 
+    /**
+     * Gets a history of function usage, useful for telemetry
+     */
     public getFunctionCounts(): Histogram {
         const functionCounts = new Histogram();
 
@@ -476,11 +481,11 @@ export class DeploymentTemplate {
     }
 
     public getContextFromDocumentLineAndColumnIndexes(documentLineIndex: number, documentColumnIndex: number): PositionContext {
-        return PositionContext.fromDocumentLineAndColumnIndexes(this, this.topLevelScope/*asdf?*/, documentLineIndex, documentColumnIndex);
+        return PositionContext.fromDocumentLineAndColumnIndexes(this, documentLineIndex, documentColumnIndex);
     }
 
     public getContextFromDocumentCharacterIndex(documentCharacterIndex: number): PositionContext {
-        return PositionContext.fromDocumentCharacterIndex(this, this.topLevelScope/*asdf?*/, documentCharacterIndex);
+        return PositionContext.fromDocumentCharacterIndex(this, documentCharacterIndex);
     }
 
     public getTLEParseResultFromJSONToken(jsonToken: Json.Token | null): TLE.ParseResult | null {
@@ -508,7 +513,7 @@ export class DeploymentTemplate {
         return result ? result : null;
     }
 
-    public findReferences(referenceType: Reference.ReferenceKind, referenceName: string): Reference.List { //asdf need scope
+    public findReferences(referenceType: Reference.ReferenceKind, referenceName: string, scope: TemplateScope/*asdf*/): Reference.List {
         const result: Reference.List = new Reference.List(referenceType);
 
         if (referenceName) {

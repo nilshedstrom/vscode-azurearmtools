@@ -1070,149 +1070,198 @@ suite("DeploymentTemplate", () => {
             assert.deepStrictEqual(list.kind, Reference.ReferenceKind.Variable);
             assert.deepStrictEqual(list.spans, [new Language.Span(18, 5)]);
         });
-    });
-});
 
-suite("ReferenceInVariableDefinitionJSONVisitor", () => {
-    suite("constructor(DeploymentTemplate)", () => {
-        test("with null", () => {
-            // tslint:disable-next-line:no-any
-            assert.throws(() => { new ReferenceInVariableDefinitionsVisitor(<any>null); });
-        });
+        suite("User functions", () => {
 
-        test("with undefined", () => {
-            // tslint:disable-next-line:no-any
-            assert.throws(() => { new ReferenceInVariableDefinitionsVisitor(<any>undefined); });
-        });
+            const userFuncsTemplate1 =
+            {
+                "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                "contentVersion": "1.0.0.0",
+                "Functions": [
+                    {
+                        "namespace": "udf",
+                        "members": {
+                            "date": {
+                                "parameters": [
+                                    {
+                                        "name": "year",
+                                        "type": "Int"
+                                    },
+                                    {
+                                        "name": "month",
+                                        "type": "Int"
+                                    },
+                                    {
+                                        "name": "day",
+                                        "type": "Int"
+                                    }
+                                ],
+                                "output": {
+                                    "type": "string",
+                                    "value": "[concat(string(parameters('YEAR')), '-', string(parameters('Month')), '-', string(parameters('day')))]"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "Resources": [
+                    {
+                        "type": "Microsoft.Storage/storageAccounts",
+                        "name": "[parameters('year')]"
+                    }
+                ]
+            };
 
-        test("with deploymentTemplate", () => {
-            const dt = new DeploymentTemplate(`{ "variables": { "a": "[reference('test')]" } }`, "id");
-            const visitor = new ReferenceInVariableDefinitionsVisitor(dt);
-            assert.deepStrictEqual(visitor.referenceSpans, []);
-        });
+            test("Reference to parameter in user function expression does not find outer scope parameter", async () => {
+                const dt = await parseTemplateAndValidateErrors(userFuncsTemplate1, []);
+                const list: Reference.List = dt.findReferences(Reference.ReferenceKind.Variable, "vName", emptyScope);
+                assert(list);
+                assert.deepStrictEqual(list.kind, Reference.ReferenceKind.Variable);
+                assert.deepStrictEqual(list.spans, [new Language.Span(18, 5)]);
+            });
+        }); // end suite User functions
+    }); // findReferences
 
-        testWithLanguageServer("expecting error: reference in variable definition", async function (this: ITestCallbackContext): Promise<void> {
-            await testDiagnostics(
-                {
-                    "variables": {
-                        "a": "[reference('test')]"
+    suite("ReferenceInVariableDefinitionJSONVisitor", () => {
+        suite("constructor(DeploymentTemplate)", () => {
+            test("with null", () => {
+                // tslint:disable-next-line:no-any
+                assert.throws(() => { new ReferenceInVariableDefinitionsVisitor(<any>null); });
+            });
+
+            test("with undefined", () => {
+                // tslint:disable-next-line:no-any
+                assert.throws(() => { new ReferenceInVariableDefinitionsVisitor(<any>undefined); });
+            });
+
+            test("with deploymentTemplate", () => {
+                const dt = new DeploymentTemplate(`{ "variables": { "a": "[reference('test')]" } }`, "id");
+                const visitor = new ReferenceInVariableDefinitionsVisitor(dt);
+                assert.deepStrictEqual(visitor.referenceSpans, []);
+            });
+
+            testWithLanguageServer("expecting error: reference in variable definition", async function (this: ITestCallbackContext): Promise<void> {
+                await testDiagnostics(
+                    {
+                        "variables": {
+                            "a": "[reference('test')]"
+                        },
                     },
-                },
-                {
-                    includeSources: [sources.expressions]
-                },
-                [
-                    "Error: reference() cannot be invoked inside of a variable definition. (arm-template (expr))",
-                    "Warning: The variable 'a' is never used. (arm-template (expr))"
-                ]);
+                    {
+                        includeSources: [sources.expressions]
+                    },
+                    [
+                        "Error: reference() cannot be invoked inside of a variable definition. (arm-template (expr))",
+                        "Warning: The variable 'a' is never used. (arm-template (expr))"
+                    ]);
+            });
+
+            // asdf
+            // testWithLanguageServer("expecting error: reference in variable definition inside user function", async function (this: ITestCallbackContext): Promise<void> {
+            //     await testDiagnostics(
+            //         {
+            //             "variables": {
+            //                 "a": "[reference('test')]"
+            //             },
+            //         },
+            //         {
+            //             includeSources: [sources.expressions]
+            //         },
+            //         [
+            //             "Error: reference() cannot be invoked inside of a variable definition. (arm-template (expr))",
+            //             "Warning: The variable 'a' is never used. (arm-template (expr))"
+            //         ]);
+            // });
         });
 
-        // asdf
-        // testWithLanguageServer("expecting error: reference in variable definition inside user function", async function (this: ITestCallbackContext): Promise<void> {
-        //     await testDiagnostics(
-        //         {
-        //             "variables": {
-        //                 "a": "[reference('test')]"
-        //             },
-        //         },
-        //         {
-        //             includeSources: [sources.expressions]
-        //         },
-        //         [
-        //             "Error: reference() cannot be invoked inside of a variable definition. (arm-template (expr))",
-        //             "Warning: The variable 'a' is never used. (arm-template (expr))"
-        //         ]);
-        // });
+        suite("visitStringValue(Json.StringValue)", () => {
+            test("with null", () => {
+                const dt = new DeploymentTemplate(`{ "variables": { "a": "[reference('test')]" } }`, "id");
+                const visitor = new ReferenceInVariableDefinitionsVisitor(dt);
+                // tslint:disable-next-line:no-any
+                assert.throws(() => { visitor.visitStringValue(<any>null); });
+            });
+
+            test("with undefined", () => {
+                const dt = new DeploymentTemplate(`{ "variables": { "a": "[reference('test')]" } }`, "id");
+                const visitor = new ReferenceInVariableDefinitionsVisitor(dt);
+                // tslint:disable-next-line:no-any
+                assert.throws(() => { visitor.visitStringValue(<any>undefined); });
+            });
+
+            test("with non-TLE string", () => {
+                const dt = new DeploymentTemplate(`{ "variables": { "a": "[reference('test')]" } }`, "id");
+                const visitor = new ReferenceInVariableDefinitionsVisitor(dt);
+                const variables: Json.StringValue = Json.asObjectValue(dt.jsonParseResult.value)!.properties[0].name;
+                visitor.visitStringValue(variables);
+                assert.deepStrictEqual(visitor.referenceSpans, []);
+            });
+
+            test("with TLE string with reference() call", () => {
+                const dt = new DeploymentTemplate(`{ "variables": { "a": "[reference('test')]" } }`, "id");
+                const visitor = new ReferenceInVariableDefinitionsVisitor(dt);
+                const dtObject: Json.ObjectValue | null = Json.asObjectValue(dt.jsonParseResult.value);
+                const variablesObject: Json.ObjectValue | null = Json.asObjectValue(dtObject!.getPropertyValue("variables"));
+                const tle: Json.StringValue | null = Json.asStringValue(variablesObject!.getPropertyValue("a"));
+
+                visitor.visitStringValue(tle!);
+                assert.deepStrictEqual(visitor.referenceSpans, [new Language.Span(24, 9)]);
+            });
+
+            test("with TLE string with reference() call inside concat() call", () => {
+                const dt = new DeploymentTemplate(`{ "variables": { "a": "[concat(reference('test'))]" } }`, "id");
+                const visitor = new ReferenceInVariableDefinitionsVisitor(dt);
+                const dtObject: Json.ObjectValue | null = Json.asObjectValue(dt.jsonParseResult.value);
+                const variablesObject: Json.ObjectValue | null = Json.asObjectValue(dtObject!.getPropertyValue("variables"));
+                const tle: Json.StringValue | null = Json.asStringValue(variablesObject!.getPropertyValue("a"));
+
+                visitor.visitStringValue(tle!);
+                assert.deepStrictEqual(visitor.referenceSpans, [new Language.Span(31, 9)]);
+            });
+        });
     });
 
-    suite("visitStringValue(Json.StringValue)", () => {
-        test("with null", () => {
-            const dt = new DeploymentTemplate(`{ "variables": { "a": "[reference('test')]" } }`, "id");
-            const visitor = new ReferenceInVariableDefinitionsVisitor(dt);
-            // tslint:disable-next-line:no-any
-            assert.throws(() => { visitor.visitStringValue(<any>null); });
-        });
+    suite("Incomplete JSON shouldn't cause crash", function (this: ISuiteCallbackContext): void {
+        this.timeout(60000);
 
-        test("with undefined", () => {
-            const dt = new DeploymentTemplate(`{ "variables": { "a": "[reference('test')]" } }`, "id");
-            const visitor = new ReferenceInVariableDefinitionsVisitor(dt);
-            // tslint:disable-next-line:no-any
-            assert.throws(() => { visitor.visitStringValue(<any>undefined); });
-        });
+        async function exercisePositionContextAtEveryPointInTheDoc(json: string): Promise<void> {
+            await exercisePositionContextAtRandomPointsInTheDoc(json, json.length + 1); // length+1 so we include past the last character as a position
+        }
 
-        test("with non-TLE string", () => {
-            const dt = new DeploymentTemplate(`{ "variables": { "a": "[reference('test')]" } }`, "id");
-            const visitor = new ReferenceInVariableDefinitionsVisitor(dt);
-            const variables: Json.StringValue = Json.asObjectValue(dt.jsonParseResult.value)!.properties[0].name;
-            visitor.visitStringValue(variables);
-            assert.deepStrictEqual(visitor.referenceSpans, []);
-        });
+        async function exercisePositionContextAtRandomPointsInTheDoc(json: string, numberOfIndicesToTest: number): Promise<void> {
+            if (numberOfIndicesToTest < 1) {
+                // Take it as a probability of doing a single sample
+                if (Math.random() > numberOfIndicesToTest) {
+                    return;
+                }
+            }
 
-        test("with TLE string with reference() call", () => {
-            const dt = new DeploymentTemplate(`{ "variables": { "a": "[reference('test')]" } }`, "id");
-            const visitor = new ReferenceInVariableDefinitionsVisitor(dt);
-            const dtObject: Json.ObjectValue | null = Json.asObjectValue(dt.jsonParseResult.value);
-            const variablesObject: Json.ObjectValue | null = Json.asObjectValue(dtObject!.getPropertyValue("variables"));
-            const tle: Json.StringValue | null = Json.asStringValue(variablesObject!.getPropertyValue("a"));
+            for (let i = 0; i < numberOfIndicesToTest; ++i) {
+                let index = i;
+                if (numberOfIndicesToTest <= json.length) {
+                    index = Math.floor(Math.random() * (json.length + 1)); // length+1 so we include past the last character as a position
+                }
 
-            visitor.visitStringValue(tle!);
-            assert.deepStrictEqual(visitor.referenceSpans, [new Language.Span(24, 9)]);
-        });
-
-        test("with TLE string with reference() call inside concat() call", () => {
-            const dt = new DeploymentTemplate(`{ "variables": { "a": "[concat(reference('test'))]" } }`, "id");
-            const visitor = new ReferenceInVariableDefinitionsVisitor(dt);
-            const dtObject: Json.ObjectValue | null = Json.asObjectValue(dt.jsonParseResult.value);
-            const variablesObject: Json.ObjectValue | null = Json.asObjectValue(dtObject!.getPropertyValue("variables"));
-            const tle: Json.StringValue | null = Json.asStringValue(variablesObject!.getPropertyValue("a"));
-
-            visitor.visitStringValue(tle!);
-            assert.deepStrictEqual(visitor.referenceSpans, [new Language.Span(31, 9)]);
-        });
-    });
-});
-
-suite("Incomplete JSON shouldn't cause crash", function (this: ISuiteCallbackContext): void {
-    this.timeout(60000);
-
-    async function exercisePositionContextAtEveryPointInTheDoc(json: string): Promise<void> {
-        await exercisePositionContextAtRandomPointsInTheDoc(json, json.length + 1); // length+1 so we include past the last character as a position
-    }
-
-    async function exercisePositionContextAtRandomPointsInTheDoc(json: string, numberOfIndicesToTest: number): Promise<void> {
-        if (numberOfIndicesToTest < 1) {
-            // Take it as a probability of doing a single sample
-            if (Math.random() > numberOfIndicesToTest) {
-                return;
+                // console.log(`Testing index ${index}`);
+                try {
+                    // Just make sure nothing throws
+                    let dt = new DeploymentTemplate(json, "id");
+                    let pc = dt.getContextFromDocumentCharacterIndex(index);
+                    pc.references;
+                    pc.signatureHelp;
+                    pc.tleInfo;
+                    pc.variableDefinitionIfAtReference;
+                    pc.parameterDefinitionIfAtReference;
+                    await pc.getCompletionItems();
+                    await pc.hoverInfo;
+                } catch (err) {
+                    throw new Error(`exercisePositionContextAtRandomPointsInTheDoc: Threw at index ${i}:\n${json.slice(i)}<***HERE***>${json.slice(i)}`);
+                }
             }
         }
 
-        for (let i = 0; i < numberOfIndicesToTest; ++i) {
-            let index = i;
-            if (numberOfIndicesToTest <= json.length) {
-                index = Math.floor(Math.random() * (json.length + 1)); // length+1 so we include past the last character as a position
-            }
-
-            // console.log(`Testing index ${index}`);
-            try {
-                // Just make sure nothing throws
-                let dt = new DeploymentTemplate(json, "id");
-                let pc = dt.getContextFromDocumentCharacterIndex(index);
-                pc.references;
-                pc.signatureHelp;
-                pc.tleInfo;
-                pc.variableDefinition;
-                pc.parameterDefinition;
-                await pc.getCompletionItems();
-                await pc.hoverInfo;
-            } catch (err) {
-                throw new Error(`exercisePositionContextAtRandomPointsInTheDoc: Threw at index ${i}:\n${json.slice(i)}<***HERE***>${json.slice(i)}`);
-            }
-        }
-    }
-
-    const template: string =
-        `{
+        const template: string =
+            `{
         "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
         "contentVersion": "1.0.0.0",
         "parameters": {
@@ -1264,29 +1313,29 @@ suite("Incomplete JSON shouldn't cause crash", function (this: ISuiteCallbackCon
     }
     `;
 
-    test("https://github.com/Microsoft/vscode-azurearmtools/issues/193", async () => {
-        // Just make sure nothing throws
-        let modifiedTemplate = template.replace('"type": "string"', '"type": string');
-        let dt = new DeploymentTemplate(modifiedTemplate, "id");
-        await dt.errors; // asdf test completions, etc.
-    });
+        test("https://github.com/Microsoft/vscode-azurearmtools/issues/193", async () => {
+            // Just make sure nothing throws
+            let modifiedTemplate = template.replace('"type": "string"', '"type": string');
+            let dt = new DeploymentTemplate(modifiedTemplate, "id");
+            await dt.errors; // asdf test completions, etc.
+        });
 
-    test("Unended string", async () => {
-        const json = "{ \"";
-        let dt = new DeploymentTemplate(json, "id");
-        await dt.errors;
-        dt.getFunctionCounts();
-    });
+        test("Unended string", async () => {
+            const json = "{ \"";
+            let dt = new DeploymentTemplate(json, "id");
+            await dt.errors;
+            dt.getFunctionCounts();
+        });
 
-    test("No top-level object", async () => {
-        const json = "\"hello\"";
-        let dt = new DeploymentTemplate(json, "id");
-        await dt.errors;
-        dt.getFunctionCounts();
-    });
+        test("No top-level object", async () => {
+            const json = "\"hello\"";
+            let dt = new DeploymentTemplate(json, "id");
+            await dt.errors;
+            dt.getFunctionCounts();
+        });
 
-    test("Malformed property name", async () => {
-        const json = `
+        test("Malformed property name", async () => {
+            const json = `
         {
             "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
             "contentVersion": "1.0.0.0",
@@ -1296,12 +1345,12 @@ suite("Incomplete JSON shouldn't cause crash", function (this: ISuiteCallbackCon
                 "subnetRef": "[concat(variables('vne2tId'), '/subnets/', parameters('subnetName'))]"
             }
         }`;
-        const dt = new DeploymentTemplate(json, "id");
-        await dt.errors;
-    });
+            const dt = new DeploymentTemplate(json, "id");
+            await dt.errors;
+        });
 
-    test("Malformed property", async () => {
-        const json = `
+        test("Malformed property", async () => {
+            const json = `
         {
             "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
             "contentVersion": "1.0.0.0",
@@ -1311,96 +1360,96 @@ suite("Incomplete JSON shouldn't cause crash", function (this: ISuiteCallbackCon
                 "subnetRef": "[concat(variables('vne2tId'), '/subnets/', parameters('subnetName'))]"
             }
         }`;
-        const dt = new DeploymentTemplate(json, "id");
-        await dt.errors;
-    });
-
-    test("typing character by character", async function (this: ITestCallbackContext): Promise<void> {
-        if (DISABLE_SLOW_TESTS) {
-            this.skip();
-            return;
-        }
-
-        // Just make sure nothing throws
-        for (let i = 0; i < template.length; ++i) {
-            let partialTemplate = template.slice(0, i);
-            let dt = new DeploymentTemplate(partialTemplate, "id");
+            const dt = new DeploymentTemplate(json, "id");
             await dt.errors;
+        });
 
-            await exercisePositionContextAtRandomPointsInTheDoc(template, 0.1);
-        }
-    });
-
-    test("typing backwards character by character", async function (this: ITestCallbackContext): Promise<void> {
-        if (DISABLE_SLOW_TESTS) {
-            this.skip();
-            return;
-        }
-
-        // Just make sure nothing throws
-        for (let i = 0; i < template.length; ++i) {
-            let partialTemplate = template.slice(i);
-            let dt = new DeploymentTemplate(partialTemplate, "id");
-            await dt.errors;
-
-            await exercisePositionContextAtRandomPointsInTheDoc(template, 0.1);
-        }
-    });
-
-    test("try parsing the document with a single character deleted (repeat through the whole document)", async function (this: ITestCallbackContext): Promise<void> {
-        if (DISABLE_SLOW_TESTS) {
-            this.skip();
-            return;
-        }
-
-        // Just make sure nothing throws
-        for (let i = 0; i < template.length; ++i) {
-            // Remove the single character at position i
-            let partialTemplate = template.slice(0, i) + template.slice(i + 1);
-            let dt = new DeploymentTemplate(partialTemplate, "id");
-            await dt.errors;
-
-            await exercisePositionContextAtRandomPointsInTheDoc(template, 0.1);
-        }
-    });
-
-    test("exercise PositionContext at every point in the full json", async function (this: ITestCallbackContext): Promise<void> {
-        if (DISABLE_SLOW_TESTS) {
-            this.skip();
-            return;
-        }
-
-        // Just make sure nothing throws
-        await exercisePositionContextAtEveryPointInTheDoc(template);
-    });
-
-    test("Random modifications", async function (this: ITestCallbackContext): Promise<void> {
-        if (DISABLE_SLOW_TESTS) {
-            this.skip();
-            return;
-        }
-
-        // Just make sure nothing throws
-        let modifiedTemplate: string = template;
-
-        for (let i = 0; i < 1000; ++i) {
-            if (modifiedTemplate.length > 0 && Math.random() < 0.5) {
-                // Delete some characters
-                let position = Math.random() * (modifiedTemplate.length - 1);
-                let length = Math.random() * Math.max(5, modifiedTemplate.length);
-                modifiedTemplate = modifiedTemplate.slice(position, position + length);
-            } else {
-                // Insert some characters
-                let position = Math.random() * modifiedTemplate.length;
-                let length = Math.random() * 5;
-                let s = randomBytes(length).toString();
-                modifiedTemplate = modifiedTemplate.slice(0, position) + s + modifiedTemplate.slice(position);
+        test("typing character by character", async function (this: ITestCallbackContext): Promise<void> {
+            if (DISABLE_SLOW_TESTS) {
+                this.skip();
+                return;
             }
 
-            let dt = new DeploymentTemplate(modifiedTemplate, "id");
-            await dt.errors;
+            // Just make sure nothing throws
+            for (let i = 0; i < template.length; ++i) {
+                let partialTemplate = template.slice(0, i);
+                let dt = new DeploymentTemplate(partialTemplate, "id");
+                await dt.errors;
 
-            await exercisePositionContextAtRandomPointsInTheDoc(template, 0.1);
-        }
+                await exercisePositionContextAtRandomPointsInTheDoc(template, 0.1);
+            }
+        });
+
+        test("typing backwards character by character", async function (this: ITestCallbackContext): Promise<void> {
+            if (DISABLE_SLOW_TESTS) {
+                this.skip();
+                return;
+            }
+
+            // Just make sure nothing throws
+            for (let i = 0; i < template.length; ++i) {
+                let partialTemplate = template.slice(i);
+                let dt = new DeploymentTemplate(partialTemplate, "id");
+                await dt.errors;
+
+                await exercisePositionContextAtRandomPointsInTheDoc(template, 0.1);
+            }
+        });
+
+        test("try parsing the document with a single character deleted (repeat through the whole document)", async function (this: ITestCallbackContext): Promise<void> {
+            if (DISABLE_SLOW_TESTS) {
+                this.skip();
+                return;
+            }
+
+            // Just make sure nothing throws
+            for (let i = 0; i < template.length; ++i) {
+                // Remove the single character at position i
+                let partialTemplate = template.slice(0, i) + template.slice(i + 1);
+                let dt = new DeploymentTemplate(partialTemplate, "id");
+                await dt.errors;
+
+                await exercisePositionContextAtRandomPointsInTheDoc(template, 0.1);
+            }
+        });
+
+        test("exercise PositionContext at every point in the full json", async function (this: ITestCallbackContext): Promise<void> {
+            if (DISABLE_SLOW_TESTS) {
+                this.skip();
+                return;
+            }
+
+            // Just make sure nothing throws
+            await exercisePositionContextAtEveryPointInTheDoc(template);
+        });
+
+        test("Random modifications", async function (this: ITestCallbackContext): Promise<void> {
+            if (DISABLE_SLOW_TESTS) {
+                this.skip();
+                return;
+            }
+
+            // Just make sure nothing throws
+            let modifiedTemplate: string = template;
+
+            for (let i = 0; i < 1000; ++i) {
+                if (modifiedTemplate.length > 0 && Math.random() < 0.5) {
+                    // Delete some characters
+                    let position = Math.random() * (modifiedTemplate.length - 1);
+                    let length = Math.random() * Math.max(5, modifiedTemplate.length);
+                    modifiedTemplate = modifiedTemplate.slice(position, position + length);
+                } else {
+                    // Insert some characters
+                    let position = Math.random() * modifiedTemplate.length;
+                    let length = Math.random() * 5;
+                    let s = randomBytes(length).toString();
+                    modifiedTemplate = modifiedTemplate.slice(0, position) + s + modifiedTemplate.slice(position);
+                }
+
+                let dt = new DeploymentTemplate(modifiedTemplate, "id");
+                await dt.errors;
+
+                await exercisePositionContextAtRandomPointsInTheDoc(template, 0.1);
+            }
+        });
     });
-});
