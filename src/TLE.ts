@@ -640,26 +640,26 @@ export class FunctionSignatureHelp {
  */
 export class Parser {
     // Handles any JSON string, not just those that are actually TLE expressions beginning with bracket
-    public static parse(stringValue: string, scope: TemplateScope): ParseResult {
-        assert(stringValue, "TLE strings cannot be null.");
-        assert(1 <= stringValue.length, "TLE strings must be at least 1 character.");
-        assert(Utilities.isQuoteCharacter(stringValue[0]), "The first character in a TLE string must be a quote character.");
+    public static parse(unquotedStringValue: string, scope: TemplateScope): ParseResult {
+        assert(unquotedStringValue, "TLE strings cannot be null.");
+        assert(1 <= unquotedStringValue.length, "TLE strings must be at least 1 character.");
+        assert(Utilities.isQuoteCharacter(unquotedStringValue[0]), "The first character in a TLE string must be a quote character.");
 
         let leftSquareBracketToken: Token | null = null;
         let expression: Value | null = null;
         let rightSquareBracketToken: Token | null = null;
         let errors: language.Issue[] = [];
 
-        if (3 <= stringValue.length && stringValue.substr(1, 2) === "[[") {
-            expression = new StringValue(Token.createQuotedString(0, stringValue));
+        if (3 <= unquotedStringValue.length && unquotedStringValue.substr(1, 2) === "[[") {
+            expression = new StringValue(Token.createQuotedString(0, unquotedStringValue));
         } else {
-            let tokenizer = Tokenizer.fromString(stringValue);
+            let tokenizer = Tokenizer.fromString(unquotedStringValue);
             tokenizer.next();
 
             if (!tokenizer.current || tokenizer.current.getType() !== TokenType.LeftSquareBracket) {
                 // This is just a plain old string (no brackets). Mark its expression as being
                 // the string value.
-                expression = new StringValue(Token.createQuotedString(0, stringValue));
+                expression = new StringValue(Token.createQuotedString(0, unquotedStringValue));
             } else {
                 leftSquareBracketToken = tokenizer.current;
                 tokenizer.next();
@@ -692,7 +692,7 @@ export class Parser {
                         tokenizer.next();
                     }
                 } else {
-                    errors.push(new language.Issue(new language.Span(stringValue.length - 1, 1), "Expected a right square bracket (']')."));
+                    errors.push(new language.Issue(new language.Span(unquotedStringValue.length - 1, 1), "Expected a right square bracket (']')."));
                 }
 
                 if (expression === null) {

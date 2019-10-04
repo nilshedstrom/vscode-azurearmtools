@@ -14,7 +14,7 @@ import { StringValue, Value } from '../TLE';
 export class UndefinedParameterAndVariableVisitor extends TLE.Visitor {
     private _errors: language.Issue[] = [];
 
-    constructor(private _scope: TemplateScope) { //asdf
+    constructor(private _scope: TemplateScope) {
         super();
 
         assert(_scope);
@@ -47,7 +47,7 @@ export class UndefinedParameterAndVariableVisitor extends TLE.Visitor {
         }
     }
 
-    public static visit(tleValue: Value | null, scope: TemplateScope): UndefinedParameterAndVariableVisitor { //asdf
+    public static visit(tleValue: Value | null, scope: TemplateScope): UndefinedParameterAndVariableVisitor {
         const visitor = new UndefinedParameterAndVariableVisitor(scope);
         if (tleValue) {
             tleValue.accept(visitor);

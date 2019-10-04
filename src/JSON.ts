@@ -571,7 +571,7 @@ export abstract class Value {
     public abstract toFriendlyString(): string;
 
     /**
-     * Convenient way of seeing what this token represents in the debugger, shouldn't be used for production code
+     * Convenient way of seeing what this object represents in the debugger, shouldn't be used for production code
      */
     public get __debugDisplay(): string {
         return this.toString();
@@ -814,7 +814,7 @@ export class StringValue extends Value {
         return new language.Span(this.startIndex + 1, this._value.length);
     }
 
-    public toString(): string {
+    public toString(): string { // asdf remove this in favor of a more explicit function or getter
         return this._value;
     }
 
@@ -1019,6 +1019,7 @@ export class ParseResult {
 
         let result: Value | null = null;
 
+        // Find the Value at the given character index via a binary search through the value tree
         if (this.value && this.value.span.contains(characterIndex, true)) {
             let current: Value = this.value;
 
@@ -1057,51 +1058,6 @@ export class ParseResult {
 
         return result;
     }
-
-    /* asdf
-    public getScopeAtCharacterIndex(characterIndex: number): Value {
-        assert(0 <= characterIndex, `characterIndex (${characterIndex}) cannot be negative.`);//testpoint
-
-        let result: Value | null = null;
-
-        if (this.value && this.value.span.contains(characterIndex, true)) {
-            let current: Value = this.value;
-
-            while (result === null) {
-                const currentValue: Value = current;
-
-                if (currentValue instanceof Property) {
-                    if (currentValue.name && currentValue.name.span.contains(characterIndex, true)) {
-                        current = currentValue.name;
-                    } else if (currentValue.value && currentValue.value.span.contains(characterIndex, true)) {
-                        current = currentValue.value;
-                    }
-                } else if (currentValue instanceof ObjectValue) {
-                    if (currentValue.properties) {
-                        for (const property of currentValue.properties) {
-                            if (property && property.span.contains(characterIndex, true)) {
-                                current = property;
-                            }
-                        }
-                    }
-                } else if (currentValue instanceof ArrayValue) {
-                    if (currentValue.elements) {
-                        for (const element of currentValue.elements) {
-                            if (element && element.span.contains(characterIndex, true)) {
-                                current = element;
-                            }
-                        }
-                    }
-                }
-
-                if (current === currentValue) {
-                    result = current;
-                }
-            }
-        }
-
-        return result;
-    }*/
 }
 
 /**
@@ -1280,6 +1236,9 @@ function next(tokenizer: Tokenizer, tokens: Token[]): void {
     }
 }
 
+/**
+ * Traverses every node in a given Value tree
+ */
 export abstract class Visitor {
     public visitProperty(property: Property | null): void {
         if (property) {

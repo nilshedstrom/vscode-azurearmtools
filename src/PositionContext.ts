@@ -140,14 +140,17 @@ export class PositionContext {
      */
     public get tleInfo(): TleInfo | null {
         return this._tleInfo.getOrCacheValue(() => {
-            const tleParseResult = this._deploymentTemplate.getTLEParseResultFromJSONToken(this.jsonToken);
-            if (tleParseResult) {
-                const tleCharacterIndex = this.documentCharacterIndex - this.jsonTokenStartIndex;
-                const tleValue = tleParseResult.getValueAtCharacterIndex(tleCharacterIndex);
-                return new TleInfo(tleParseResult, tleCharacterIndex, tleValue, tleParseResult.scope);
-            } else {
-                return null;
+            //const tleParseResult = this._deploymentTemplate.getTLEParseResultFromJSONToken(this.jsonToken);
+            if (this.jsonValue && this.jsonValue instanceof Json.StringValue) { //asdfasdf
+                const tleParseResult = this._deploymentTemplate.getTLEParseResultFromJSONStringValue(this.jsonValue);
+                if (tleParseResult) {
+                    const tleCharacterIndex = this.documentCharacterIndex - this.jsonTokenStartIndex;
+                    const tleValue = tleParseResult.getValueAtCharacterIndex(tleCharacterIndex);
+                    return new TleInfo(tleParseResult, tleCharacterIndex, tleValue, tleParseResult.scope);
+                }
             }
+
+            return null;
         });
     }
 
@@ -285,7 +288,7 @@ export class PositionContext {
                 // If the variable's value is an object...
                 const sourceVariableDefinition: Json.ObjectValue | null = Json.asObjectValue(variableProperty.value);
                 if (sourceVariableDefinition) {
-                    return this.getDeepPropertyAccessCompletions( //testpoint
+                    return this.getDeepPropertyAccessCompletions(//testpoint
                         propertyPrefix,
                         sourceVariableDefinition,
                         sourcesNameStack,
@@ -297,7 +300,7 @@ export class PositionContext {
                 if (parameterDefValue) {
                     const sourcePropertyDefinition: Json.ObjectValue | null = Json.asObjectValue(parameterDefValue.getPropertyValueFromStack(sourcesNameStack));
                     if (sourcePropertyDefinition) {
-                        return this.getDeepPropertyAccessCompletions( //testpoint
+                        return this.getDeepPropertyAccessCompletions(//testpoint
                             propertyPrefix,
                             sourcePropertyDefinition,
                             sourcesNameStack,
@@ -397,7 +400,7 @@ export class PositionContext {
             if (this.tleInfo) {
                 // Handle variable and parameter uses inside a string expression
                 const tleStringValue: TLE.StringValue | null = TLE.asStringValue(this.tleInfo.tleValue);
-                let scope: TemplateScope | null = this.tleInfo.scope;
+                let scope: TemplateScope = this.tleInfo.scope;
 
                 // Handle references for "xxx" when we're on "xxx" in a call to parameters('xxx') or references('xxx')
                 if (tleStringValue) {
@@ -432,7 +435,7 @@ export class PositionContext {
                     }
                 }
 
-                if (referenceName && referenceType !== null && scope) {
+                if (referenceName && referenceType !== null) {
                     return this._deploymentTemplate.findReferences(referenceType, referenceName, scope);
                 }
             }
@@ -596,7 +599,7 @@ export class PositionContext {
             replaceSpan = replaceSpan.translate(this.jsonTokenStartIndex);
         } else {
             if (tleValue.rightParenthesisToken) {
-                replaceSpan = new language.Span( //testpoint
+                replaceSpan = new language.Span(//testpoint
                     this.documentCharacterIndex,
                     tleValue.rightParenthesisToken.span.startIndex - tleCharacterIndex + 1);
             } else {

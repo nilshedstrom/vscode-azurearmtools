@@ -36,6 +36,7 @@ export class TemplateScope {
         private readonly _parameterDefinitions: IParameterDefinition[] | undefined, // undefined means not supported in this context
         private readonly _variableDefinitions: Json.Property[] | undefined, // undefined means not supported in this context
         private readonly _namespaceDefinitions: UserFunctionNamespaceDefinition[] | undefined, // undefined means not supported in this context
+        // tslint:disable-next-line:variable-name
         public readonly __debugDisplay: string // Convenience for debugging
     ) {
     }
