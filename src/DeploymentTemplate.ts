@@ -144,7 +144,7 @@ export class DeploymentTemplate {
             this.visitAllStringValues(jsonStringValue => {//asdfasdf
                 // const unquoted: string = Utilities.unquote(jsonQuotedStringvs.toString()); // not positive about this - "\"" is turning into empty string
                 if (!jsonStringValueToTleParseResultMap.has(jsonStringValue)) {
-                    let tleParseResult: TLE.ParseResult = TLE.Parser.parse(`"${jsonStringValue.toString()}"`, this.topLevelScope); //asdf?
+                    let tleParseResult: TLE.ParseResult = TLE.Parser.parse(jsonStringValue.quotedValue, this.topLevelScope); //asdf?
                     // Cache the results of this parse by the string's value // asdf: can't map by string value, they might be in different scopes, getting different results.  Need to cache by string and scope
                     jsonStringValueToTleParseResultMap.set(jsonStringValue, tleParseResult);
                 }
@@ -172,7 +172,7 @@ export class DeploymentTemplate {
                             if (!jsonStringValueToTleParseResultMap.has(jsonStringValue)) {
                                 // Parse the string as a possible TLE expression
                                 let tleParseResult: TLE.ParseResult = TLE.Parser.parse(
-                                    `"${jsonStringValue.toString()}`, //asdfasdf
+                                    jsonStringValue.quotedValue, //asdfasdf
                                     scope
                                 );
 
@@ -501,7 +501,15 @@ export class DeploymentTemplate {
      */
     public getTLEParseResultFromJSONStringValue(jsonStringValue: Json.StringValue): TLE.ParseResult | null {
         const result = this.quotedStringToTleParseResultMap.get(jsonStringValue);
-        return result ? result : null;
+        if (result) {
+            return result;
+        }
+
+        const tleParseResult = TLE.Parser.parse(jsonStringValue.quotedValue, this.topLevelScope); //asdf?
+        // asdf cache?
+        return tleParseResult;
+
+        //return result ? result : null;
         // const result = this.getTLEParseResultFromString(jsonStringValue.toString());
         // return result;
     }

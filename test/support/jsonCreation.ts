@@ -8,11 +8,11 @@ import { Json, Span } from "../../extension.bundle";
 
 const fakeSpan = new Span(1, 2);
 
-export function createStringProperty(name: string, value: string): Json.Property {
+export function createStringProperty(name: string, unquotedValue: string): Json.Property {
     const prop = new Json.Property(
         fakeSpan,
         new Json.StringValue(fakeSpan, name),
-        new Json.StringValue(fakeSpan, value));
+        new Json.StringValue(fakeSpan, `'${unquotedValue}'`));
     return prop;
 }
 

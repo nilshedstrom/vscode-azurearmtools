@@ -12,6 +12,7 @@
 // Because the JSON/ARM parsers catch these errors, it doesn't make too much difference for the end user
 //   so might not be worth fixing.
 
+import { Utilities } from "../extension.bundle";
 import { CachedValue } from "./CachedValue";
 import { assert } from "./fixed_assert";
 import * as language from "./Language";
@@ -802,8 +803,11 @@ export class BooleanValue extends Value {
  * A JSON quoted string.
  */
 export class StringValue extends Value {
-    constructor(span: language.Span, private _unquotedValue: string) {
-        super(span);
+    private _unquotedValue: string;
+
+    constructor(quotedSpan: language.Span, private _quotedValue: string) {
+        super(quotedSpan);
+        this._unquotedValue = Utilities.unquote(_quotedValue);
     }
 
     public get valueKind(): ValueKind {
@@ -814,7 +818,15 @@ export class StringValue extends Value {
         return new language.Span(this.startIndex + 1, this._unquotedValue.length);
     }
 
-    public toString(): string { // asdf remove this in favor of a more explicit function or getter
+    public get unquotedValue(): string {
+        return this._unquotedValue;
+    }
+
+    public get quotedValue(): string {
+        return this._quotedValue;
+    }
+
+    public toString(): string { // CONSIDER: remove in favor of unquotedValue
         return this._unquotedValue;
     }
 
@@ -1094,7 +1106,7 @@ function parseValue(tokenizer: Tokenizer, tokens: Token[]): Value | null {
     if (tokenizer.current) {
         switch (tokenizer.current.type) {
             case TokenType.QuotedString:
-                value = new StringValue(tokenizer.current.span, utilities.unquote(tokenizer.current.toString()));
+                value = new StringValue(tokenizer.current.span, tokenizer.current.toString());
                 next(tokenizer, tokens);
                 break;
 
@@ -1149,7 +1161,7 @@ function parseObject(tokenizer: Tokenizer, tokens: Token[]): ObjectValue {
         } else if (propertyName === null) {
             if (tokenizer.current.type === TokenType.QuotedString) {
                 propertySpan = tokenizer.current.span;
-                propertyName = new StringValue(propertySpan, utilities.unquote(tokenizer.current.toString()));
+                propertyName = new StringValue(propertySpan, tokenizer.current.toString());
                 next(tokenizer, tokens);
             } else {
                 next(tokenizer, tokens);
