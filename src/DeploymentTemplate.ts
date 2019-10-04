@@ -144,7 +144,7 @@ export class DeploymentTemplate {
             this.visitAllStringValues(jsonStringValue => {//asdfasdf
                 // const unquoted: string = Utilities.unquote(jsonQuotedStringvs.toString()); // not positive about this - "\"" is turning into empty string
                 if (!jsonStringValueToTleParseResultMap.has(jsonStringValue)) {
-                    let tleParseResult: TLE.ParseResult = TLE.Parser.parse(`"${jsonStringValue.toString()}`, this.topLevelScope); //asdf?
+                    let tleParseResult: TLE.ParseResult = TLE.Parser.parse(`"${jsonStringValue.toString()}"`, this.topLevelScope); //asdf?
                     // Cache the results of this parse by the string's value // asdf: can't map by string value, they might be in different scopes, getting different results.  Need to cache by string and scope
                     jsonStringValueToTleParseResultMap.set(jsonStringValue, tleParseResult);
                 }
@@ -518,35 +518,37 @@ export class DeploymentTemplate {
     public findReferences(referenceType: Reference.ReferenceKind, referenceName: string, scope: TemplateScope): Reference.List {
         const result: Reference.List = new Reference.List(referenceType);
 
-        // Add the parameter/variable definition to the list
-        switch (referenceType) {
-            case Reference.ReferenceKind.Parameter:
-                const parameterDefinition: IParameterDefinition | null = scope.getParameterDefinition(referenceName);
-                if (parameterDefinition) {
-                    result.add(parameterDefinition.name.unquotedSpan);
-                }
-                break;
+        if (referenceName) {
+            // Add the parameter/variable definition to the list
+            switch (referenceType) {
+                case Reference.ReferenceKind.Parameter:
+                    const parameterDefinition: IParameterDefinition | null = scope.getParameterDefinition(referenceName);
+                    if (parameterDefinition) {
+                        result.add(parameterDefinition.name.unquotedSpan);
+                    }
+                    break;
 
-            case Reference.ReferenceKind.Variable:
-                const variableDefinition: Json.Property | null = scope.getVariableDefinition(referenceName); //asdf
-                if (variableDefinition) {
-                    result.add(variableDefinition.name.unquotedSpan);
-                }
-                break;
+                case Reference.ReferenceKind.Variable:
+                    const variableDefinition: Json.Property | null = scope.getVariableDefinition(referenceName); //asdf
+                    if (variableDefinition) {
+                        result.add(variableDefinition.name.unquotedSpan);
+                    }
+                    break;
 
-            default:
-                assert.fail(`Unrecognized Reference.Kind: ${referenceType}`);
-                break;
-        }
-
-        // Add references to the list that match the scope we're looking for
-        this.visitAllStringValues(jsonStringValue => { //asdfasdf
-            const tleParseResult: TLE.ParseResult | null = this.getTLEParseResultFromJSONStringValue(jsonStringValue);
-            if (tleParseResult && tleParseResult.expression && tleParseResult.scope === scope) {
-                const visitor = FindReferencesVisitor.FindReferencesVisitor.visit(tleParseResult.expression, referenceType, referenceName);
-                result.addAll(visitor.references.translate(jsonStringValue.span.startIndex)); //asdf unquotedspan?
+                default:
+                    assert.fail(`Unrecognized Reference.Kind: ${referenceType}`);
+                    break;
             }
-        });
+
+            // Add references to the list that match the scope we're looking for
+            this.visitAllStringValues(jsonStringValue => { //asdfasdf
+                const tleParseResult: TLE.ParseResult | null = this.getTLEParseResultFromJSONStringValue(jsonStringValue);
+                if (tleParseResult && tleParseResult.expression && tleParseResult.scope === scope) {
+                    const visitor = FindReferencesVisitor.FindReferencesVisitor.visit(tleParseResult.expression, referenceType, referenceName);
+                    result.addAll(visitor.references.translate(jsonStringValue.span.startIndex)); //asdf unquotedspan?
+                }
+            });
+        }
 
         return result;
     }
