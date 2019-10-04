@@ -2,7 +2,6 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 // ----------------------------------------------------------------------------
 
-import { Utilities } from "../extension.bundle";
 import { AzureRMAssets, FunctionsMetadata } from "./AzureRMAssets";
 import { CachedPromise } from "./CachedPromise";
 import { CachedValue } from "./CachedValue";
@@ -42,7 +41,7 @@ export class DeploymentTemplate {
 
     // A map from all quoted string values (not including the surrounding quotes) to their
     //   cached TLE parse results.
-    private _quotedStringToTleParseResultMap: CachedValue<Map<Json.StringValue, TLE.ParseResult>> = new CachedValue<Map<Json.StringValue, TLE.ParseResult>>();
+    private _jsonStringValueToTleParseResultMap: CachedValue<Map<Json.StringValue, TLE.ParseResult>> = new CachedValue<Map<Json.StringValue, TLE.ParseResult>>();
 
     // All errors and warnings in the template
     private _errors: CachedPromise<language.Issue[]> = new CachedPromise<language.Issue[]>();
@@ -107,8 +106,8 @@ export class DeploymentTemplate {
      * asdf should it map from the token instead?
      */
     private get quotedStringToTleParseResultMap(): Map<Json.StringValue, TLE.ParseResult> {
-        return this._quotedStringToTleParseResultMap.getOrCacheValue(() => {
-            const quotedStringToTleParseResultMap = new Map<Json.StringValue, TLE.ParseResult>();
+        return this._jsonStringValueToTleParseResultMap.getOrCacheValue(() => {
+            const jsonStringValueToTleParseResultMap = new Map<Json.StringValue, TLE.ParseResult>();
 
             const paramDefaultValuesScope = new TemplateScope(
                 ScopeContext.ParameterDefaultValue,
@@ -144,14 +143,14 @@ export class DeploymentTemplate {
             // All other strings have top-level scope
             this.visitAllStringValues(jsonStringValue => {//asdfasdf
                 // const unquoted: string = Utilities.unquote(jsonQuotedStringvs.toString()); // not positive about this - "\"" is turning into empty string
-                if (!quotedStringToTleParseResultMap.has(jsonStringValue)) {
+                if (!jsonStringValueToTleParseResultMap.has(jsonStringValue)) {
                     let tleParseResult: TLE.ParseResult = TLE.Parser.parse(`"${jsonStringValue.toString()}`, this.topLevelScope); //asdf?
                     // Cache the results of this parse by the string's value // asdf: can't map by string value, they might be in different scopes, getting different results.  Need to cache by string and scope
-                    quotedStringToTleParseResultMap.set(jsonStringValue, tleParseResult);
+                    jsonStringValueToTleParseResultMap.set(jsonStringValue, tleParseResult);
                 }
             });
 
-            return quotedStringToTleParseResultMap;
+            return jsonStringValueToTleParseResultMap;
 
             // (local function) Parse all expressions from the asdf
             function parseExpressionsByScope(value: Json.Value | null, scope: TemplateScope): void {
@@ -170,16 +169,16 @@ export class DeploymentTemplate {
 
                             //const unquoted = Utilities.unquote(jsonQuotedStringToken.toString());
                             //const unquoted = Utilities.unquote(stringValue.toString().toString());
-                            if (!quotedStringToTleParseResultMap.has(jsonStringValue)) {
+                            if (!jsonStringValueToTleParseResultMap.has(jsonStringValue)) {
                                 // Parse the string as a possible TLE expression
                                 let tleParseResult: TLE.ParseResult = TLE.Parser.parse(
-                                    Utilities.unquote(jsonStringValue.toString()),
+                                    `"${jsonStringValue.toString()}`, //asdfasdf
                                     scope
                                 );
 
                                 // Cache the results of this parse by the string's value without the quotes
                                 // asdf: can't map by string value, they might be in different scopes, getting different results.  Need to cache by string and scope
-                                quotedStringToTleParseResultMap.set(jsonStringValue, tleParseResult);
+                                jsonStringValueToTleParseResultMap.set(jsonStringValue, tleParseResult);
                             }
                         });
                 }
@@ -495,7 +494,11 @@ export class DeploymentTemplate {
     //     return this.getTLEParseResultFromString(unquoted);
     // }
 
-    // Note: I don't think this should ever return null, but being defensive for now
+    /**
+     * Get the TLE parse results from this JSON string.
+     * Can return null if the string is not reachable in the parsed
+     *   template tree.
+     */
     public getTLEParseResultFromJSONStringValue(jsonStringValue: Json.StringValue): TLE.ParseResult | null {
         const result = this.quotedStringToTleParseResultMap.get(jsonStringValue);
         return result ? result : null;

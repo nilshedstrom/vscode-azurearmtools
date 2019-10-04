@@ -802,7 +802,7 @@ export class BooleanValue extends Value {
  * A JSON quoted string.
  */
 export class StringValue extends Value {
-    constructor(span: language.Span, private _value: string) {
+    constructor(span: language.Span, private _unquotedValue: string) {
         super(span);
     }
 
@@ -811,11 +811,11 @@ export class StringValue extends Value {
     }
 
     public get unquotedSpan(): language.Span {
-        return new language.Span(this.startIndex + 1, this._value.length);
+        return new language.Span(this.startIndex + 1, this._unquotedValue.length);
     }
 
     public toString(): string { // asdf remove this in favor of a more explicit function or getter
-        return this._value;
+        return this._unquotedValue;
     }
 
     public accept(visitor: Visitor): void {
@@ -984,7 +984,7 @@ export class ParseResult {
     }
 
     /**
-     * Get the JSON Token that contains the provided characterIndex.
+     * Get the JSON Token that contains the provided characterIndex, if any (e.g. returns null if at whitespace)
      */
     public getTokenAtCharacterIndex(characterIndex: number): Token | null {
         assert(0 <= characterIndex, `characterIndex (${characterIndex}) cannot be negative.`);

@@ -141,7 +141,13 @@ export class PositionContext {
     public get tleInfo(): TleInfo | null {
         return this._tleInfo.getOrCacheValue(() => {
             //const tleParseResult = this._deploymentTemplate.getTLEParseResultFromJSONToken(this.jsonToken);
-            if (this.jsonValue && this.jsonValue instanceof Json.StringValue) { //asdfasdf
+            const jsonToken = this.jsonToken;
+            if (
+                jsonToken
+                && jsonToken.type === Json.TokenType.QuotedString
+                && this.jsonValue
+                && this.jsonValue instanceof Json.StringValue
+            ) { //asdfasdf
                 const tleParseResult = this._deploymentTemplate.getTLEParseResultFromJSONStringValue(this.jsonValue);
                 if (tleParseResult) {
                     const tleCharacterIndex = this.documentCharacterIndex - this.jsonTokenStartIndex;
@@ -149,7 +155,6 @@ export class PositionContext {
                     return new TleInfo(tleParseResult, tleCharacterIndex, tleValue, tleParseResult.scope);
                 }
             }
-
             return null;
         });
     }

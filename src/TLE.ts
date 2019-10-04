@@ -73,14 +73,19 @@ export abstract class ParentValue extends Value {
 }
 
 /**
- * A TLE value representing a string.
+ * A TLE value representing a string.  This can be either an entire JSON string that
+ * is not an expression (e.g. "string value") or a single-quoted string value inside
+ * of a JSON string that is an expression (e.g. "[concat('string value')]"). asdf is this true?
+ *
+ * CONSIDER: Differentiate between a string value that is an entire string vs a
+ * single-quoted string inside an expression string
  */
 export class StringValue extends Value {
     constructor(private _token: Token) {
         super();
 
         assert(_token);
-        assert.deepEqual(TokenType.QuotedString, _token.getType());
+        assert.equal(TokenType.QuotedString, _token.getType());
     }
 
     public get token(): Token {
@@ -635,31 +640,33 @@ export class FunctionSignatureHelp {
  * The given string value must start with a quote (single or double).
  * If there are no square brackets, the expression will be a StringValue representing the entire
  *   JSON (non-expression) string, assuming no errors
+ *
+ * CONSIDER: Change the following implementation details:
  * Given that the current parser requires a function expression at the top-most level of an expression,
  *   the top-level expression returned will only be a StringValue if there is in fact no expression.
  */
 export class Parser {
     // Handles any JSON string, not just those that are actually TLE expressions beginning with bracket
-    public static parse(unquotedStringValue: string, scope: TemplateScope): ParseResult {
-        assert(unquotedStringValue, "TLE strings cannot be null.");
-        assert(1 <= unquotedStringValue.length, "TLE strings must be at least 1 character.");
-        assert(Utilities.isQuoteCharacter(unquotedStringValue[0]), "The first character in a TLE string must be a quote character.");
+    public static parse(quotedStringValue: string, scope: TemplateScope): ParseResult {
+        assert(quotedStringValue, "TLE strings cannot be null.");
+        assert(1 <= quotedStringValue.length, "TLE strings must be at least 1 character.");
+        assert(Utilities.isQuoteCharacter(quotedStringValue[0]), "The first character in the TLE string to parse must be a quote character.");
 
         let leftSquareBracketToken: Token | null = null;
         let expression: Value | null = null;
         let rightSquareBracketToken: Token | null = null;
         let errors: language.Issue[] = [];
 
-        if (3 <= unquotedStringValue.length && unquotedStringValue.substr(1, 2) === "[[") {
-            expression = new StringValue(Token.createQuotedString(0, unquotedStringValue));
+        if (3 <= quotedStringValue.length && quotedStringValue.substr(1, 2) === "[[") {
+            expression = new StringValue(Token.createQuotedString(0, quotedStringValue));
         } else {
-            let tokenizer = Tokenizer.fromString(unquotedStringValue);
+            let tokenizer = Tokenizer.fromString(quotedStringValue);
             tokenizer.next();
 
             if (!tokenizer.current || tokenizer.current.getType() !== TokenType.LeftSquareBracket) {
                 // This is just a plain old string (no brackets). Mark its expression as being
                 // the string value.
-                expression = new StringValue(Token.createQuotedString(0, unquotedStringValue));
+                expression = new StringValue(Token.createQuotedString(0, quotedStringValue));
             } else {
                 leftSquareBracketToken = tokenizer.current;
                 tokenizer.next();
@@ -692,7 +699,7 @@ export class Parser {
                         tokenizer.next();
                     }
                 } else {
-                    errors.push(new language.Issue(new language.Span(unquotedStringValue.length - 1, 1), "Expected a right square bracket (']')."));
+                    errors.push(new language.Issue(new language.Span(quotedStringValue.length - 1, 1), "Expected a right square bracket (']')."));
                 }
 
                 if (expression === null) {
