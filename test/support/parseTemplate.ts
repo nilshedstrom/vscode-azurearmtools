@@ -7,12 +7,14 @@ import { DeploymentTemplate } from "../../src/DeploymentTemplate";
 import { Issue } from '../../src/Language';
 import { stringify } from "./stringify";
 
-export async function parseTemplate(template: string | {}, expectedErrors: string[]): Promise<DeploymentTemplate> {
+export async function parseTemplate(template: string | {}, expectedErrors?: string[]): Promise<DeploymentTemplate> {
     const json = typeof template === "string" ? template : stringify(template);
     const dt = new DeploymentTemplate(json, "id");
     const errors: Issue[] = await dt.errors;
     const errorMessages = errors.map(e => e.message);
-    assert.deepStrictEqual(errorMessages, expectedErrors);
+    if (expectedErrors) {
+        assert.deepStrictEqual(errorMessages, expectedErrors);
+    }
 
     return dt;
 }
@@ -33,7 +35,7 @@ interface Markers {
 export async function parseTemplateWithMarkers(
     template: string | {},
     expectedErrors?: string[]
-): Promise<{ dt: DeploymentTemplate, markers: Markers }> {
+): Promise<{ dt: DeploymentTemplate; markers: Markers }> {
     const { text, markers } = getDocumentMarkers(template);
     const dt = new DeploymentTemplate(text, "id");
 
@@ -61,7 +63,8 @@ export function getDocumentMarkers(template: object | string): { text: string; m
             break;
         }
 
-        const index = match.index!;
+        // tslint:disable-next-line:no-non-null-assertion // Tested above
+        const index: number = match.index!;
         const name = match[1];
         const marker: Marker = { name, index };
         markers[marker.name] = marker;

@@ -56,11 +56,11 @@ export class UserFunctionInfo extends Info {
         super(_span);
     }
 
-    public static getUsage(namespace: UserFunctionNamespaceDefinition, func: UserFunctionDefinition): string {
-        const ns = namespace.namespaceName.unquotedValue;
+    public static getUsage(namespace: UserFunctionNamespaceDefinition | undefined, func: UserFunctionDefinition): string {
+        const ns: string = namespace ? namespace.namespaceName.unquotedValue : "";
         const name = func.name.unquotedValue;
         const params: UserFunctionParameterDefinition[] = func.parameterDefinitions;
-        const usage: string = `${ns}.${name}(${params.map(getParamUsage).join(", ")})`;
+        const usage: string = `${ns ? `${ns}.` : ns}${name}(${params.map(getParamUsage).join(", ")})`;
 
         return usage;
 
@@ -91,12 +91,12 @@ export class UserNamespaceInfo extends Info {
     public getHoverText(): string {
         const ns = this._namespace.namespaceName.unquotedValue;
         const methodsUsage: string[] = this._namespace.members
-            .map(md => UserFunctionInfo.getUsage(this._namespace, md));
+            .map(md => UserFunctionInfo.getUsage(undefined, md));
         const summary = `**${ns}** User-defined namespace`;
         if (methodsUsage.length > 0) {
             return `${summary}\nMembers:\n${methodsUsage.map(mu => `* ${mu}`).join("\n")}`;
         } else {
-            return summary;
+            return `${summary}\nNo members`;
         }
     }
 }
