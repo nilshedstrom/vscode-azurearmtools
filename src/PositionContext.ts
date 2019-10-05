@@ -147,7 +147,7 @@ export class PositionContext {
                 && jsonToken.type === Json.TokenType.QuotedString
                 && this.jsonValue
                 && this.jsonValue instanceof Json.StringValue
-            ) { //asdfasdf
+            ) {
                 const tleParseResult = this._deploymentTemplate.getTLEParseResultFromJSONStringValue(this.jsonValue);
                 if (tleParseResult) {
                     const tleCharacterIndex = this.documentCharacterIndex - this.jsonTokenStartIndex;
@@ -168,10 +168,20 @@ export class PositionContext {
             const tleInfo = this.tleInfo;
             if (tleInfo) {
                 const tleValue: TLE.Value | null = tleInfo.tleValue; //testpoint
+                const tleCharacterIndex = tleInfo.tleCharacterIndex;
                 const scope = tleInfo.scope;
                 if (tleValue instanceof TLE.FunctionCallValue) {
-                    if (tleValue.nameToken.span.contains(tleInfo.tleCharacterIndex)) {
+                    if (tleValue.namespaceToken && tleValue.namespaceToken.span.contains(tleCharacterIndex)) {
+                        // Inside the namespace of a user-function reference
+                        const ns = tleValue.namespaceToken.stringValue;
+                        const nsDefinition = scope.getFunctionNamespaceDefinition(ns);
+                        if (nsDefinition) {
+                            const hoverSpan: language.Span = tleValue.namespaceToken.span.translate(this.jsonTokenStartIndex);
+                            return new Hover.UserNamespaceInfo(nsDefinition, hoverSpan);
+                        }
+                    } else if (tleValue.nameToken.span.contains(tleCharacterIndex)) {
                         if (tleValue.namespaceToken) {
+                            // Inside the name of a user-function reference
                             const ns = tleValue.namespaceToken.stringValue;
                             const name = tleValue.nameToken.stringValue;
                             const nsDefinition = scope.getFunctionNamespaceDefinition(ns);
@@ -181,6 +191,7 @@ export class PositionContext {
                                 return new Hover.UserFunctionInfo(nsDefinition, definition, hoverSpan);
                             }
                         } else {
+                            // Inside a reference of a built-in function
                             const functionMetadata: FunctionMetadata | undefined = await AzureRMAssets.getFunctionMetadataFromName(tleValue.nameToken.stringValue); //testpoint
                             if (functionMetadata) {
                                 const hoverSpan: language.Span = tleValue.nameToken.span.translate(this.jsonTokenStartIndex); //testpoint

@@ -49,20 +49,20 @@ export class FunctionInfo extends Info {
 }
 
 /**
- * The information that will be displayed when the cursor hovers over a TLE function.
+ * The information that will be displayed when the cursor hovers over a user-defined TLE function.
  */
 export class UserFunctionInfo extends Info {
     constructor(private _namespace: UserFunctionNamespaceDefinition, private _function: UserFunctionDefinition, _span: language.Span) {
         super(_span);
     }
 
-    public getHoverText(): string {
-        const ns = this._namespace.namespaceName.unquotedValue;
-        const name = this._function.name.unquotedValue;
-        const params: UserFunctionParameterDefinition[] = this._function.parameterDefinitions;
+    public static getUsage(namespace: UserFunctionNamespaceDefinition, func: UserFunctionDefinition): string {
+        const ns = namespace.namespaceName.unquotedValue;
+        const name = func.name.unquotedValue;
+        const params: UserFunctionParameterDefinition[] = func.parameterDefinitions;
         const usage: string = `${ns}.${name}(${params.map(getParamUsage).join(", ")})`;
 
-        return `**${usage}** User-defined function`;
+        return usage;
 
         function getParamUsage(pd: UserFunctionParameterDefinition): string {
             const paramName = pd.name.unquotedValue;
@@ -71,6 +71,32 @@ export class UserFunctionInfo extends Info {
             const paramTypeLC: string | null = paramType && paramType.toLowerCase();
 
             return paramTypeLC ? `${paramName} [${paramTypeLC}]` : paramName;
+        }
+    }
+
+    public getHoverText(): string {
+        const usage: string = UserFunctionInfo.getUsage(this._namespace, this._function);
+        return `**${usage}** User-defined function`;
+    }
+}
+
+/**
+ * The information that will be displayed when the cursor hovers over a user-defined namespace
+ */
+export class UserNamespaceInfo extends Info {
+    constructor(private _namespace: UserFunctionNamespaceDefinition, _span: language.Span) {
+        super(_span);
+    }
+
+    public getHoverText(): string {
+        const ns = this._namespace.namespaceName.unquotedValue;
+        const methodsUsage: string[] = this._namespace.members
+            .map(md => UserFunctionInfo.getUsage(this._namespace, md));
+        const summary = `**${ns}** User-defined namespace`;
+        if (methodsUsage.length > 0) {
+            return `${summary}\nMembers:\n${methodsUsage.map(mu => `* ${mu}`).join("\n")}`;
+        } else {
+            return summary;
         }
     }
 }

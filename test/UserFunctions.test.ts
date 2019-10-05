@@ -1118,7 +1118,10 @@ suite("User functions", () => {
 
         test("Hover over user-defined function reference's namespace", async () => {
             const { dt, markers: { udfRefAtNs } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
-            await testHover(dt, udfRefAtNs.index, "**udf.string(year [int], month, day [int])** User-defined function");
+            await testHover(
+                dt,
+                udfRefAtNs.index,
+                "**udf** User-defined namespace\nMembers:\n* udf.string(year [int], month, day [int])");
         });
     });
 

@@ -293,7 +293,7 @@ export class FunctionCallValue extends ParentValue {
      * The token for the namespace if it's a user-defined function.
      */
     public get namespaceToken(): Token | null {
-        return this._namespaceToken; //testpoint
+        return this._namespaceToken;
     }
 
     /**
@@ -304,7 +304,7 @@ export class FunctionCallValue extends ParentValue {
     }
 
     public get fullName(): string {
-        let result = this._nameToken.stringValue; //testpoint
+        let result = this._nameToken.stringValue;
         if (this._namespaceToken) {
             result = `${this._namespaceToken.stringValue}.${this._nameToken.stringValue}`;
         }
@@ -375,7 +375,10 @@ export class FunctionCallValue extends ParentValue {
     }
 
     public getSpan(): language.Span {
-        return this._nameToken.span.union(this.argumentListSpan);
+        return this._nameToken.span
+            .union(this.argumentListSpan)
+            // tslint:disable-next-line: strict-boolean-expressions
+            .union(this._namespaceToken && this._namespaceToken.span);
     }
 
     public contains(characterIndex: number): boolean {
