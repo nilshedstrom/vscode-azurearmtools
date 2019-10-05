@@ -1121,7 +1121,7 @@ suite("User functions", () => {
             await testHover(
                 dt,
                 udfRefAtNs.index,
-                "**udf** User-defined namespace\nMembers:\n* udf.string(year [int], month, day [int])");
+                "**udf** User-defined namespace\n\nMembers:\n* udf.string(year [int], month, day [int])");
         });
     });
 

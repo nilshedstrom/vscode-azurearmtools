@@ -12,7 +12,6 @@
 // Because the JSON/ARM parsers catch these errors, it doesn't make too much difference for the end user
 //   so might not be worth fixing.
 
-import { Utilities } from "../extension.bundle";
 import { CachedValue } from "./CachedValue";
 import { assert } from "./fixed_assert";
 import * as language from "./Language";
@@ -807,7 +806,7 @@ export class StringValue extends Value {
 
     constructor(quotedSpan: language.Span, private _quotedValue: string) {
         super(quotedSpan);
-        this._unquotedValue = Utilities.unquote(_quotedValue);
+        this._unquotedValue = utilities.unquote(_quotedValue);
     }
 
     public get valueKind(): ValueKind {

@@ -27,7 +27,7 @@ suite("Hover.UserNamespaceInfo", () => {
             const info = new UserNamespaceInfo(
                 dt.topLevelScope.getFunctionNamespaceDefinition("udf")!,
                 fakeSpan);
-            assert.equal(info.getHoverText(), "**udf** User-defined namespace\nNo members");
+            assert.equal(info.getHoverText(), "**udf** User-defined namespace\n\nNo members");
         });
     });
 
@@ -48,7 +48,7 @@ suite("Hover.UserNamespaceInfo", () => {
         const info = new UserNamespaceInfo(
             dt.topLevelScope.getFunctionNamespaceDefinition("udf")!,
             fakeSpan);
-        assert.equal(info.getHoverText(), "**udf** User-defined namespace\nMembers:\n* date()");
+        assert.equal(info.getHoverText(), "**udf** User-defined namespace\n\nMembers:\n* date()");
     });
 
     test("one member, one param, no type", async () => {
@@ -71,7 +71,7 @@ suite("Hover.UserNamespaceInfo", () => {
         const info = new UserNamespaceInfo(
             dt.topLevelScope.getFunctionNamespaceDefinition("udf")!,
             fakeSpan);
-        assert.equal(info.getHoverText(), "**udf** User-defined namespace\nMembers:\n* date(param)");
+        assert.equal(info.getHoverText(), "**udf** User-defined namespace\n\nMembers:\n* date(param)");
     });
 
     test("one member, one param", async () => {
@@ -97,7 +97,7 @@ suite("Hover.UserNamespaceInfo", () => {
         const info = new UserNamespaceInfo(
             dt.topLevelScope.getFunctionNamespaceDefinition("udf")!,
             fakeSpan);
-        assert.equal(info.getHoverText(), "**udf** User-defined namespace\nMembers:\n* date(param [whatever])");
+        assert.equal(info.getHoverText(), "**udf** User-defined namespace\n\nMembers:\n* date(param [whatever])");
     });
 
     test("one member, two params", async () => {
@@ -127,7 +127,7 @@ suite("Hover.UserNamespaceInfo", () => {
         const info = new UserNamespaceInfo(
             dt.topLevelScope.getFunctionNamespaceDefinition("udf")!,
             fakeSpan);
-        assert.equal(info.getHoverText(), "**udf** User-defined namespace\nMembers:\n* date(param1 [string], param2 [securestring])");
+        assert.equal(info.getHoverText(), "**udf** User-defined namespace\n\nMembers:\n* date(param1 [string], param2 [securestring])");
     });
 
     test("two members", async () => {
@@ -165,6 +165,6 @@ suite("Hover.UserNamespaceInfo", () => {
         const info = new UserNamespaceInfo(
             dt.topLevelScope.getFunctionNamespaceDefinition("udf")!,
             fakeSpan);
-        assert.equal(info.getHoverText(), "**udf** User-defined namespace\nMembers:\n* date(param1 [string], param2 [securestring])\n* time(param [string])");
+        assert.equal(info.getHoverText(), "**udf** User-defined namespace\n\nMembers:\n* date(param1 [string], param2 [securestring])\n* time(param [string])");
     });
 });

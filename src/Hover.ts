@@ -94,9 +94,9 @@ export class UserNamespaceInfo extends Info {
             .map(md => UserFunctionInfo.getUsage(undefined, md));
         const summary = `**${ns}** User-defined namespace`;
         if (methodsUsage.length > 0) {
-            return `${summary}\nMembers:\n${methodsUsage.map(mu => `* ${mu}`).join("\n")}`;
+            return `${summary}\n\nMembers:\n${methodsUsage.map(mu => `* ${mu}`).join("\n")}`;
         } else {
-            return `${summary}\nNo members`;
+            return `${summary}\n\nNo members`;
         }
     }
 }
