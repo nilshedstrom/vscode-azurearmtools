@@ -15,9 +15,9 @@ export class UserFunctionDefinition {
     private _output: CachedValue<OutputDefinition | null> = new CachedValue<OutputDefinition | null>();
     private _parameterDefinitions: CachedValue<UserFunctionParameterDefinition[]> = new CachedValue<UserFunctionParameterDefinition[]>();
 
-    constructor(private _name: Json.StringValue, private _value: Json.ObjectValue) {
+    constructor(private _name: Json.StringValue, public readonly objectValue: Json.ObjectValue) {
         assert(_name);
-        assert(_value);
+        assert(objectValue);
     }
 
     public get name(): Json.StringValue {
@@ -26,7 +26,7 @@ export class UserFunctionDefinition {
 
     public get output(): OutputDefinition | null {
         return this._output.getOrCacheValue(() => {
-            let output = Json.asObjectValue(this._value.getPropertyValue("output"));
+            let output = Json.asObjectValue(this.objectValue.getPropertyValue("output"));
             if (output) {
                 return new OutputDefinition(output);
             }
@@ -40,7 +40,7 @@ export class UserFunctionDefinition {
             const parameterDefinitions: UserFunctionParameterDefinition[] = [];
 
             // User-function parameters are an ordered array, not an object
-            const parametersArray: Json.ArrayValue | null = Json.asArrayValue(this._value.getPropertyValue("parameters")); //testpoint
+            const parametersArray: Json.ArrayValue | null = Json.asArrayValue(this.objectValue.getPropertyValue("parameters")); //testpoint
             if (parametersArray) {
                 for (const parameter of parametersArray.elements) {
                     const parameterObject = Json.asObjectValue(parameter);

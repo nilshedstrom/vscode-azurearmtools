@@ -125,18 +125,16 @@ export class DeploymentTemplate {
 
             for (let ns of this.namespaceDefinitions) {
                 for (let member of ns.members) {
-                    if (member.output) {
-                        const userFunctionScope = new TemplateScope(
-                            ScopeContext.UserFunction, //asdf?
-                            // User functions can only use their own parameters, they do
-                            //   not have access to top-level parameters
-                            member.parameterDefinitions,
-                            undefined, // variable references not supported
-                            undefined, // nested user functions not supported
-                            `User function '${ns.namespaceName.toString()}.${member.name.toString()}' scope`
-                        );
-                        parseExpressionsByScope(member.output.value, userFunctionScope);
-                    }
+                    const userFunctionScope = new TemplateScope(
+                        ScopeContext.UserFunction,
+                        // User functions can only use their own parameters, they do
+                        //   not have access to top-level parameters
+                        member.parameterDefinitions,
+                        undefined, // variable references not supported
+                        undefined, // nested user functions not supported
+                        `User function '${ns.namespaceName.toString()}.${member.name.toString()}' scope`
+                    );
+                    parseExpressionsByScope(member.objectValue, userFunctionScope);
                 }
             }
 

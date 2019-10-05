@@ -424,16 +424,16 @@ export class PositionContext {
                 if (referenceType === null) {
                     const jsonStringValue: Json.StringValue | null = Json.asStringValue(this.jsonValue); //testpoint
                     if (jsonStringValue) {
-                        const jsonString = jsonStringValue.toString(); //testpoint
+                        const unquotedString = jsonStringValue.unquotedValue; //testpoint
 
-                        const parameterDefinition: IParameterDefinition | null = scope.getParameterDefinition(jsonString);
-                        if (parameterDefinition && parameterDefinition.name === jsonStringValue) { //asdf?
-                            referenceName = jsonString;
+                        const parameterDefinition: IParameterDefinition | null = scope.getParameterDefinition(unquotedString);
+                        if (parameterDefinition && parameterDefinition.name.unquotedValue === unquotedString) { //asdf?
+                            referenceName = unquotedString;
                             referenceType = Reference.ReferenceKind.Parameter; //testpoint
                         } else {
-                            const variableDefinition: Json.Property | null = scope.getVariableDefinition(jsonString); //testpoint
+                            const variableDefinition: Json.Property | null = scope.getVariableDefinition(unquotedString); //testpoint
                             if (variableDefinition && variableDefinition.name === jsonStringValue) { //testpoint
-                                referenceName = jsonString;
+                                referenceName = unquotedString;
                                 referenceType = Reference.ReferenceKind.Variable; //testpoint
                             }
                         }
