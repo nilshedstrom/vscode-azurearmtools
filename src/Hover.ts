@@ -4,7 +4,11 @@
 
 // tslint:disable max-classes-per-file // Grandfathered in
 
+import * as Json from "./JSON";
 import * as language from "./Language";
+import { UserFunctionDefinition } from "./UserFunctionDefinition";
+import { UserFunctionNamespaceDefinition } from "./UserFunctionNamespaceDefinition";
+import { UserFunctionParameterDefinition } from "./UserFunctionParameterDefinition";
 
 /**
  * The information that will be displayed when the cursor hovers over parts of a document.
@@ -17,6 +21,13 @@ export abstract class Info {
 
     public get span(): language.Span {
         return this._span;
+    }
+
+    /**
+     * Convenient way of seeing what this object represents in the debugger, shouldn't be used for production code
+     */
+    public get __debugDisplay(): string {
+        return this.getHoverText();
     }
 }
 
@@ -34,6 +45,33 @@ export class FunctionInfo extends Info {
 
     public get functionName(): string {
         return this._name;
+    }
+}
+
+/**
+ * The information that will be displayed when the cursor hovers over a TLE function.
+ */
+export class UserFunctionInfo extends Info {
+    constructor(private _namespace: UserFunctionNamespaceDefinition, private _function: UserFunctionDefinition, _span: language.Span) {
+        super(_span);
+    }
+
+    public getHoverText(): string {
+        const ns = this._namespace.namespaceName.unquotedValue;
+        const name = this._function.name.unquotedValue;
+        const params: UserFunctionParameterDefinition[] = this._function.parameterDefinitions;
+        const usage: string = `${ns}.${name}(${params.map(getParamUsage).join(", ")})`;
+
+        return `**${usage}** User-defined function`;
+
+        function getParamUsage(pd: UserFunctionParameterDefinition): string {
+            const paramName = pd.name.unquotedValue;
+            const paramTypeValue: Json.StringValue | null = Json.asStringValue(pd.type);
+            const paramType: string | null = paramTypeValue && paramTypeValue.unquotedValue;
+            const paramTypeLC: string | null = paramType && paramType.toLowerCase();
+
+            return paramTypeLC ? `${paramName} [${paramTypeLC}]` : paramName;
+        }
     }
 }
 

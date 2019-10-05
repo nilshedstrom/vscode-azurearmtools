@@ -396,7 +396,9 @@ export class AzureRMTools {
                 let hover: vscode.Hover;
 
                 if (hoverInfo) {
-                    if (hoverInfo instanceof Hover.FunctionInfo) {
+                    if (hoverInfo instanceof Hover.UserFunctionInfo) {
+                        properties.hoverType = "User Function";
+                    } else if (hoverInfo instanceof Hover.FunctionInfo) {
                         properties.hoverType = "TLE Function";
                         properties.tleFunctionName = hoverInfo.functionName;
                     } else if (hoverInfo instanceof Hover.ParameterReferenceInfo) {

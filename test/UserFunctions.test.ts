@@ -3,9 +3,9 @@
 // ----------------------------------------------------------------------------
 
 // tslint:disable:no-unused-expression max-func-body-length promise-function-async max-line-length no-unnecessary-class
-// tslint:disable:no-non-null-assertion object-literal-key-quotes variable-name
+// tslint:disable:no-non-null-assertion object-literal-key-quotes variable-name no-constant-condition
 
-import { Reference } from "../extension.bundle";
+import { Hover, Language, Reference } from "../extension.bundle";
 import { DeploymentTemplate } from "../src/DeploymentTemplate";
 import { assert } from "../src/fixed_assert";
 import { IDeploymentTemplate } from "./support/diagnostics";
@@ -13,8 +13,84 @@ import { parseTemplate, parseTemplateWithMarkers } from "./support/parseTemplate
 
 suite("User functions", () => {
 
+    const userFuncsTemplate1: IDeploymentTemplate = {
+        "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+        "contentVersion": "1.0.0.0",
+        "functions": [
+            {
+                "namespace": "udf",
+                "members": {
+                    "<!udfDef!>string": {
+                        "parameters": [
+                            {
+                                "name": "<!udfYearDef!>year",
+                                "type": "Int"
+                            },
+                            {
+                                "name": "month",
+                                // tslint:disable-next-line:no-any
+                                "type": <any>123 // invalid type
+                            },
+                            {
+                                "name": "day",
+                                "type": "int"
+                            }
+                        ],
+                        "output": {
+                            "type": "string",
+                            "value": "[concat(string(parameters('<!udfYearRef!>year')), '-', string(parameters('month')), '-', string(parameters('day')))]"
+                        }
+                    }
+                }
+            }
+        ],
+        "resources": [
+            {
+                "type": "Microsoft.Storage/storageAccounts",
+                "name": "[parameters('<!yearRef!>year')]",
+                "apiVersion": "[parameters('<!apiVersionRef!>apiVersion')]",
+                "location": "westus"
+            }
+        ],
+        "parameters": {
+            "<!yearDef!>year": {
+                "type": "int",
+                "defaultValue": 2010
+            },
+            "<!apiVersionDef!>apiVersion": {
+                "type": "int",
+                "defaultValue": 2010
+            }
+        },
+        "variables": {
+            "<!var1Def!>var1": {
+                "a": {
+                    "b": {
+                        "c": 16180339887498948482
+                    },
+                    "d": 42
+                }
+            },
+            "<!var2Def!>var2": "[variables('<!var1Ref1!>var1')]"
+        },
+        "outputs": {
+            "output1": {
+                "type": "int",
+                "value": "[variables('<!var1Ref2!>var1')]"
+            },
+            "output2": {
+                "type": "string",
+                "value": "[<!udfRefAtNs!>udf.<!udfRefAtName!>string(2019, 10, 5)]" // Using user function udf.string
+            },
+            "output3": {
+                "type": "string",
+                "value": "[<!stringRef!>string(2019)]" // using built-in function 'string'
+            }
+        }
+    };
+
     // #region
-    suite("Malformed", () => {
+    suite("UDF Malformed", () => {
         test("missing namespace name", async () => {
             const template = {
                 "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
@@ -40,7 +116,6 @@ suite("User functions", () => {
             };
 
             const dt = await parseTemplate(template, [
-                // Since the function isn't valid, the parameter show as missing
                 "Undefined parameter reference: 'number'"
             ]);
             assert.equal(0, dt.topLevelScope.namespaceDefinitions.length);
@@ -108,7 +183,7 @@ suite("User functions", () => {
     // #endregion
 
     // #region
-    suite("Function definitions", () => {
+    suite("UDF Function definitions", () => {
         test("simple function definition", async () => {
             const template = {
                 "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
@@ -383,7 +458,7 @@ suite("User functions", () => {
 
     // #region
 
-    suite("Calling user functions", () => {
+    suite("UDF Calling user functions", () => {
 
         test("Calling function with no parameters and no output", async () => {
             const template = {
@@ -785,40 +860,37 @@ suite("User functions", () => {
             await parseTemplate(template, []);
         });
 
-        // CONSIDER: Give better error message.  Right now we get this:
+        // CONSIDER: Give better error message.  Right now we get this (from backend validation):
         //  Template validation failed: The template function 'b' at line '15' and column '22' is not valid. These function calls are not supported in a function definition: 'udf.a'. Please see https://aka.ms/arm-template/#functions for usage details.
-
-        if (false) {
-            test("User function can't call another user function", async () => {
-                const template = {
-                    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-                    "contentVersion": "1.0.0.0",
-                    "functions": [
-                        {
-                            "namespace": "udf",
-                            "members": {
-                                "a": {
-                                    "output": {
-                                        "value": {
-                                        },
-                                        "type": "Object"
-                                    }
-                                },
-                                "b": {
-                                    "output": {
-                                        "type": "int",
-                                        "value": "[udf.a()]"
-                                    }
+        test("User function can't call another user function", async () => {
+            const template = {
+                "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                "contentVersion": "1.0.0.0",
+                "functions": [
+                    {
+                        "namespace": "udf",
+                        "members": {
+                            "a": {
+                                "output": {
+                                    "value": {
+                                    },
+                                    "type": "Object"
+                                }
+                            },
+                            "b": {
+                                "output": {
+                                    "type": "int",
+                                    "value": "[udf.a()]"
                                 }
                             }
                         }
-                    ],
-                    "resources": []
-                };
+                    }
+                ],
+                "resources": []
+            };
 
-                await parseTemplate(template, []);
-            });
-        }
+            await parseTemplate(template, []);
+        });
 
         test("Calling user function with same name as built-in function", async () => {
             const template = {
@@ -881,62 +953,12 @@ suite("User functions", () => {
     });
     // #endregion
 
-    suite("References", () => {
-
-        const userFuncsTemplate1: IDeploymentTemplate = {
-            "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-            "contentVersion": "1.0.0.0",
-            "functions": [
-                {
-                    "namespace": "udf",
-                    "members": {
-                        "date": {
-                            "parameters": [
-                                {
-                                    "name": "<!udfYearDef!>year",
-                                    "type": "Int"
-                                },
-                                {
-                                    "name": "month",
-                                    "type": "Int"
-                                },
-                                {
-                                    "name": "day",
-                                    "type": "Int"
-                                }
-                            ],
-                            "output": {
-                                "type": "string",
-                                "value": "[concat(string(parameters('<!udfYearRef!>year')), '-', string(parameters('month')), '-', string(parameters('day')))]"
-                            }
-                        }
-                    }
-                }
-            ],
-            "resources": [
-                {
-                    "type": "Microsoft.Storage/storageAccounts",
-                    "name": "[parameters('<!yearRef!>year')]",
-                    "apiVersion": "[parameters('<!apiVersionRef!>apiVersion')]",
-                    "location": "westus"
-                }
-            ],
-            "parameters": {
-                "<!yearDef!>year": {
-                    "type": "int",
-                    "defaultValue": 2010
-                },
-                "<!apiVersionDef!>apiVersion": {
-                    "type": "int",
-                    "defaultValue": 2010
-                }
-            }
-        };
+    suite("UDF Find References", () => {
 
         function testReferences(dt: DeploymentTemplate, cursorIndex: number, expectedReferenceIndices: number[]): void {
             const pc = dt.getContextFromDocumentCharacterIndex(cursorIndex);
             const references: Reference.List = pc.references!;
-            assert(references);
+            assert(references, "Expected non-empty list of references");
 
             const indices = references.spans.map(r => r.startIndex).sort();
             expectedReferenceIndices = expectedReferenceIndices.sort();
@@ -995,6 +1017,109 @@ suite("User functions", () => {
             });
         });
 
+        suite("UDF Find variable references", () => {
+            test("At reference variable", async () => {
+                const { dt, markers: { var1Def, var1Ref1, var1Ref2 } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+
+                // Cursor at reference to "var1" inside var2
+                testReferences(dt, var1Ref1.index, [var1Def.index, var1Ref1.index, var1Ref2.index]);
+
+                // Cursor at reference to "var1" inside outputs2
+                testReferences(dt, var1Ref2.index, [var1Def.index, var1Ref1.index, var1Ref2.index]);
+            });
+
+            test("At definition of variable", async () => {
+                const { dt, markers: { var1Def, var1Ref1, var1Ref2 } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+
+                // Cursor at definition to "var1" variable
+                testReferences(dt, var1Def.index, [var1Def.index, var1Ref1.index, var1Ref2.index]);
+            });
+        });
+
+        suite("UDF Find user function references", () => {
+            if (false) { // asdf
+                test("At reference to user-defined function, cursor inside the namespace portion", async () => {
+                    const { dt, markers: { udfDef, udfRefAtName, udfRefAtNs } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+
+                    // Cursor at reference to "udf.string" inside the namespace
+                    testReferences(dt, udfRefAtNs.index, [udfDef.index, udfRefAtName.index]);
+                });
+
+                test("At reference to user-defined function, cursor inside the name portion", async () => {
+                    const { dt, markers: { udfDef, udfRefAtName } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+
+                    // Cursor at reference to "udf.string" inside the namespace
+                    testReferences(dt, udfRefAtName.index, [udfDef.index, udfRefAtName.index]);
+                });
+
+                test("At definition of user-defined function", async () => {
+                    const { dt, markers: { udfDef, udfRefAtName } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+
+                    // Cursor at definition of "udf.string"
+                    testReferences(dt, udfDef.index, [udfRefAtName.index]);
+                });
+            }
+
+            test("Reference to built-in function with same name as UDF function doesn't find UDF", async () => {
+                const { dt, markers: { stringRef } } = await parseTemplateWithMarkers(userFuncsTemplate1);
+                const pc = dt.getContextFromDocumentCharacterIndex(stringRef.index);
+                const references: Reference.List | null = pc.references;
+                assert(!references, "Expected no references");
+            });
+        });
+
     }); // suite References
+
+    suite("UDF Hover Info", () => {
+        async function testHover(
+            dt: DeploymentTemplate,
+            cursorIndex: number,
+            expectedHoverText: string,
+            expectedSpan?: Language.Span
+        ): Promise<void> {
+            const pc = dt.getContextFromDocumentCharacterIndex(cursorIndex);
+            let hoverInfo: Hover.Info | null = await pc.hoverInfo!;
+            assert(hoverInfo, "Expected non-empty hover info");
+            hoverInfo = hoverInfo!;
+
+            const text: string = hoverInfo.getHoverText();
+            const span: Language.Span = hoverInfo.span;
+
+            assert.equal(text, expectedHoverText);
+            if (expectedSpan) {
+                assert.equal(span, expectedSpan);
+            }
+        }
+
+        test("Hover over top-level parameter reference", async () => {
+            const { dt, markers: { yearRef } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+            await testHover(dt, yearRef.index, "**year** (parameter)");
+        });
+
+        test("Hover over UDF parameter reference", async () => {
+            const { dt, markers: { udfYearRef } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+            await testHover(dt, udfYearRef.index, "**year** (parameter)");
+        });
+
+        test("Hover over top-level variable reference", async () => {
+            const { dt, markers: { var1Ref1 } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+            await testHover(dt, var1Ref1.index, "**var1** (variable)");
+        });
+
+        test("Hover over built-in function reference", async () => {
+            const { dt, markers: { stringRef } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+            await testHover(dt, stringRef.index, "**string(valueToConvert)**\nConverts the specified value to String.");
+        });
+
+        test("Hover over user-defined function reference's name", async () => {
+            const { dt, markers: { udfRefAtName } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+            await testHover(dt, udfRefAtName.index, "**udf.string(year [int], month, day [int])** User-defined function");
+        });
+
+        test("Hover over user-defined function reference's namespace", async () => {
+            const { dt, markers: { udfRefAtNs } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+            await testHover(dt, udfRefAtNs.index, "**udf.string(year [int], month, day [int])** User-defined function");
+        });
+    });
 
 }); // suite User Functions

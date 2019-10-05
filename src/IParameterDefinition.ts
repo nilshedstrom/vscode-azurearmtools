@@ -10,6 +10,8 @@ import * as language from "./Language";
  */
 export interface IParameterDefinition {
     name: Json.StringValue;
+    // tslint:disable-next-line:no-reserved-keywords
+    type: Json.Value | null;
     span: language.Span;
 
     // We don't currently need access to the parameter's "type" or other properties

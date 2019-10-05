@@ -171,10 +171,21 @@ export class PositionContext {
                 const scope = tleInfo.scope;
                 if (tleValue instanceof TLE.FunctionCallValue) {
                     if (tleValue.nameToken.span.contains(tleInfo.tleCharacterIndex)) {
-                        const functionMetadata: FunctionMetadata | undefined = await AzureRMAssets.getFunctionMetadataFromName(tleValue.nameToken.stringValue); //testpoint
-                        if (functionMetadata) {
-                            const hoverSpan: language.Span = tleValue.nameToken.span.translate(this.jsonTokenStartIndex); //testpoint
-                            return new Hover.FunctionInfo(functionMetadata.name, functionMetadata.usage, functionMetadata.description, hoverSpan);
+                        if (tleValue.namespaceToken) {
+                            const ns = tleValue.namespaceToken.stringValue;
+                            const name = tleValue.nameToken.stringValue;
+                            const nsDefinition = scope.getFunctionNamespaceDefinition(ns);
+                            const definition = scope.getFunctionDefinition(ns, name);
+                            if (nsDefinition && definition) {
+                                const hoverSpan: language.Span = tleValue.nameToken.span.translate(this.jsonTokenStartIndex); //testpoint
+                                return new Hover.UserFunctionInfo(nsDefinition, definition, hoverSpan);
+                            }
+                        } else {
+                            const functionMetadata: FunctionMetadata | undefined = await AzureRMAssets.getFunctionMetadataFromName(tleValue.nameToken.stringValue); //testpoint
+                            if (functionMetadata) {
+                                const hoverSpan: language.Span = tleValue.nameToken.span.translate(this.jsonTokenStartIndex); //testpoint
+                                return new Hover.FunctionInfo(functionMetadata.name, functionMetadata.usage, functionMetadata.description, hoverSpan);
+                            }
                         }
                         return null;
                     }
@@ -397,6 +408,8 @@ export class PositionContext {
         return new Completion.Item(propertyName, `${propertyName}$0`, replaceSpan, "(property)", "", Completion.CompletionKind.Property);
     }
 
+    // Returns null if references are not supported at this location.
+    // Returns empty list if supported but none found
     public get references(): Reference.List | null {
         return this._references.getOrCacheValue(() => {
             let referenceName: string | null = null;

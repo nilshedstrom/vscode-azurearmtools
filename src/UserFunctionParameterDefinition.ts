@@ -28,6 +28,16 @@ export class UserFunctionParameterDefinition implements IParameterDefinition {
         return this._name;
     }
 
+    // tslint:disable-next-line:no-reserved-keywords
+    public get type(): Json.Value | null {
+        const parameterDefinition: Json.ObjectValue | null = Json.asObjectValue(this._objectValue);
+        if (parameterDefinition) {
+            return parameterDefinition.getPropertyValue("type");
+        }
+
+        return null;
+    }
+
     public get span(): language.Span {
         return this._objectValue.span;
     }
