@@ -1200,10 +1200,9 @@ suite("DeploymentTemplate", () => {
                     pc.references;
                     pc.signatureHelp;
                     pc.tleInfo;
-                    pc.variableDefinitionIfAtReference;
-                    pc.parameterDefinitionIfAtReference;
+                    await pc.getReferenceSiteInfo();
+                    await pc.getHoverInfo();
                     await pc.getCompletionItems();
-                    await pc.hoverInfo;
                 } catch (err) {
                     throw new Error(`exercisePositionContextAtRandomPointsInTheDoc: Threw at index ${i}:\n${json.slice(i)}<***HERE***>${json.slice(i)}`);
                 }

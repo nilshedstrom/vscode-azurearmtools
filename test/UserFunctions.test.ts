@@ -8,6 +8,7 @@
 import { Hover, Language, Reference } from "../extension.bundle";
 import { DeploymentTemplate } from "../src/DeploymentTemplate";
 import { assert } from "../src/fixed_assert";
+import { IReferenceSite } from "../src/PositionContext";
 import { IDeploymentTemplate } from "./support/diagnostics";
 import { parseTemplate, parseTemplateWithMarkers } from "./support/parseTemplate";
 
@@ -1078,7 +1079,7 @@ suite("User functions", () => {
             expectedSpan?: Language.Span
         ): Promise<void> {
             const pc = dt.getContextFromDocumentCharacterIndex(cursorIndex);
-            let hoverInfo: Hover.Info | null = await pc.hoverInfo!;
+            let hoverInfo: Hover.Info = (await pc.getHoverInfo())!;
             assert(hoverInfo, "Expected non-empty hover info");
             hoverInfo = hoverInfo!;
 
@@ -1125,27 +1126,27 @@ suite("User functions", () => {
         });
     }); // suite UDF Hover Info
 
-    suite("UDF Go To Definition", () => {
+    suite("UDF Go To Definition", async () => {
         async function testGoToDefinition(
             dt: DeploymentTemplate,
             cursorIndex: number,
-            expectedDefinitionIndex: number
+            expectedReferenceKind: string,
+            expectedDefinitionStart: number
         ): Promise<void> {
             const pc = dt.getContextFromDocumentCharacterIndex(cursorIndex);
-            pc.def;
-            let hoverInfo: Hover.Info | null = await pc.hoverInfo!;
-            assert(hoverInfo, "Expected non-empty hover info");
-            hoverInfo = hoverInfo!;
+            const refInfo: IReferenceSite = (await pc.getReferenceSiteInfo())!;
+            assert(refInfo, "Expected non-null IReferenceSite");
 
-            const span: Language.Span = hoverInfo.span;
-            assert.equal(span.startIndex, expectedDefinitionIndex);
+            assert.deepStrictEqual(refInfo.kind, expectedReferenceKind);
+            assert.deepStrictEqual(refInfo.definitionSpan!.startIndex, expectedDefinitionStart);
         }
 
         test("Top-level parameter", async () => {
             const { dt, markers: { apiVersionDef, apiVersionRef } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
 
             // Cursor at reference to "apiVersion" inside resources
-            await testGoToDefinition(dt, apiVersionRef.index, apiVersionDef.index);
+            // -1 because go to definition currently goes to the quote at the start of the string asdf
+            await testGoToDefinition(dt, apiVersionRef.index, "parameter", apiVersionDef.index - 1);
         });
         /*
                 test("Fser function parameter", async () => {

@@ -4,6 +4,7 @@
 
 // tslint:disable max-classes-per-file // Grandfathered in
 
+import { IParameterDefinition } from "./IParameterDefinition";
 import * as Json from "./JSON";
 import * as language from "./Language";
 import { UserFunctionDefinition } from "./UserFunctionDefinition";
@@ -109,6 +110,10 @@ export class ParameterReferenceInfo extends Info {
         super(_parameterNameSpan);
     }
 
+    public static fromDefinition(definition: IParameterDefinition, parameterNameSpan: language.Span): ParameterReferenceInfo {
+        return new ParameterReferenceInfo(definition.name.unquotedValue, definition.description, parameterNameSpan);
+    }
+
     public getHoverText(): string {
         return `**${this._name}** (parameter)${(this._description ? `\n${this._description}` : "")}`;
     }
@@ -120,6 +125,10 @@ export class ParameterReferenceInfo extends Info {
 export class VariableReferenceInfo extends Info {
     constructor(private _name: string, _variableNameSpan: language.Span) {
         super(_variableNameSpan);
+    }
+
+    public static fromDefinition(definition: Json.Property, variableNameSpan: language.Span): VariableReferenceInfo {
+        return new VariableReferenceInfo(definition.name.unquotedValue, variableNameSpan);
     }
 
     public getHoverText(): string {

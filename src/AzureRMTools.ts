@@ -284,8 +284,8 @@ export class AzureRMTools {
         ext.context.subscriptions.push(vscode.languages.registerCompletionItemProvider(armDeploymentDocumentSelector, completionProvider, "'", "[", "."));
 
         const definitionProvider: vscode.DefinitionProvider = {
-            provideDefinition: (document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.Definition | undefined => {
-                return this.onProvideDefinition(document, position, token);
+            provideDefinition: async (document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): Promise<vscode.Definition | undefined> => {
+                return await this.onProvideDefinition(document, position, token);
             }
         };
         ext.context.subscriptions.push(vscode.languages.registerDefinitionProvider(armDeploymentDocumentSelector, definitionProvider));
@@ -392,11 +392,13 @@ export class AzureRMTools {
                 let properties = <TelemetryProperties & { hoverType?: string; tleFunctionName: string }>actionContext.telemetry.properties;
 
                 const context = deploymentTemplate.getContextFromDocumentLineAndColumnIndexes(position.line, position.character);
-                let hoverInfo: Hover.Info | null = await context.hoverInfo;
+                let hoverInfo: Hover.Info | null = await context.getHoverInfo();
                 let hover: vscode.Hover;
 
                 if (hoverInfo) {
-                    if (hoverInfo instanceof Hover.UserFunctionInfo) {
+                    if (hoverInfo instanceof Hover.UserNamespaceInfo) {
+                        properties.hoverType = "User Namespace";
+                    } else if (hoverInfo instanceof Hover.UserFunctionInfo) {
                         properties.hoverType = "User Function";
                     } else if (hoverInfo instanceof Hover.FunctionInfo) {
                         properties.hoverType = "TLE Function";
@@ -464,31 +466,25 @@ export class AzureRMTools {
         }
     }
 
-    private onProvideDefinition(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.Location | undefined {
+    private async onProvideDefinition(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): Promise<vscode.Location | undefined> {
         const deploymentTemplate: DeploymentTemplate | undefined = this.getDeploymentTemplate(document);
         if (deploymentTemplate) {
-            return callWithTelemetryAndErrorHandlingSync('Go To Definition', (actionContext: IActionContext): vscode.Location | undefined => {
+            return await callWithTelemetryAndErrorHandling('Go To Definition', async (actionContext: IActionContext): Promise<vscode.Location | undefined> => {
                 let properties = <TelemetryProperties & { definitionType?: string }>actionContext.telemetry.properties;
                 actionContext.errorHandling.suppressDisplay = true;
-                let result: vscode.Location | undefined;
 
                 const context: PositionContext = deploymentTemplate.getContextFromDocumentLineAndColumnIndexes(position.line, position.character);
+                const refInfo = await context.getReferenceSiteInfo();
+                if (refInfo && refInfo.definitionSpan) {
+                    properties.definitionType = refInfo.kind;
 
-                let definitionType: string = "no definition";
-                if (context.parameterDefinitionIfAtReference) {
-                    const locationUri: vscode.Uri = vscode.Uri.parse(deploymentTemplate.documentId);
-                    const definitionRange: vscode.Range = this.getVSCodeRangeFromSpan(deploymentTemplate, context.parameterDefinitionIfAtReference.span);
-                    result = new vscode.Location(locationUri, definitionRange);
-                    definitionType = "parameter";
-                } else if (context.variableDefinitionIfAtReference) {
-                    const locationUri: vscode.Uri = vscode.Uri.parse(deploymentTemplate.documentId);
-                    const definitionRange: vscode.Range = this.getVSCodeRangeFromSpan(deploymentTemplate, context.variableDefinitionIfAtReference.span);
-                    result = new vscode.Location(locationUri, definitionRange);
-                    definitionType = "variable";
+                    return new vscode.Location(
+                        vscode.Uri.parse(deploymentTemplate.documentId),
+                        this.getVSCodeRangeFromSpan(deploymentTemplate, refInfo.definitionSpan)
+                    );
                 }
 
-                properties.definitionType = definitionType;
-                return result;
+                return undefined;
             });
         }
     }
