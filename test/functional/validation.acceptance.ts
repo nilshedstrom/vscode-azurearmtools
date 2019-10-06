@@ -33,4 +33,12 @@ suite("Acceptance validation tests (all sources)", () => {
     test('language-service-p0.template.json'); // TODO
     test('language-service-p1.template.json'); // TODO
     test('language-service-p2.template.json'); // TODO
+
+    testWithLanguageServer("udf-xmas-tree2", async () => {
+        await testDiagnostics(
+            minimalDeploymentTemplate,
+            {
+            },
+            []);
+    });
 });

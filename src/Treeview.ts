@@ -8,10 +8,10 @@
 
 // tslint:disable:no-increment-decrement
 
-import * as assert from "assert";
 import * as path from 'path';
 import * as vscode from "vscode";
 import { iconsPath, languageId } from "./constants";
+import { assert } from './fixed_assert';
 import * as Json from "./JSON";
 
 const topLevelIcons: [string, string][] = [

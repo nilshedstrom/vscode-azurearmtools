@@ -2,31 +2,51 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 // ----------------------------------------------------------------------------
 
-import * as assert from "assert";
 import { AzureRMAssets, FunctionsMetadata } from "./AzureRMAssets";
 import { CachedPromise } from "./CachedPromise";
 import { CachedValue } from "./CachedValue";
+import { assert } from "./fixed_assert";
 import { Histogram } from "./Histogram";
+import { IParameterDefinition } from "./IParameterDefinition";
 import * as Json from "./JSON";
 import * as language from "./Language";
 import { ParameterDefinition } from "./ParameterDefinition";
 import { PositionContext } from "./PositionContext";
 import * as Reference from "./Reference";
 import { isArmSchema } from "./supported";
+import { ScopeContext, TemplateScope } from "./TemplateScope";
 import * as TLE from "./TLE";
-import * as Utilities from "./Utilities";
+import { UserFunctionNamespaceDefinition } from "./UserFunctionNamespaceDefinition";
+import * as FindReferencesVisitor from "./visitors/FindReferencesVisitor";
+import * as FunctionCountVisitor from "./visitors/FunctionCountVisitor";
+import { GenericStringVisitor } from "./visitors/GenericStringVisitor";
+import * as IncorrectFunctionArgumentCountVisitor from "./visitors/IncorrectFunctionArgumentCountVisitor";
+import { ReferenceInVariableDefinitionsVisitor } from "./visitors/ReferenceInVariableDefinitionsVisitor";
+import { UndefinedParameterAndVariableVisitor } from "./visitors/UndefinedParameterAndVariableVisitor";
+import * as UndefinedVariablePropertyVisitor from "./visitors/UndefinedVariablePropertyVisitor";
+import * as UnrecognizedFunctionVisitor from "./visitors/UnrecognizedFunctionVisitor";
 
 export class DeploymentTemplate {
+    // Parse result for the template JSON document as a whole
     private _jsonParseResult: Json.ParseResult;
-    private _jsonQuotedStringTokens: Json.Token[];
-    private _quotedStringToTleParseResultMap: { [key: string]: TLE.ParseResult };
-    private _tleParseResults: CachedValue<TLE.ParseResult[]> = new CachedValue<TLE.ParseResult[]>();
-    private _parameterDefinitions: CachedValue<ParameterDefinition[]> = new CachedValue<ParameterDefinition[]>();
-    private _variableDefinitions: CachedValue<Json.Property[]> = new CachedValue<Json.Property[]>();
-    private _namespaceDefinitions: Json.Value[];
+
+    // The top-level parameters and variables (as opposed to those in user functions and deployment resources)
+    private _topLevelScope: TemplateScope;
+
+    // asdf
+    private _topLevelValue: Json.ObjectValue | null;
+
+    // A list of all JSON tokens in the template that represent quoted strings
+    //private _jsonQuotedStringTokens: CachedValue<Json.Token[]> = new CachedValue<Json.Token[]>();
+
+    // A map from all quoted string values (not including the surrounding quotes) to their
+    //   cached TLE parse results.
+    private _jsonStringValueToTleParseResultMap: CachedValue<Map<Json.StringValue, TLE.ParseResult>> = new CachedValue<Map<Json.StringValue, TLE.ParseResult>>();
+
+    // All errors and warnings in the template
     private _errors: CachedPromise<language.Issue[]> = new CachedPromise<language.Issue[]>();
-    private _warnings: language.Issue[];
-    private _functionCounts: Histogram;
+    private _warnings: CachedValue<language.Issue[]> = new CachedValue<language.Issue[]>();
+
     private _schemaUri: CachedValue<string | null> = new CachedValue<string | null>();
 
     /**
@@ -41,47 +61,126 @@ export class DeploymentTemplate {
         assert(_documentId);
 
         this._jsonParseResult = Json.parse(_documentText);
+        this._topLevelValue = Json.asObjectValue(this._jsonParseResult.value);
+
+        this._topLevelScope = new TemplateScope(
+            ScopeContext.TopLevel,
+            this.getTopLevelParameterDefinitions(),
+            this.getTopLevelVariableDefinitions(),
+            this.getTopLevelNamespaceDefinitions(),
+            'Top-level scope');
+    }
+
+    public get topLevelScope(): TemplateScope {
+        return this._topLevelScope;
     }
 
     public hasArmSchemaUri(): boolean {
         return isArmSchema(this.schemaUri);
     }
 
-    private get jsonQuotedStringTokens(): Json.Token[] {
-        if (this._jsonQuotedStringTokens === undefined) {
-            this._jsonQuotedStringTokens = [];
+    // /**
+    //  * A list of all JSON tokens in the template that represent quoted strings
+    //  */
+    // // asdf: should probably just use the string map instead of this
+    // private get jsonQuotedStringTokens(): Json.Token[] {
+    //     return this._jsonQuotedStringTokens.getOrCacheValue(() => {
+    //         const jsonQuotedStringTokens: Json.Token[] = [];
 
-            for (const jsonToken of this._jsonParseResult.tokens) {
-                if (jsonToken.type === Json.TokenType.QuotedString) {
-                    this._jsonQuotedStringTokens.push(jsonToken);
+    //         for (const jsonToken of this._jsonParseResult.tokens) {
+    //             if (jsonToken.type === Json.TokenType.QuotedString) {
+    //                 jsonQuotedStringTokens.push(jsonToken);
+    //             }
+    //         }
+
+    //         return jsonQuotedStringTokens;
+    //     });
+    // }
+
+    /**
+     * Parses all JSON strings in the template and cache the resulting TLE.ParseResult.
+     * Tries to avoid parsing the exact same expression string more than once for a given scope.
+     * Returns a map that maps from the unquoted string to the parse result.
+     *
+     * asdf Should be more lazy?
+     * asdf should it map from the token instead?
+     */
+    private get quotedStringToTleParseResultMap(): Map<Json.StringValue, TLE.ParseResult> {
+        return this._jsonStringValueToTleParseResultMap.getOrCacheValue(() => {
+            const jsonStringValueToTleParseResultMap = new Map<Json.StringValue, TLE.ParseResult>();
+
+            const paramDefaultValuesScope = new TemplateScope(
+                ScopeContext.ParameterDefaultValue,
+                this._topLevelScope.parameterDefinitions,
+                this.topLevelScope.variableDefinitions,
+                this.topLevelScope.namespaceDefinitions,
+                'Top-level parameter default value scope'
+            ); //asdf
+
+            for (let param of this.parameterDefinitions) {
+                if (param.defaultValue) {
+                    parseExpressionsByScope(param.defaultValue, paramDefaultValuesScope);
                 }
             }
-        }
-        return this._jsonQuotedStringTokens;
-    }
 
-    private get quotedStringToTleParseResultMap(): { [key: string]: TLE.ParseResult } {
-        if (this._quotedStringToTleParseResultMap === undefined) {
-            this._quotedStringToTleParseResultMap = {};
-
-            for (let jsonQuotedStringToken of this.jsonQuotedStringTokens) {
-                let tleParseResult: TLE.ParseResult = TLE.Parser.parse(jsonQuotedStringToken.toString());
-                this._quotedStringToTleParseResultMap[jsonQuotedStringToken.toString()] = tleParseResult;
-            }
-        }
-        return this._quotedStringToTleParseResultMap;
-    }
-
-    private get tleParseResults(): TLE.ParseResult[] {
-        return this._tleParseResults.getOrCacheValue(() => {
-            const results: TLE.ParseResult[] = [];
-
-            // tslint:disable-next-line:forin no-for-in // Grandfathered in
-            for (let quotedString in this.quotedStringToTleParseResultMap) {
-                results.push(this.quotedStringToTleParseResultMap[quotedString]);
+            for (let ns of this.namespaceDefinitions) {
+                for (let member of ns.members) {
+                    const userFunctionScope = new TemplateScope(
+                        ScopeContext.UserFunction,
+                        // User functions can only use their own parameters, they do
+                        //   not have access to top-level parameters
+                        member.parameterDefinitions,
+                        undefined, // variable references not supported
+                        undefined, // nested user functions not supported
+                        `User function '${ns.namespaceName.toString()}.${member.name.toString()}' scope`
+                    );
+                    parseExpressionsByScope(member.objectValue, userFunctionScope);
+                }
             }
 
-            return results;
+            // All other strings have top-level scope
+            this.visitAllStringValues(jsonStringValue => {//asdfasdf
+                // const unquoted: string = Utilities.unquote(jsonQuotedStringvs.toString()); // not positive about this - "\"" is turning into empty string
+                if (!jsonStringValueToTleParseResultMap.has(jsonStringValue)) {
+                    let tleParseResult: TLE.ParseResult = TLE.Parser.parse(jsonStringValue.quotedValue, this.topLevelScope); //asdf?
+                    // Cache the results of this parse by the string's value // asdf: can't map by string value, they might be in different scopes, getting different results.  Need to cache by string and scope
+                    jsonStringValueToTleParseResultMap.set(jsonStringValue, tleParseResult);
+                }
+            });
+
+            return jsonStringValueToTleParseResultMap;
+
+            // (local function) Parse all expressions from the asdf
+            function parseExpressionsByScope(value: Json.Value | null, scope: TemplateScope): void {
+                if (value) {
+                    GenericStringVisitor.visit(
+                        value,
+                        jsonStringValue => {
+                            // asdf better way to go from Json.Value to Json.Token?
+                            // Wny not just use the string value from the Json.Value?
+                            // let jsonQuotedStringToken: Json.Token | null = that.getJSONTokenAtDocumentCharacterIndex(stringValue.span.startIndex);
+                            // assert(!!jsonQuotedStringToken, "Expected token at this location, because the location came from a StringValue from the JSON parse");
+
+                            // // tslint:disable-next-line:no-non-null-assertion // Asserted
+                            // jsonQuotedStringToken = jsonQuotedStringToken!;
+                            // assert(jsonQuotedStringToken.type === Json.TokenType.QuotedString, "Expected quoted string token");
+
+                            //const unquoted = Utilities.unquote(jsonQuotedStringToken.toString());
+                            //const unquoted = Utilities.unquote(stringValue.toString().toString());
+                            if (!jsonStringValueToTleParseResultMap.has(jsonStringValue)) {
+                                // Parse the string as a possible TLE expression
+                                let tleParseResult: TLE.ParseResult = TLE.Parser.parse(
+                                    jsonStringValue.quotedValue, //asdfasdf
+                                    scope
+                                );
+
+                                // Cache the results of this parse by the string's value without the quotes
+                                // asdf: can't map by string value, they might be in different scopes, getting different results.  Need to cache by string and scope
+                                jsonStringValueToTleParseResultMap.set(jsonStringValue, tleParseResult);
+                            }
+                        });
+                }
+            }
         });
     }
 
@@ -120,46 +219,59 @@ export class DeploymentTemplate {
                 try {
                     let functions: FunctionsMetadata = await AzureRMAssets.getFunctionsMetadata();
                     const parseErrors: language.Issue[] = [];
-                    for (const jsonQuotedStringToken of this.jsonQuotedStringTokens) {
-                        const jsonTokenStartIndex: number = jsonQuotedStringToken.span.startIndex;
 
-                        const tleParseResult: TLE.ParseResult | null = this.getTLEParseResultFromJSONToken(jsonQuotedStringToken);
-                        assert(tleParseResult);
+                    // Loop through each string in the template
+                    this.visitAllStringValues(jsonStringValue => {
+                        //const jsonTokenStartIndex: number = jsonQuotedStringToken.span.startIndex;
+                        const jsonTokenStartIndex = jsonStringValue.span.startIndex; //asdfasdf
+
+                        const tleParseResult: TLE.ParseResult | null = this.getTLEParseResultFromJSONStringValue(jsonStringValue); //asdfasdf
                         if (tleParseResult) {
+                            const expressionScope: TemplateScope = tleParseResult.scope;
+
                             for (const error of tleParseResult.errors) {
                                 parseErrors.push(error.translate(jsonTokenStartIndex));
                             }
 
                             const tleExpression: TLE.Value | null = tleParseResult.expression;
-                            const tleUndefinedParameterAndVariableVisitor = TLE.UndefinedParameterAndVariableVisitor.visit(tleExpression, this);
+
+                            // Undefined parameter/variable references
+                            const tleUndefinedParameterAndVariableVisitor =
+                                UndefinedParameterAndVariableVisitor.visit(
+                                    tleExpression,
+                                    tleParseResult.scope); // asdf better error message?
                             for (const error of tleUndefinedParameterAndVariableVisitor.errors) {
                                 parseErrors.push(error.translate(jsonTokenStartIndex));
                             }
 
-                            const tleUnrecognizedFunctionVisitor = TLE.UnrecognizedFunctionVisitor.visit(tleExpression, functions);
+                            // Unrecognized function calls
+                            const tleUnrecognizedFunctionVisitor = UnrecognizedFunctionVisitor.UnrecognizedFunctionVisitor.visit(this._topLevelScope/*asdf?*/, tleExpression, functions);
                             for (const error of tleUnrecognizedFunctionVisitor.errors) {
                                 parseErrors.push(error.translate(jsonTokenStartIndex));
                             }
 
-                            const tleIncorrectArgumentCountVisitor = TLE.IncorrectFunctionArgumentCountVisitor.visit(tleExpression, functions);
+                            // Incorrect number of function arguments
+                            const tleIncorrectArgumentCountVisitor = IncorrectFunctionArgumentCountVisitor.IncorrectFunctionArgumentCountVisitor.visit(tleExpression, functions, expressionScope);
                             for (const error of tleIncorrectArgumentCountVisitor.errors) {
                                 parseErrors.push(error.translate(jsonTokenStartIndex));
                             }
 
-                            const tleUndefinedVariablePropertyVisitor = TLE.UndefinedVariablePropertyVisitor.visit(tleExpression, this);
+                            // Undefined variable properties
+                            const tleUndefinedVariablePropertyVisitor = UndefinedVariablePropertyVisitor.UndefinedVariablePropertyVisitor.visit(tleExpression, expressionScope);
                             for (const error of tleUndefinedVariablePropertyVisitor.errors) {
                                 parseErrors.push(error.translate(jsonTokenStartIndex));
                             }
                         }
-                    }
+                    });
 
                     const deploymentTemplateObject: Json.ObjectValue | null = Json.asObjectValue(this.jsonParseResult.value);
                     if (deploymentTemplateObject) {
                         const variablesObject: Json.ObjectValue | null = Json.asObjectValue(deploymentTemplateObject.getPropertyValue("variables"));
                         if (variablesObject) {
-                            const referenceInVariablesFinder = new ReferenceInVariableDefinitionJSONVisitor(this);
+                            const referenceInVariablesFinder = new ReferenceInVariableDefinitionsVisitor(this);
                             variablesObject.accept(referenceInVariablesFinder);
 
+                            // Can't call reference() inside variable definitions //asdf scopes
                             for (const referenceSpan of referenceInVariablesFinder.referenceSpans) {
                                 parseErrors.push(
                                     new language.Issue(referenceSpan, "reference() cannot be invoked inside of a variable definition."));
@@ -176,39 +288,66 @@ export class DeploymentTemplate {
     }
 
     public get warnings(): language.Issue[] {
-        if (this._warnings === undefined) {
-            this._warnings = [];
+        return this._warnings.getOrCacheValue(() => {
+            const warnings: language.Issue[] = [];
 
+            // Find parameters that are never used
             for (const parameterDefinition of this.parameterDefinitions) {
                 const parameterReferences: Reference.List =
-                    this.findReferences(Reference.ReferenceKind.Parameter, parameterDefinition.name.toString());
+                    this.findReferences(Reference.ReferenceKind.Parameter, parameterDefinition.name.toString(), this.topLevelScope/*asdf*/);
                 if (parameterReferences.length === 1) {
-                    this._warnings.push(
+                    warnings.push(
                         new language.Issue(parameterDefinition.name.span, `The parameter '${parameterDefinition.name.toString()}' is never used.`));
                 }
             }
 
+            // Find variables that are never used
             for (const variableDefinition of this.variableDefinitions) {
-                const variableReferences: Reference.List = this.findReferences(Reference.ReferenceKind.Variable, variableDefinition.name.toString());
+                const variableReferences: Reference.List = this.findReferences(Reference.ReferenceKind.Variable, variableDefinition.name.toString(), this.topLevelScope/*asdf*/);
                 if (variableReferences.length === 1) {
-                    this._warnings.push(
+                    warnings.push(
                         new language.Issue(variableDefinition.name.span, `The variable '${variableDefinition.name.toString()}' is never used.`));
                 }
             }
-        }
-        return this._warnings;
+
+            //asdf
+            // for (const nsDefinition of this.namespaceDefinitions) {
+            //     this._warnings.push(new language.Issue(nsDefinition.name.span, `namespace ${nsDefinition.name.toString()}`));
+
+            //     for (const funcDefinition of nsDefinition.members) {
+            //         this._warnings.push(new language.Issue(
+            //             funcDefinition.name.span,
+            //             `func ${funcDefinition.name.toString()}`)
+            //         );
+            //     }
+            // }
+
+            return warnings;
+        });
     }
 
-    public get functionCounts(): Histogram {
-        if (this._functionCounts === undefined) {
-            this._functionCounts = new Histogram();
+    /**
+     * Gets a history of function usage, useful for telemetry
+     */
+    public getFunctionCounts(): Histogram {
+        const functionCounts = new Histogram();
 
-            for (let tleParseResult of this.tleParseResults) {
-                let tleFunctionCountVisitor = TLE.FunctionCountVisitor.visit(tleParseResult.expression);
-                this._functionCounts.add(tleFunctionCountVisitor.functionCounts);
-            }
+        if (this.jsonParseResult.value) {
+            // Our count should count every string in the template, even if it's repeated multiple times, so don't loop through
+            //    _quotedStringToTleParseResultMap directly because that counts repeated strings only once.
+            //
+            GenericStringVisitor.visit(
+                this.jsonParseResult.value,
+                (stringValue: Json.StringValue): void => {
+                    const tleParseResult = this.getTLEParseResultFromJSONStringValue(stringValue);
+                    if (tleParseResult) {
+                        let tleFunctionCountVisitor = FunctionCountVisitor.FunctionCountVisitor.visit(tleParseResult.expression);
+                        functionCounts.add(tleFunctionCountVisitor.functionCounts);
+                    }
+                });
         }
-        return this._functionCounts;
+
+        return functionCounts;
     }
 
     public get jsonParseResult(): Json.ParseResult {
@@ -238,192 +377,85 @@ export class DeploymentTemplate {
         return this._jsonParseResult.maxCharacterIndex;
     }
 
-    public get parameterDefinitions(): ParameterDefinition[] {
-        return this._parameterDefinitions.getOrCacheValue(() => {
-            const result: ParameterDefinition[] = [];
-            const value: Json.ObjectValue | null = Json.asObjectValue(this._jsonParseResult.value);
-            if (value) {
-                const parameters: Json.ObjectValue | null = Json.asObjectValue(value.getPropertyValue("parameters"));
-                if (parameters) {
-                    for (const parameter of parameters.properties) {
-                        result.push(new ParameterDefinition(parameter));
+    public get parameterDefinitions(): IParameterDefinition[] { //asdf remove
+        return this._topLevelScope.parameterDefinitions;
+    }
+
+    public get variableDefinitions(): Json.Property[] { //asdf remove
+        return this._topLevelScope.variableDefinitions;
+    }
+
+    public get namespaceDefinitions(): UserFunctionNamespaceDefinition[] { //asdf remove
+        return this._topLevelScope.namespaceDefinitions;
+    }
+
+    private getTopLevelParameterDefinitions(): ParameterDefinition[] {
+        const parameterDefinitions: ParameterDefinition[] = [];
+
+        if (this._topLevelValue) {
+            const parameters: Json.ObjectValue | null = Json.asObjectValue(this._topLevelValue.getPropertyValue("parameters"));
+            if (parameters) {
+                for (const parameter of parameters.properties) {
+                    parameterDefinitions.push(new ParameterDefinition(parameter));
+                }
+            }
+        }
+
+        return parameterDefinitions;
+    }
+
+    private getTopLevelVariableDefinitions(): Json.Property[] {
+        if (this._topLevelValue) {
+            const variables: Json.ObjectValue | null = Json.asObjectValue(this._topLevelValue.getPropertyValue("variables"));
+            if (variables) {
+                return variables.properties;
+            }
+        }
+
+        return []; //testpoint
+    }
+
+    private getTopLevelNamespaceDefinitions(): UserFunctionNamespaceDefinition[] {
+        const namespaceDefinitions: UserFunctionNamespaceDefinition[] = [];
+
+        // Example:
+        //
+        // "functions": [
+        //     { << This is a UserFunctionNamespaceDefinition
+        //       "namespace": "<namespace-for-functions>",
+        //       "members": { << This is a UserFunctionDefinition
+        //         "<function-name>": {
+        //           "parameters": [
+        //             {
+        //               "name": "<parameter-name>",
+        //               "type": "<type-of-parameter-value>"
+        //             }
+        //           ],
+        //           "output": {
+        //             "type": "<type-of-output-value>",
+        //             "value": "<function-return-value>"
+        //           }
+        //         }
+        //       }
+        //     }
+        //   ],
+
+        if (this._topLevelValue) {
+            const functionNamespacesArray: Json.ArrayValue | null = Json.asArrayValue(this._topLevelValue.getPropertyValue("functions"));
+            if (functionNamespacesArray) {
+                for (let namespaceElement of functionNamespacesArray.elements) {
+                    const namespaceObject = Json.asObjectValue(namespaceElement);
+                    if (namespaceObject) {
+                        let namespace = UserFunctionNamespaceDefinition.createIfValid(namespaceObject);
+                        if (namespace) {
+                            namespaceDefinitions.push(namespace);
+                        }
                     }
                 }
             }
-
-            return result;
-        });
-    }
-
-    public get variableDefinitions(): Json.Property[] {
-        return this._variableDefinitions.getOrCacheValue(() => {
-            const value: Json.ObjectValue | null = Json.asObjectValue(this._jsonParseResult.value);
-            if (value) {
-                const variables: Json.ObjectValue | null = Json.asObjectValue(value.getPropertyValue("variables"));
-                if (variables) {
-                    return variables.properties;
-                }
-            }
-
-            return [];
-        });
-    }
-
-    // Example user-defined namespaces/functions:
-    //
-    // "functions": [
-    //     {
-    //       "namespace": "contoso",
-    //       "members": {
-    //         "uniqueName": {
-    //           "parameters": [
-    //             {
-    //               "name": "namePrefix",
-    //               "type": "string"
-    //             }
-    //           ],
-    //           "output": {
-    //             "type": "string",
-    //             "value": "[concat(toLower(parameters('namePrefix')), uniqueString(resourceGroup().id))]"
-    //           }
-    //         }
-    //       }
-    //     }
-    //   ],
-    public get namespaceDefinitions(): Json.Value[] {
-        if (this._namespaceDefinitions === undefined) {
-            this._namespaceDefinitions = [];
-
-            const value: Json.ObjectValue | null = Json.asObjectValue(this._jsonParseResult.value);
-            if (value) {
-                const namespaces: Json.ArrayValue | null = Json.asArrayValue(value.getPropertyValue("functions"));
-                if (namespaces) {
-                    this._namespaceDefinitions = namespaces.elements;
-                }
-            }
-        }
-        return this._namespaceDefinitions;
-    }
-
-    public getParameterDefinition(parameterName: string): ParameterDefinition | null {
-        assert(parameterName, "parameterName cannot be null, undefined, or empty");
-
-        const unquotedParameterName = Utilities.unquote(parameterName);
-        let result: ParameterDefinition | null = null;
-
-        for (const pd of this.parameterDefinitions) {
-            if (pd.name.toString() === unquotedParameterName) {
-                result = pd;
-                break;
-            }
         }
 
-        if (!result) {
-            for (const pd of this.parameterDefinitions) {
-                if (pd.name.toString().toLowerCase() === unquotedParameterName.toLowerCase()) {
-                    result = pd;
-                    break;
-                }
-            }
-        }
-
-        return result;
-    }
-
-    public getVariableDefinition(variableName: string): Json.Property | null {
-        assert(variableName, "variableName cannot be null, undefined, or empty");
-
-        const unquotedVariableName = Utilities.unquote(variableName);
-        let result: Json.Property | null = null;
-
-        for (const vd of this.variableDefinitions) {
-            if (vd.name.toString() === unquotedVariableName) {
-                result = vd;
-                break;
-            }
-        }
-
-        if (!result) {
-            for (const vd of this.variableDefinitions) {
-                if (vd.name.toString().toLowerCase() === unquotedVariableName.toLowerCase()) {
-                    result = vd;
-                    break;
-                }
-            }
-        }
-
-        return result;
-    }
-
-    public getVariableDefinitionFromFunction(tleFunction: TLE.FunctionValue): Json.Property | null {
-        assert(tleFunction);
-
-        let result: Json.Property | null = null;
-
-        if (tleFunction.nameToken.stringValue === "variables") {
-            const variableName: TLE.StringValue | null = TLE.asStringValue(tleFunction.argumentExpressions[0]);
-            if (variableName) {
-                result = this.getVariableDefinition(variableName.toString());
-            }
-        }
-
-        return result;
-    }
-
-    public getParameterDefinitionFromFunction(tleFunction: TLE.FunctionValue): ParameterDefinition | null {
-        assert(tleFunction);
-
-        let result: ParameterDefinition | null = null;
-
-        if (tleFunction.nameToken.stringValue === "parameters") {
-            const propertyName: TLE.StringValue | null = TLE.asStringValue(tleFunction.argumentExpressions[0]);
-            if (propertyName) {
-                result = this.getParameterDefinition(propertyName.toString());
-            }
-        }
-
-        return result;
-    }
-
-    public findParameterDefinitionsWithPrefix(parameterNamePrefix: string): ParameterDefinition[] {
-        assert(parameterNamePrefix !== null, "parameterNamePrefix cannot be null");
-        assert(parameterNamePrefix !== undefined, "parameterNamePrefix cannot be undefined");
-
-        let result: ParameterDefinition[] = [];
-
-        if (parameterNamePrefix !== "") {
-            let lowerCasedPrefix = parameterNamePrefix.toLowerCase();
-            for (let parameterDefinition of this.parameterDefinitions) {
-                if (parameterDefinition.name.toString().toLowerCase().startsWith(lowerCasedPrefix)) {
-                    result.push(parameterDefinition);
-                }
-            }
-        } else {
-            result = this.parameterDefinitions;
-        }
-
-        return result;
-    }
-
-    public findVariableDefinitionsWithPrefix(variableNamePrefix: string): Json.Property[] {
-        assert(variableNamePrefix !== null, "variableNamePrefix cannot be null");
-        assert(variableNamePrefix !== undefined, "variableNamePrefix cannot be undefined");
-
-        let result: Json.Property[];
-        if (variableNamePrefix) {
-            result = [];
-
-            const lowerCasedPrefix = variableNamePrefix.toLowerCase();
-            for (const variableDefinition of this.variableDefinitions) {
-                if (variableDefinition.name.toString().toLowerCase().startsWith(lowerCasedPrefix)) {
-                    result.push(variableDefinition);
-                }
-            }
-        } else {
-            result = this.variableDefinitions;
-        }
-
-        return result;
+        return namespaceDefinitions;
     }
 
     public getDocumentCharacterIndex(documentLineIndex: number, documentColumnIndex: number): number {
@@ -450,39 +482,60 @@ export class DeploymentTemplate {
         return PositionContext.fromDocumentCharacterIndex(this, documentCharacterIndex);
     }
 
-    public getTLEParseResultFromJSONToken(jsonToken: Json.Token | null): TLE.ParseResult | null {
-        return jsonToken ? this.getTLEParseResultFromString(jsonToken.toString()) : null;
-    }
+    // public getTLEParseResultFromJSONToken(jsonToken: Json.Token | null): TLE.ParseResult | null {
+    //     if (!jsonToken || jsonToken.type !== Json.TokenType.QuotedString) {
+    //         // Don't do a map lookup if it's not a quoted string parse
+    //         return null;
+    //     }
 
-    public getTLEParseResultFromJSONStringValue(jsonStringValue: Json.StringValue | null): TLE.ParseResult | null {
-        return jsonStringValue ? this.getTLEParseResultFromString(`"${jsonStringValue.toString()}"`) : null;
-    }
+    //     const unquoted = Utilities.unquote(jsonToken.toString());
+    //     return this.getTLEParseResultFromString(unquoted);
+    // }
 
-    private getTLEParseResultFromString(value: string): TLE.ParseResult | null {
-        let result: TLE.ParseResult | null = null;
-        if (value) {
-            result = this.quotedStringToTleParseResultMap[value];
-            if (result === undefined) {
-                result = null;
-            }
+    /**
+     * Get the TLE parse results from this JSON string.
+     * Can return null if the string is not reachable in the parsed
+     *   template tree.
+     */
+    public getTLEParseResultFromJSONStringValue(jsonStringValue: Json.StringValue): TLE.ParseResult | null {
+        const result = this.quotedStringToTleParseResultMap.get(jsonStringValue);
+        if (result) {
+            return result;
         }
-        return result;
+
+        const tleParseResult = TLE.Parser.parse(jsonStringValue.quotedValue, this.topLevelScope); //asdf?
+        // asdf cache?
+        return tleParseResult;
+
+        //return result ? result : null;
+        // const result = this.getTLEParseResultFromString(jsonStringValue.toString());
+        // return result;
     }
 
-    public findReferences(referenceType: Reference.ReferenceKind, referenceName: string): Reference.List {
+    // // asdf be lazy?
+    // // Note: I don't think this should ever return null (unless not a string), but being defensive for now
+    // private getTLEParseResultFromString2(value: string): TLE.ParseResult | null {
+    //     assert(typeof value === "string");
+    //     const result: TLE.ParseResult | undefined = this.quotedStringToTleParseResultMap.get(value);
+    //     assert(result); // asdf why would this be null?  - probably best to be safe and remove this assert
+    //     return result ? result : null;
+    // }
+
+    public findReferences(referenceType: Reference.ReferenceKind, referenceName: string, scope: TemplateScope): Reference.List {
         const result: Reference.List = new Reference.List(referenceType);
 
         if (referenceName) {
+            // Add the parameter/variable definition to the list
             switch (referenceType) {
                 case Reference.ReferenceKind.Parameter:
-                    const parameterDefinition: ParameterDefinition | null = this.getParameterDefinition(referenceName);
+                    const parameterDefinition: IParameterDefinition | null = scope.getParameterDefinition(referenceName);
                     if (parameterDefinition) {
                         result.add(parameterDefinition.name.unquotedSpan);
                     }
                     break;
 
                 case Reference.ReferenceKind.Variable:
-                    const variableDefinition: Json.Property | null = this.getVariableDefinition(referenceName);
+                    const variableDefinition: Json.Property | null = scope.getVariableDefinition(referenceName); //asdf
                     if (variableDefinition) {
                         result.add(variableDefinition.name.unquotedSpan);
                     }
@@ -493,60 +546,23 @@ export class DeploymentTemplate {
                     break;
             }
 
-            for (const jsonStringToken of this.jsonQuotedStringTokens) {
-                const tleParseResult: TLE.ParseResult | null = this.getTLEParseResultFromJSONToken(jsonStringToken);
-                if (tleParseResult && tleParseResult.expression) {
-                    const visitor = TLE.FindReferencesVisitor.visit(tleParseResult.expression, referenceType, referenceName);
-                    result.addAll(visitor.references.translate(jsonStringToken.span.startIndex));
+            // Add references to the list that match the scope we're looking for
+            this.visitAllStringValues(jsonStringValue => { //asdfasdf
+                const tleParseResult: TLE.ParseResult | null = this.getTLEParseResultFromJSONStringValue(jsonStringValue);
+                if (tleParseResult && tleParseResult.expression && tleParseResult.scope === scope) {
+                    const visitor = FindReferencesVisitor.FindReferencesVisitor.visit(tleParseResult.expression, referenceType, referenceName);
+                    result.addAll(visitor.references.translate(jsonStringValue.span.startIndex)); //asdf unquotedspan?
                 }
-            }
+            });
         }
 
         return result;
     }
-}
 
-export class ReferenceInVariableDefinitionJSONVisitor extends Json.Visitor {
-    private _referenceSpans: language.Span[] = [];
-
-    constructor(private _deploymentTemplate: DeploymentTemplate) {
-        super();
-
-        assert(_deploymentTemplate);
-    }
-
-    public get referenceSpans(): language.Span[] {
-        return this._referenceSpans;
-    }
-
-    public visitStringValue(value: Json.StringValue): void {
-        assert(value, "Cannot visit a null or undefined Json.StringValue.");
-
-        const tleParseResult: TLE.ParseResult | null = this._deploymentTemplate.getTLEParseResultFromJSONStringValue(value);
-        if (tleParseResult && tleParseResult.expression) {
-            const tleVisitor = new ReferenceInVariableDefinitionTLEVisitor();
-            tleParseResult.expression.accept(tleVisitor);
-
-            const jsonValueStartIndex: number = value.startIndex;
-            for (const tleReferenceSpan of tleVisitor.referenceSpans) {
-                this._referenceSpans.push(tleReferenceSpan.translate(jsonValueStartIndex));
-            }
+    private visitAllStringValues(onStringValue: (stringValue: Json.StringValue) => void): void {
+        let value = this._topLevelValue;
+        if (value) {
+            GenericStringVisitor.visit(value, onStringValue);
         }
-    }
-}
-
-class ReferenceInVariableDefinitionTLEVisitor extends TLE.Visitor {
-    private _referenceSpans: language.Span[] = [];
-
-    public get referenceSpans(): language.Span[] {
-        return this._referenceSpans;
-    }
-
-    public visitFunction(functionValue: TLE.FunctionValue | null): void {
-        if (functionValue && functionValue.nameToken.stringValue === "reference") {
-            this._referenceSpans.push(functionValue.nameToken.span);
-        }
-
-        super.visitFunction(functionValue);
     }
 }
