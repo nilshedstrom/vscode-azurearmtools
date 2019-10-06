@@ -19,9 +19,9 @@ suite("User functions", () => {
         "contentVersion": "1.0.0.0",
         "functions": [
             {
-                "namespace": "udf",
+                "namespace": "<!udfDef!>udf",
                 "members": {
-                    "<!udfDef!>string": {
+                    "<!udfStringDef!>string": {
                         "parameters": [
                             {
                                 "name": "<!udfYearDef!>year",
@@ -956,9 +956,9 @@ suite("User functions", () => {
 
     suite("UDF Find References", () => {
 
-        function testReferences(dt: DeploymentTemplate, cursorIndex: number, expectedReferenceIndices: number[]): void {
+        async function testReferences(dt: DeploymentTemplate, cursorIndex: number, expectedReferenceIndices: number[]): Promise<void> {
             const pc = dt.getContextFromDocumentCharacterIndex(cursorIndex);
-            const references: Reference.List = pc.references!;
+            const references: Reference.List = (await pc.getReferences())!;
             assert(references, "Expected non-empty list of references");
 
             const indices = references.spans.map(r => r.startIndex).sort();
@@ -972,49 +972,49 @@ suite("User functions", () => {
                 const { dt, markers: { apiVersionDef, apiVersionRef } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
 
                 // Cursor at reference to "apiVersion" inside resources
-                testReferences(dt, apiVersionRef.index, [apiVersionRef.index, apiVersionDef.index]);
+                await testReferences(dt, apiVersionRef.index, [apiVersionRef.index, apiVersionDef.index]);
             });
 
             test("At definition of top-level parameter", async () => {
                 const { dt, markers: { apiVersionDef, apiVersionRef } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
 
                 // Cursor at definition to "apiVersion" parameter
-                testReferences(dt, apiVersionDef.index, [apiVersionDef.index, apiVersionRef.index]);
+                await testReferences(dt, apiVersionDef.index, [apiVersionDef.index, apiVersionRef.index]);
             });
 
             test("At reference to user function parameter", async () => {
                 const { dt, markers: { udfYearRef, udfYearDef } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
 
                 // Cursor at reference to "year" inside user function output
-                testReferences(dt, udfYearRef.index, [udfYearRef.index, udfYearDef.index]);
+                await testReferences(dt, udfYearRef.index, [udfYearRef.index, udfYearDef.index]);
             });
 
             test("At definition of user function parameter", async () => {
                 const { dt, markers: { udfYearRef, udfYearDef } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
 
                 // Cursor at definition of "year" inside user function
-                testReferences(dt, udfYearDef.index, [udfYearRef.index, udfYearDef.index]);
+                await testReferences(dt, udfYearDef.index, [udfYearRef.index, udfYearDef.index]);
             });
 
             test("At reference to parameter in user function only finds UDF scope parameter, not top-level param", async () => {
                 const { dt, markers: { udfYearRef, udfYearDef } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
 
                 // Cursor at reference to "year" inside user function output
-                testReferences(dt, udfYearRef.index, [udfYearRef.index, udfYearDef.index]);
+                await testReferences(dt, udfYearRef.index, [udfYearRef.index, udfYearDef.index]);
             });
 
             test("At definition to parameter in user function only finds UDF scope parameter, not top-level param", async () => {
                 const { dt, markers: { udfYearRef, udfYearDef } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
 
                 // Cursor at definition of "year" inside user function
-                testReferences(dt, udfYearDef.index, [udfYearRef.index, udfYearDef.index]);
+                await testReferences(dt, udfYearDef.index, [udfYearRef.index, udfYearDef.index]);
             });
 
             test("At reference to top-level parameter only finds top-level parameter definition, not param in user function", async () => {
                 const { dt, markers: { udfYearRef, udfYearDef } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
 
                 // Cursor at reference to "year" inside user function output
-                testReferences(dt, udfYearRef.index, [udfYearRef.index, udfYearDef.index]);
+                await testReferences(dt, udfYearRef.index, [udfYearRef.index, udfYearDef.index]);
             });
         });
 
@@ -1023,48 +1023,48 @@ suite("User functions", () => {
                 const { dt, markers: { var1Def, var1Ref1, var1Ref2 } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
 
                 // Cursor at reference to "var1" inside var2
-                testReferences(dt, var1Ref1.index, [var1Def.index, var1Ref1.index, var1Ref2.index]);
+                await testReferences(dt, var1Ref1.index, [var1Def.index, var1Ref1.index, var1Ref2.index]);
 
                 // Cursor at reference to "var1" inside outputs2
-                testReferences(dt, var1Ref2.index, [var1Def.index, var1Ref1.index, var1Ref2.index]);
+                await testReferences(dt, var1Ref2.index, [var1Def.index, var1Ref1.index, var1Ref2.index]);
             });
 
             test("At definition of variable", async () => {
                 const { dt, markers: { var1Def, var1Ref1, var1Ref2 } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
 
                 // Cursor at definition to "var1" variable
-                testReferences(dt, var1Def.index, [var1Def.index, var1Ref1.index, var1Ref2.index]);
+                await testReferences(dt, var1Def.index, [var1Def.index, var1Ref1.index, var1Ref2.index]);
             });
         });
 
         suite("UDF Find user function references", () => {
-            if (false) { // asdf
+            if (false) { // asdf not yet implemented
                 test("At reference to user-defined function, cursor inside the namespace portion", async () => {
-                    const { dt, markers: { udfDef, udfRefAtName, udfRefAtNs } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+                    const { dt, markers: { udfDef, udfRefAtNs } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
 
                     // Cursor at reference to "udf.string" inside the namespace
-                    testReferences(dt, udfRefAtNs.index, [udfDef.index, udfRefAtName.index]);
+                    await testReferences(dt, udfRefAtNs.index, [udfDef.index, udfRefAtNs.index]);
                 });
 
                 test("At reference to user-defined function, cursor inside the name portion", async () => {
-                    const { dt, markers: { udfDef, udfRefAtName } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+                    const { dt, markers: { udfStringDef, udfRefAtName } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
 
-                    // Cursor at reference to "udf.string" inside the namespace
-                    testReferences(dt, udfRefAtName.index, [udfDef.index, udfRefAtName.index]);
+                    // Cursor at reference to "udf.string" inside the name
+                    await testReferences(dt, udfRefAtName.index, [udfStringDef.index, udfRefAtName.index]);
                 });
 
                 test("At definition of user-defined function", async () => {
-                    const { dt, markers: { udfDef, udfRefAtName } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+                    const { dt, markers: { udfStringDef, udfRefAtName } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
 
                     // Cursor at definition of "udf.string"
-                    testReferences(dt, udfDef.index, [udfRefAtName.index]);
+                    await testReferences(dt, udfStringDef.index, [udfRefAtName.index]);
                 });
             }
 
             test("Reference to built-in function with same name as UDF function doesn't find UDF", async () => {
                 const { dt, markers: { stringRef } } = await parseTemplateWithMarkers(userFuncsTemplate1);
                 const pc = dt.getContextFromDocumentCharacterIndex(stringRef.index);
-                const references: Reference.List | null = pc.references;
+                const references: Reference.List | null = (await pc.getReferences());
                 assert(!references, "Expected no references");
             });
         });
@@ -1148,53 +1148,36 @@ suite("User functions", () => {
             // -1 because go to definition currently goes to the quote at the start of the string asdf
             await testGoToDefinition(dt, apiVersionRef.index, "parameter", apiVersionDef.index - 1);
         });
-        /*
-                test("Fser function parameter", async () => {
-                    const { dt, markers: { udfYearRef, udfYearDef } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+        test("User function parameter", async () => {
+            const { dt, markers: { udfYearRef, udfYearDef } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
 
-                    // Cursor at reference to "year" inside user function output
-                    testGoToDefinition(dt, udfYearRef.index, [udfYearRef.index, udfYearDef.index]);
-                });
+            // Cursor at reference to "year" inside user function output
+            await testGoToDefinition(dt, udfYearRef.index, "parameter", udfYearDef.index - 1);
+        });
 
-                test("User function parameter", async () => {
-                    const { dt, markers: { udfYearRef, udfYearDef } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+        test("Variable reference", async () => {
+            const { dt, markers: { var1Def, var1Ref1, var1Ref2 } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
 
-                    // Cursor at definition of "year" inside user function
-                    testGoToDefinition(dt, udfYearDef.index, [udfYearRef.index, udfYearDef.index]);
-                });
+            // Cursor at reference to "var1" inside var2
+            await testGoToDefinition(dt, var1Ref1.index, "variable", var1Def.index - 1);
 
-                test("Variable reference", async () => {
-                    const { dt, markers: { var1Def, var1Ref1, var1Ref2 } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+            // Cursor at reference to "var1" inside outputs2
+            await testGoToDefinition(dt, var1Ref2.index, "variable", var1Def.index - 1);
+        });
 
-                    // Cursor at reference to "var1" inside var2
-                    testReferences(dt, var1Ref1.index, [var1Def.index, var1Ref1.index, var1Ref2.index]);
+        test("User-defined function, cursor inside the namespace portion", async () => {
+            const { dt, markers: { udfDef, udfRefAtNs } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
 
-                    // Cursor at reference to "var1" inside outputs2
-                    testReferences(dt, var1Ref2.index, [var1Def.index, var1Ref1.index, var1Ref2.index]);
-                });
+            // Cursor at reference to "udf.string" inside the namespace -> goes to namespace definition
+            await testGoToDefinition(dt, udfRefAtNs.index, "userNamespace", udfDef.index - 1);
+        });
 
-                test("User-defined function, cursor inside the namespace portion", async () => {
-                    const { dt, markers: { udfDef, udfRefAtName, udfRefAtNs } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+        test("User-defined function, cursor inside the name portion", async () => {
+            const { dt, markers: { udfStringDef, udfRefAtName } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
 
-                    // Cursor at reference to "udf.string" inside the namespace
-                    testReferences(dt, udfRefAtNs.index, [udfDef.index, udfRefAtName.index]);
-                });
-
-                test("User-defined function, cursor inside the name portion", async () => {
-                    const { dt, markers: { udfDef, udfRefAtName } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
-
-                    // Cursor at reference to "udf.string" inside the namespace
-                    testReferences(dt, udfRefAtName.index, [udfDef.index, udfRefAtName.index]);
-                });
-
-                test("Reference to built-in function with same name as UDF function doesn't find UDF", async () => {
-                    const { dt, markers: { stringRef } } = await parseTemplateWithMarkers(userFuncsTemplate1);
-                    const pc = dt.getContextFromDocumentCharacterIndex(stringRef.index);
-                    const references: Reference.List | null = pc.references;
-                    assert(!references, "Expected no references");
-                });
-        */
-
+            // Cursor at reference to "udf.string" inside the name
+            await testGoToDefinition(dt, udfRefAtName.index, "userFunction", udfStringDef.index - 1);
+        });
     }); // suite UDF Go To Definition
 
 }); // suite User Functions

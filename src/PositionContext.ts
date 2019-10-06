@@ -72,7 +72,7 @@ export type IReferenceSite = {
  * that can be parsed and analyzed about it
  */
 export class PositionContext {
-    private _deploymentTemplate: DeploymentTemplate; //asdf needed?
+    private _deploymentTemplate: DeploymentTemplate;
     private _givenDocumentPosition?: language.Position;
     private _documentPosition: CachedValue<language.Position> = new CachedValue<language.Position>();
     private _givenDocumentCharacterIndex?: number;
@@ -81,7 +81,6 @@ export class PositionContext {
     private _jsonValue: CachedValue<Json.Value | null> = new CachedValue<Json.Value | null>();
     private _tleInfo: CachedValue<TleInfo | null> = new CachedValue<TleInfo | null>();
     private _completionItems: CachedPromise<Completion.Item[]> = new CachedPromise<Completion.Item[]>();
-    private _references: CachedValue<Reference.List | null> = new CachedValue<Reference.List | null>();
     private _signatureHelp: CachedPromise<TLE.FunctionSignatureHelp | null> = new CachedPromise<TLE.FunctionSignatureHelp | null>();
 
     public static fromDocumentLineAndColumnIndexes(deploymentTemplate: DeploymentTemplate, documentLineIndex: number, documentColumnIndex: number): PositionContext {
@@ -224,7 +223,7 @@ export class PositionContext {
                     const nsDefinition = scope.getFunctionNamespaceDefinition(ns);
                     if (nsDefinition) {
                         const referenceSpan: language.Span = tleFuncCall.namespaceToken.span.translate(this.jsonTokenStartIndex);
-                        const definitionSpan: language.Span = nsDefinition.span;
+                        const definitionSpan: language.Span = nsDefinition.namespaceName.span;
                         return { kind: "userNamespace", userNamespace: nsDefinition, referenceSpan: referenceSpan, definitionSpan };
                     }
                 } else if (tleFuncCall.nameToken.span.contains(tleCharacterIndex)) {
@@ -501,56 +500,71 @@ export class PositionContext {
 
     // Returns null if references are not supported at this location.
     // Returns empty list if supported but none found
-    public get references(): Reference.List | null {
-        return this._references.getOrCacheValue(() => {
-            let referenceName: string | null = null;
-            let referenceType: Reference.ReferenceKind | null = null;
 
-            if (this.tleInfo) {
-                // Handle variable and parameter uses inside a string expression
-                const tleStringValue: TLE.StringValue | null = TLE.asStringValue(this.tleInfo.tleValue);
-                let scope: TemplateScope = this.tleInfo.scope;
+    // Returns null if references are not supported at this location.
+    // Returns empty list if supported but none found
+    public async getReferences(): Promise<Reference.List | null> {
+        let referenceName: string | null = null;
+        let referenceType: Reference.ReferenceKind | null = null;
 
-                // Handle references for "xxx" when we're on "xxx" in a call to parameters('xxx') or references('xxx')
-                if (tleStringValue) {
-                    referenceName = tleStringValue.toString();
+        const tleInfo = this.tleInfo;
+        if (tleInfo) { // If we're inside a string (whether an expression or not)
+            const scope = tleInfo.scope;
 
-                    if (tleStringValue.isParametersArgument()) { //testpoint
+            const refInfo = await this.getReferenceSiteInfo();
+            if (refInfo) {
+                switch (refInfo.kind) {
+                    case "parameter":
                         // We're inside a parameters('xxx') call
                         referenceType = Reference.ReferenceKind.Parameter;
-                    } else if (tleStringValue.isVariablesArgument()) {
-                        // We're inside a variables('xxx') call
-                        referenceType = Reference.ReferenceKind.Variable; //testpoint
-                    }
-                }
-
-                // Handle when we're directly on the name in parameter or variable definition
-                if (referenceType === null) {
-                    const jsonStringValue: Json.StringValue | null = Json.asStringValue(this.jsonValue); //testpoint
-                    if (jsonStringValue) {
-                        const unquotedString = jsonStringValue.unquotedValue; //testpoint
-
-                        const parameterDefinition: IParameterDefinition | null = scope.getParameterDefinition(unquotedString);
-                        if (parameterDefinition && parameterDefinition.name.unquotedValue === unquotedString) { //asdf?
-                            referenceName = unquotedString;
-                            referenceType = Reference.ReferenceKind.Parameter; //testpoint
-                        } else {
-                            const variableDefinition: Json.Property | null = scope.getVariableDefinition(unquotedString); //testpoint
-                            if (variableDefinition && variableDefinition.name === jsonStringValue) { //testpoint
-                                referenceName = unquotedString;
-                                referenceType = Reference.ReferenceKind.Variable; //testpoint
-                            }
-                        }
-                    }
+                        referenceName = refInfo.parameter.name.unquotedValue;
+                        break;
+                    case "variable":
+                        // We're inside a vriables('xxx') call
+                        referenceType = Reference.ReferenceKind.Variable;
+                        referenceName = refInfo.variable.name.unquotedValue;
+                        break;
+                    case "builtinFunction":
+                    case "userNamespace":
+                    case "userFunction":
+                        return null; // asdf Not currently supported
+                        break;
+                    default:
+                        return assertNever(refInfo);
                 }
 
                 if (referenceName && referenceType !== null) {
-                    return this._deploymentTemplate.findReferences(referenceType, referenceName, scope);
+                    return this._deploymentTemplate.findReferences(referenceType, referenceName, tleInfo.scope);
                 }
             }
 
-            return null;
-        });
+            // Handle when we're directly on the name in a parameter or variable definition (as opposed to a reference)
+            // asdf handle user function and user namespace
+            if (referenceType === null) {
+                const jsonStringValue: Json.StringValue | null = Json.asStringValue(this.jsonValue); //testpoint
+                if (jsonStringValue) {
+                    const unquotedString = jsonStringValue.unquotedValue; //testpoint
+
+                    const parameterDefinition: IParameterDefinition | null = scope.getParameterDefinition(unquotedString);
+                    if (parameterDefinition && parameterDefinition.name.unquotedValue === unquotedString) { //asdf?
+                        referenceName = unquotedString;
+                        referenceType = Reference.ReferenceKind.Parameter; //testpoint
+                    } else {
+                        const variableDefinition: Json.Property | null = scope.getVariableDefinition(unquotedString); //testpoint
+                        if (variableDefinition && variableDefinition.name === jsonStringValue) { //testpoint
+                            referenceName = unquotedString;
+                            referenceType = Reference.ReferenceKind.Variable; //testpoint
+                        }
+                    }
+                }
+            }
+
+            if (referenceName && referenceType !== null) {
+                return this._deploymentTemplate.findReferences(referenceType, referenceName, scope);
+            }
+        }
+
+        return null;
     }
 
     public get signatureHelp(): Promise<TLE.FunctionSignatureHelp | null> {

@@ -291,8 +291,8 @@ export class AzureRMTools {
         ext.context.subscriptions.push(vscode.languages.registerDefinitionProvider(armDeploymentDocumentSelector, definitionProvider));
 
         const referenceProvider: vscode.ReferenceProvider = {
-            provideReferences: (document: vscode.TextDocument, position: vscode.Position, context: vscode.ReferenceContext, token: vscode.CancellationToken): vscode.Location[] | undefined => {
-                return this.onProvideReferences(document, position, context, token);
+            provideReferences: async (document: vscode.TextDocument, position: vscode.Position, context: vscode.ReferenceContext, token: vscode.CancellationToken): Promise<vscode.Location[] | undefined> => {
+                return await this.onProvideReferences(document, position, context, token);
             }
         };
         ext.context.subscriptions.push(vscode.languages.registerReferenceProvider(armDeploymentDocumentSelector, referenceProvider));
@@ -305,8 +305,8 @@ export class AzureRMTools {
         ext.context.subscriptions.push(vscode.languages.registerSignatureHelpProvider(armDeploymentDocumentSelector, signatureHelpProvider, ",", "(", "\n"));
 
         const renameProvider: vscode.RenameProvider = {
-            provideRenameEdits: (document: vscode.TextDocument, position: vscode.Position, newName: string, token: vscode.CancellationToken): vscode.WorkspaceEdit | undefined => {
-                return this.onProvideRename(document, position, newName, token);
+            provideRenameEdits: async (document: vscode.TextDocument, position: vscode.Position, newName: string, token: vscode.CancellationToken): Promise<vscode.WorkspaceEdit | undefined> => {
+                return await this.onProvideRename(document, position, newName, token);
             }
         };
         ext.context.subscriptions.push(vscode.languages.registerRenameProvider(armDeploymentDocumentSelector, renameProvider));
@@ -489,15 +489,15 @@ export class AzureRMTools {
         }
     }
 
-    private onProvideReferences(document: vscode.TextDocument, position: vscode.Position, context: vscode.ReferenceContext, token: vscode.CancellationToken): vscode.Location[] | undefined {
+    private async onProvideReferences(document: vscode.TextDocument, position: vscode.Position, context: vscode.ReferenceContext, token: vscode.CancellationToken): Promise<vscode.Location[] | undefined> {
         const deploymentTemplate: DeploymentTemplate | undefined = this.getDeploymentTemplate(document);
         if (deploymentTemplate) {
-            return callWithTelemetryAndErrorHandlingSync('Find References', (actionContext: IActionContext): vscode.Location[] => {
+            return await callWithTelemetryAndErrorHandling('Find References', async (actionContext: IActionContext): Promise<vscode.Location[]> => {
                 const results: vscode.Location[] = [];
                 const locationUri: vscode.Uri = vscode.Uri.parse(deploymentTemplate.documentId);
                 const positionContext: PositionContext = deploymentTemplate.getContextFromDocumentLineAndColumnIndexes(position.line, position.character);
 
-                const references: Reference.List | null = positionContext.references;
+                const references: Reference.List | null = await positionContext.getReferences();
                 if (references && references.length > 0) {
                     let referenceType: string;
                     switch (references.kind) {
@@ -558,14 +558,14 @@ export class AzureRMTools {
         }
     }
 
-    private onProvideRename(document: vscode.TextDocument, position: vscode.Position, newName: string, token: vscode.CancellationToken): vscode.WorkspaceEdit | undefined {
+    private async onProvideRename(document: vscode.TextDocument, position: vscode.Position, newName: string, token: vscode.CancellationToken): Promise<vscode.WorkspaceEdit | undefined> {
         const deploymentTemplate: DeploymentTemplate | undefined = this.getDeploymentTemplate(document);
         if (deploymentTemplate) {
-            return callWithTelemetryAndErrorHandlingSync('Rename', () => {
+            return await callWithTelemetryAndErrorHandling('Rename', async () => {
                 const result: vscode.WorkspaceEdit = new vscode.WorkspaceEdit();
 
                 const context: PositionContext = deploymentTemplate.getContextFromDocumentLineAndColumnIndexes(position.line, position.character);
-                const referenceList: Reference.List | null = context.references;
+                const referenceList: Reference.List | null = await context.getReferences();
                 if (referenceList) {
                     // When trying to rename a parameter or variable reference inside of a TLE, the
                     // textbox that pops up when you press F2 contains more than just the variable
