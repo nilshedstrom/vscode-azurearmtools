@@ -4,9 +4,8 @@
 
 // tslint:disable:no-unused-expression no-non-null-assertion max-func-body-length
 
-import { Language } from "../extension.bundle";
-import { assert } from "../src/fixed_assert";
-import { UserNamespaceInfo } from "../src/Hover";
+import * as assert from "assert";
+import { Hover, Language } from "../extension.bundle";
 import { parseTemplate } from "./support/parseTemplate";
 
 const fakeSpan = new Language.Span(0, 0);
@@ -24,7 +23,7 @@ suite("Hover.UserNamespaceInfo", () => {
                     }
                 ]
             });
-            const info = new UserNamespaceInfo(
+            const info = new Hover.UserNamespaceInfo(
                 dt.topLevelScope.getFunctionNamespaceDefinition("udf")!,
                 fakeSpan);
             assert.equal(info.getHoverText(), "**udf** User-defined namespace\n\nNo members");
@@ -45,7 +44,7 @@ suite("Hover.UserNamespaceInfo", () => {
                 }
             ]
         });
-        const info = new UserNamespaceInfo(
+        const info = new Hover.UserNamespaceInfo(
             dt.topLevelScope.getFunctionNamespaceDefinition("udf")!,
             fakeSpan);
         assert.equal(info.getHoverText(), "**udf** User-defined namespace\n\nMembers:\n* date()");
@@ -68,7 +67,7 @@ suite("Hover.UserNamespaceInfo", () => {
                 }
             ]
         });
-        const info = new UserNamespaceInfo(
+        const info = new Hover.UserNamespaceInfo(
             dt.topLevelScope.getFunctionNamespaceDefinition("udf")!,
             fakeSpan);
         assert.equal(info.getHoverText(), "**udf** User-defined namespace\n\nMembers:\n* date(param)");
@@ -94,7 +93,7 @@ suite("Hover.UserNamespaceInfo", () => {
                 }
             ]
         });
-        const info = new UserNamespaceInfo(
+        const info = new Hover.UserNamespaceInfo(
             dt.topLevelScope.getFunctionNamespaceDefinition("udf")!,
             fakeSpan);
         assert.equal(info.getHoverText(), "**udf** User-defined namespace\n\nMembers:\n* date(param [whatever])");
@@ -124,7 +123,7 @@ suite("Hover.UserNamespaceInfo", () => {
                 }
             ]
         });
-        const info = new UserNamespaceInfo(
+        const info = new Hover.UserNamespaceInfo(
             dt.topLevelScope.getFunctionNamespaceDefinition("udf")!,
             fakeSpan);
         assert.equal(info.getHoverText(), "**udf** User-defined namespace\n\nMembers:\n* date(param1 [string], param2 [securestring])");
@@ -162,7 +161,7 @@ suite("Hover.UserNamespaceInfo", () => {
                 }
             ]
         });
-        const info = new UserNamespaceInfo(
+        const info = new Hover.UserNamespaceInfo(
             dt.topLevelScope.getFunctionNamespaceDefinition("udf")!,
             fakeSpan);
         assert.equal(info.getHoverText(), "**udf** User-defined namespace\n\nMembers:\n* date(param1 [string], param2 [securestring])\n* time(param [string])");

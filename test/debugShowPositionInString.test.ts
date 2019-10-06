@@ -4,8 +4,8 @@
 
 // tslint:disable:max-func-body-length no-http-string max-line-length no-null-keyword
 
-import { __debugMarkPositionInString, __debugMarkSubstring } from "../src/debugMarkStrings";
-import { assert } from "../src/fixed_assert";
+import * as assert from "assert";
+import { __debugMarkPositionInString, __debugMarkSubstring } from "../extension.bundle";
 
 suite("__debugMarkPositionInString", () => {
     const text = "this is a short string";

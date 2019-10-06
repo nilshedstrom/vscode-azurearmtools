@@ -5,11 +5,8 @@
 // tslint:disable:no-unused-expression max-func-body-length promise-function-async max-line-length no-unnecessary-class
 // tslint:disable:no-non-null-assertion object-literal-key-quotes variable-name
 
-import { TLE } from "../extension.bundle";
-import { assert } from "../src/fixed_assert";
-import { Histogram } from "../src/Histogram";
-import { ScopeContext, TemplateScope } from "../src/TemplateScope";
-import { FunctionCountVisitor } from "../src/visitors/FunctionCountVisitor";
+import * as assert from "assert";
+import { FunctionCountVisitor, Histogram, ScopeContext, TemplateScope, TLE } from "../extension.bundle";
 
 suite("FunctionCountVisitor", () => {
 

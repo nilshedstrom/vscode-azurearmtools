@@ -3,7 +3,7 @@
 // ----------------------------------------------------------------------------
 
 import * as assert from 'assert';
-import { DeploymentTemplate } from "../../src/DeploymentTemplate";
+import { DeploymentTemplate } from "../../extension.bundle";
 import { Issue } from '../../src/Language';
 import { stringify } from "./stringify";
 

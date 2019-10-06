@@ -5,10 +5,8 @@
 // tslint:disable:no-unused-expression max-func-body-length promise-function-async max-line-length no-unnecessary-class
 // tslint:disable:no-non-null-assertion object-literal-key-quotes variable-name no-constant-condition
 
-import { Hover, Language, Reference } from "../extension.bundle";
-import { DeploymentTemplate } from "../src/DeploymentTemplate";
-import { assert } from "../src/fixed_assert";
-import { IReferenceSite } from "../src/PositionContext";
+import * as assert from "assert";
+import { DeploymentTemplate, Hover, IReferenceSite, Language, Reference } from "../extension.bundle";
 import { IDeploymentTemplate } from "./support/diagnostics";
 import { parseTemplate, parseTemplateWithMarkers } from "./support/parseTemplate";
 

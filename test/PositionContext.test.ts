@@ -6,9 +6,7 @@
 // tslint:disable:no-non-null-assertion
 
 import * as assert from "assert";
-import { Completion, DeploymentTemplate, Hover, Json, Language, PositionContext, TLE, Utilities } from "../extension.bundle";
-import { IParameterDefinition } from "../src/IParameterDefinition";
-import { IReferenceSite } from "../src/PositionContext";
+import { Completion, DeploymentTemplate, Hover, IParameterDefinition, IReferenceSite, Json, Language, PositionContext, TLE, Utilities } from "../extension.bundle";
 import * as jsonTest from "./JSON.test";
 import { assertNotNull } from "./support/assertNotNull";
 

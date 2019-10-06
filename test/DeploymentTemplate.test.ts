@@ -8,10 +8,7 @@
 import * as assert from "assert";
 import { randomBytes } from "crypto";
 import { ISuiteCallbackContext, ITestCallbackContext } from "mocha";
-import { DeploymentTemplate, Histogram, IncorrectArgumentsCountIssue, Json, Language, Reference } from "../extension.bundle";
-import { IParameterDefinition } from "../src/IParameterDefinition";
-import { UnrecognizedUserFunctionIssue, UnrecognizedUserNamespaceIssue } from "../src/UnrecognizedFunctionIssues";
-import { ReferenceInVariableDefinitionsVisitor } from "../src/visitors/ReferenceInVariableDefinitionsVisitor";
+import { DeploymentTemplate, Histogram, IncorrectArgumentsCountIssue, IParameterDefinition, Json, Language, Reference, ReferenceInVariableDefinitionsVisitor, UnrecognizedUserFunctionIssue, UnrecognizedUserNamespaceIssue } from "../extension.bundle";
 import { sources, testDiagnostics } from "./support/diagnostics";
 import { parseTemplate } from "./support/parseTemplate";
 import { stringify } from "./support/stringify";

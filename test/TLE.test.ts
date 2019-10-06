@@ -6,12 +6,7 @@
 // tslint:disable:no-non-null-assertion
 
 import * as assert from "assert";
-import { AzureRMAssets, DeploymentTemplate, FunctionsMetadata, IncorrectArgumentsCountIssue, Language, PositionContext, Reference, TLE } from "../extension.bundle";
-import { ScopeContext, TemplateScope } from "../src/TemplateScope";
-import { FindReferencesVisitor } from "../src/visitors/FindReferencesVisitor";
-import { IncorrectFunctionArgumentCountVisitor } from "../src/visitors/IncorrectFunctionArgumentCountVisitor";
-import { UndefinedParameterAndVariableVisitor } from "../src/visitors/UndefinedParameterAndVariableVisitor";
-import { UndefinedVariablePropertyVisitor } from "../src/visitors/UndefinedVariablePropertyVisitor";
+import { AzureRMAssets, DeploymentTemplate, FindReferencesVisitor, FunctionsMetadata, IncorrectArgumentsCountIssue, IncorrectFunctionArgumentCountVisitor, Language, PositionContext, Reference, ScopeContext, TemplateScope, TLE, UndefinedParameterAndVariableVisitor, UndefinedVariablePropertyVisitor } from "../extension.bundle";
 import { assertNotNull } from "./support/assertNotNull";
 
 suite("TLE", () => {
