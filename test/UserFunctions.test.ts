@@ -1121,8 +1121,79 @@ suite("User functions", () => {
             await testHover(
                 dt,
                 udfRefAtNs.index,
-                "**udf** User-defined namespace\n\nMembers:\n* udf.string(year [int], month, day [int])");
+                "**udf** User-defined namespace\n\nMembers:\n* string(year [int], month, day [int])");
         });
-    });
+    }); // suite UDF Hover Info
+
+    suite("UDF Go To Definition", () => {
+        async function testGoToDefinition(
+            dt: DeploymentTemplate,
+            cursorIndex: number,
+            expectedDefinitionIndex: number
+        ): Promise<void> {
+            const pc = dt.getContextFromDocumentCharacterIndex(cursorIndex);
+            pc.def;
+            let hoverInfo: Hover.Info | null = await pc.hoverInfo!;
+            assert(hoverInfo, "Expected non-empty hover info");
+            hoverInfo = hoverInfo!;
+
+            const span: Language.Span = hoverInfo.span;
+            assert.equal(span.startIndex, expectedDefinitionIndex);
+        }
+
+        test("Top-level parameter", async () => {
+            const { dt, markers: { apiVersionDef, apiVersionRef } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+
+            // Cursor at reference to "apiVersion" inside resources
+            await testGoToDefinition(dt, apiVersionRef.index, apiVersionDef.index);
+        });
+        /*
+                test("Fser function parameter", async () => {
+                    const { dt, markers: { udfYearRef, udfYearDef } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+
+                    // Cursor at reference to "year" inside user function output
+                    testGoToDefinition(dt, udfYearRef.index, [udfYearRef.index, udfYearDef.index]);
+                });
+
+                test("User function parameter", async () => {
+                    const { dt, markers: { udfYearRef, udfYearDef } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+
+                    // Cursor at definition of "year" inside user function
+                    testGoToDefinition(dt, udfYearDef.index, [udfYearRef.index, udfYearDef.index]);
+                });
+
+                test("Variable reference", async () => {
+                    const { dt, markers: { var1Def, var1Ref1, var1Ref2 } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+
+                    // Cursor at reference to "var1" inside var2
+                    testReferences(dt, var1Ref1.index, [var1Def.index, var1Ref1.index, var1Ref2.index]);
+
+                    // Cursor at reference to "var1" inside outputs2
+                    testReferences(dt, var1Ref2.index, [var1Def.index, var1Ref1.index, var1Ref2.index]);
+                });
+
+                test("User-defined function, cursor inside the namespace portion", async () => {
+                    const { dt, markers: { udfDef, udfRefAtName, udfRefAtNs } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+
+                    // Cursor at reference to "udf.string" inside the namespace
+                    testReferences(dt, udfRefAtNs.index, [udfDef.index, udfRefAtName.index]);
+                });
+
+                test("User-defined function, cursor inside the name portion", async () => {
+                    const { dt, markers: { udfDef, udfRefAtName } } = await parseTemplateWithMarkers(userFuncsTemplate1, []);
+
+                    // Cursor at reference to "udf.string" inside the namespace
+                    testReferences(dt, udfRefAtName.index, [udfDef.index, udfRefAtName.index]);
+                });
+
+                test("Reference to built-in function with same name as UDF function doesn't find UDF", async () => {
+                    const { dt, markers: { stringRef } } = await parseTemplateWithMarkers(userFuncsTemplate1);
+                    const pc = dt.getContextFromDocumentCharacterIndex(stringRef.index);
+                    const references: Reference.List | null = pc.references;
+                    assert(!references, "Expected no references");
+                });
+        */
+
+    }); // suite UDF Go To Definition
 
 }); // suite User Functions

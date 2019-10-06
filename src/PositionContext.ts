@@ -4,6 +4,7 @@
 
 // tslint:disable:max-line-length
 
+import { Language } from "../extension.bundle";
 import { AzureRMAssets, FunctionMetadata } from "./AzureRMAssets";
 import { CachedPromise } from "./CachedPromise";
 import { CachedValue } from "./CachedValue";
@@ -15,10 +16,16 @@ import * as Hover from "./Hover";
 import { IParameterDefinition } from "./IParameterDefinition";
 import * as Json from "./JSON";
 import * as language from "./Language";
-import { ParameterDefinition } from "./ParameterDefinition";
 import * as Reference from "./Reference";
 import { TemplateScope } from "./TemplateScope";
 import * as TLE from "./TLE";
+import { UserFunctionDefinition } from "./UserFunctionDefinition";
+import { UserFunctionNamespaceDefinition } from "./UserFunctionNamespaceDefinition";
+
+interface IReferenceCallSiteInfo { //asdf
+    definition: UserFunctionDefinition | UserFunctionNamespaceDefinition | FunctionMetadata;
+    span: Language.Span;
+}
 
 /**
  * Represents a position inside the snapshot of a deployment template, plus all related information
@@ -35,8 +42,6 @@ export class PositionContext {
     private _tleInfo: CachedValue<TleInfo | null> = new CachedValue<TleInfo | null>();
     private _hoverInfo: CachedPromise<Hover.Info | null> = new CachedPromise<Hover.Info | null>();
     private _completionItems: CachedPromise<Completion.Item[]> = new CachedPromise<Completion.Item[]>();
-    private _parameterDefinition: CachedValue<IParameterDefinition | null> = new CachedValue<ParameterDefinition | null>();
-    private _variableDefinition: CachedValue<Json.Property | null> = new CachedValue<Json.Property | null>();
     private _references: CachedValue<Reference.List | null> = new CachedValue<Reference.List | null>();
     private _signatureHelp: CachedPromise<TLE.FunctionSignatureHelp | null> = new CachedPromise<TLE.FunctionSignatureHelp | null>();
 
@@ -163,7 +168,49 @@ export class PositionContext {
         return new language.Span(this.documentCharacterIndex, 0);
     }
 
-    public get hoverInfo(): Promise<Hover.Info | null> {
+    private getDefinitionIfFunctionCall(): null | IReferenceCallSiteInfo {
+        const tleInfo = this.tleInfo;
+        if (tleInfo) {
+            const tleFuncCall: TLE.FunctionCallValue | null = TLE.asFunctionCallValue(tleInfo.tleValue);
+            if (tleFuncCall) {
+                const scope = tleInfo.scope;
+                const tleCharacterIndex = tleInfo.tleCharacterIndex;
+
+                if (tleFuncCall.namespaceToken && tleFuncCall.namespaceToken.span.contains(tleCharacterIndex)) {
+                    // Inside the namespace of a user-function reference
+                    const ns = tleFuncCall.namespaceToken.stringValue;
+                    const nsDefinition = scope.getFunctionNamespaceDefinition(ns);
+                    if (nsDefinition) {
+                        const span: language.Span = tleFuncCall.namespaceToken.span.translate(this.jsonTokenStartIndex);
+                        return { definition: nsDefinition, span };
+                    }
+                } else if (tleFuncCall.nameToken.span.contains(tleCharacterIndex)) {
+                    if (tleFuncCall.namespaceToken) {
+                        // Inside the name of a user-function reference
+                        const ns = tleFuncCall.namespaceToken.stringValue;
+                        const name = tleFuncCall.nameToken.stringValue;
+                        const nsDefinition = scope.getFunctionNamespaceDefinition(ns);
+                        const definition = scope.getFunctionDefinition(ns, name);
+                        if (nsDefinition && definition) {
+                            const hoverSpan: language.Span = tleFuncCall.nameToken.span.translate(this.jsonTokenStartIndex); //testpoint
+                            return new Hover.UserFunctionInfo(nsDefinition, definition, hoverSpan);
+                        }
+                    } else {
+                        // Inside a reference of a built-in function
+                        const functionMetadata: FunctionMetadata | undefined = await AzureRMAssets.getFunctionMetadataFromName(tleFuncCall.nameToken.stringValue); //testpoint
+                        if (functionMetadata) {
+                            const hoverSpan: language.Span = tleFuncCall.nameToken.span.translate(this.jsonTokenStartIndex); //testpoint
+                            return new Hover.FunctionInfo(functionMetadata.name, functionMetadata.usage, functionMetadata.description, hoverSpan);
+                        }
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public get hoverInfo(): Promise<Hover.Info | null> { // asdf refactor with go to definition and other similar code
         return this._hoverInfo.getOrCachePromise(async () => {
             const tleInfo = this.tleInfo;
             if (tleInfo) {
@@ -477,9 +524,9 @@ export class PositionContext {
         return this._signatureHelp.getOrCachePromise(async () => {
             const tleValue: TLE.Value | null = this.tleInfo && this.tleInfo.tleValue;
             if (this.tleInfo && tleValue) {
-                let functionToHelpWith: TLE.FunctionCallValue | null = TLE.asFunctionValue(tleValue); //testpoint
+                let functionToHelpWith: TLE.FunctionCallValue | null = TLE.asFunctionCallValue(tleValue); //testpoint
                 if (!functionToHelpWith) {
-                    functionToHelpWith = TLE.asFunctionValue(tleValue.parent); //testpoint
+                    functionToHelpWith = TLE.asFunctionCallValue(tleValue.parent); //testpoint
                 }
 
                 if (functionToHelpWith) {
@@ -510,39 +557,34 @@ export class PositionContext {
         });
     }
 
-    /**
-     * If this PositionContext is currently at a parameter reference (inside 'parameterName' in
-     * "[parameters('parameterName')])", get the definition of the parameter that is being referenced.
+    /*
+     * If this PositionContext is currently at a parameter/variable/etc reference (e.g.
+     * inside 'parameterName' in "[parameters('parameterName')])", get the definition of the member
+     * that is being referenced.
      */
-    public get parameterDefinitionIfAtReference(): IParameterDefinition | null {
-        return this._parameterDefinition.getOrCacheValue(() => {
-            if (this.tleInfo) {
-                const tleValue: TLE.Value | null = this.tleInfo.tleValue;
-                if (tleValue && tleValue instanceof TLE.StringValue && tleValue.isParametersArgument()) {
-                    return this.tleInfo.scope.getParameterDefinition(tleValue.toString()); //testpoint
+    public get findDefinition(): {
+        parameter?: IParameterDefinition | null;
+        variable?: Json.Property | null;
+        namespace?: UserFunctionNamespaceDefinition | null;
+        userFunction?: UserFunctionDefinition | null;
+    } {
+        if (this.tleInfo) {
+            const tleString: TLE.StringValue | null = TLE.asStringValue(this.tleInfo.tleValue);
+            if (tleString) {
+                if (tleString.isParametersArgument()) {
+                    return { parameter: this.tleInfo.scope.getParameterDefinition(tleString.toString()) }; //testpoint
+                } else if (tleString.isVariablesArgument()) {
+                    return { variable: this.tleInfo.scope.getVariableDefinition(tleString.toString()) }; //testpoint)
+                }
+
+                const tleFuncCall: TLE.FunctionCallValue | null = TLE.asFunctionCallValue(this.tleInfo.tleValue);
+                if (tleFuncCall) {
+                    tleFuncCall.;
                 }
             }
 
-            return null;
-        });
-    }
-
-    /**
-     * If this PositionContext is currently at a variable reference (inside 'variableName' in
-     * "[variables('variableName')])", get the definition of the variable that is being referenced.
-     */
-    public get variableDefinitionIfAtReference(): Json.Property | null {
-        return this._variableDefinition.getOrCacheValue(() => {
-            if (this.tleInfo) {
-                const tleValue: TLE.Value | null = this.tleInfo.tleValue;
-                if (tleValue && tleValue instanceof TLE.StringValue && tleValue.isVariablesArgument()) {
-                    return this.tleInfo.scope.getVariableDefinition(tleValue.toString()); //testpoint
-                }
-            }
-
-            return null;
-        });
-    }
+            return {};
+        }
 
     /**
      * Given a function name prefix and replacement span, return a list of completions for functions
@@ -610,7 +652,7 @@ export class PositionContext {
         if (tleValue instanceof TLE.StringValue) {
             const stringSpan: language.Span = tleValue.getSpan(); //testpoint
             const stringStartIndex: number = stringSpan.startIndex;
-            const functionValue: TLE.FunctionCallValue | null = TLE.asFunctionValue(tleValue.parent);
+            const functionValue: TLE.FunctionCallValue | null = TLE.asFunctionCallValue(tleValue.parent);
 
             const rightParenthesisIndex: number = tleValue.toString().indexOf(")");
             const rightSquareBracketIndex: number = tleValue.toString().indexOf("]");

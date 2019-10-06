@@ -31,7 +31,7 @@ export function asArrayAccessValue(value: Value | null): ArrayAccessValue | null
     return value instanceof ArrayAccessValue ? value : null;
 }
 
-export function asFunctionValue(value: Value | null): FunctionCallValue | null {
+export function asFunctionCallValue(value: Value | null): FunctionCallValue | null {
     return value instanceof FunctionCallValue ? value : null;
 }
 
@@ -116,14 +116,24 @@ export class StringValue extends Value {
         return this.length > 1 && this.toString()[this.length - 1] === this.quoteCharacter;
     }
 
+    /**
+     * Checks whether the current position is at the argument of a 'parameters' function call //asdf test doesn't catch user functions
+     */
     public isParametersArgument(): boolean {
         return this.isBuiltinFunctionArgument("parameters");
     }
 
+    /**
+     * Checks whether the current position is at the argument of a 'variables' function call //asdf test doesn't catch user functions
+     */
     public isVariablesArgument(): boolean {
         return this.isBuiltinFunctionArgument("variables");
     }
 
+    /**
+     * Checks whether the current position is at the argument of a call to the
+     * built-in function with the given name
+     */
     private isBuiltinFunctionArgument(functionName: string): boolean { //asdf document
         const parent: Value | null = this.parent;
         return !!parent &&
@@ -461,7 +471,7 @@ export class PropertyAccess extends ParentValue {
             // tslint:disable-next-line:no-non-null-assertion // Asserted
             currentSource = propertyAccess!.source;
         }
-        return asFunctionValue(currentSource);
+        return asFunctionCallValue(currentSource);
     }
 
     public get periodToken(): Token {
