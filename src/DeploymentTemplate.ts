@@ -186,7 +186,7 @@ export class DeploymentTemplate {
                         }
 
                         // Unrecognized function calls
-                        const tleUnrecognizedFunctionVisitor = UnrecognizedFunctionVisitor.UnrecognizedFunctionVisitor.visit(this, tleExpression, functions);
+                        const tleUnrecognizedFunctionVisitor = UnrecognizedFunctionVisitor.UnrecognizedFunctionVisitor.visit(expressionScope, tleExpression, functions);
                         for (const error of tleUnrecognizedFunctionVisitor.errors) {
                             parseErrors.push(error.translate(jsonTokenStartIndex));
                         }

@@ -119,7 +119,7 @@
   "main": "main",
   "scripts": {
     "vscode:prepublish": "gulp error-vsce-package",
-    "compile": "gulp build-grammars && npm run get-language-server && tsc -watch -p ./",
+    "compile": "gulp build-grammars && npm run get-language-server && gulp verify-test-uses-extension-bundle && tsc -watch -p ./",
     "build": "gulp build-grammars && npm run get-language-server && gulp verify-test-uses-extension-bundle && tsc -p ./",
     "get-language-server": "gulp get-language-server",
     "lint": "tslint --project tsconfig.json -t verbose",

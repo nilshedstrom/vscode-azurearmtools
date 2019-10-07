@@ -1207,7 +1207,8 @@ suite("User functions", () => {
         });
 
         suite("UDF Find user function references", () => {
-            if (false) { // asdf not yet implemented
+            // tslint:disable-next-line: no-suspicious-comment
+            if (false) { // TODO: feature not yet implemented
                 test("At reference to user-defined function, cursor inside the namespace portion", async () => {
                     const { dt, markers: { udfDef, udfRefAtNs } } = await parseTemplateWithMarkers(userFuncsTemplate1, [], { ignoreWarnings: true });
 
@@ -1314,7 +1315,7 @@ suite("User functions", () => {
             const { dt, markers: { apiVersionDef, apiVersionRef } } = await parseTemplateWithMarkers(userFuncsTemplate1, [], { ignoreWarnings: true });
 
             // Cursor at reference to "apiVersion" inside resources
-            // -1 because go to definition currently goes to the quote at the start of the string asdf
+            // -1 because go to definition currently goes to the quote at the start of the string
             await testGoToDefinition(dt, apiVersionRef.index, "parameter", apiVersionDef.index - 1);
         });
         test("User function parameter", async () => {

@@ -316,7 +316,7 @@ async function verifyTestReferencesOnlyExtensionBundle(testFolder: string): Prom
                 for (let match of matches) {
                     errors.push(
                         os.EOL +
-                        `${path.relative(__dirname, file)}: error: Test code may not import from the src folder. It should import from '../extension.bundle'${os.EOL}` +
+                        `${path.relative(__dirname, file)}: error: Test code may not import from the src folder, it should import from '../extension.bundle'${os.EOL}` +
                         `Imported here: ${match}${os.EOL}`
                     );
                     console.error(match);

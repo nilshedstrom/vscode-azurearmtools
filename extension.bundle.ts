@@ -57,6 +57,7 @@ export { IncorrectFunctionArgumentCountVisitor } from "./src/visitors/IncorrectF
 export { ReferenceInVariableDefinitionsVisitor } from "./src/visitors/ReferenceInVariableDefinitionsVisitor";
 export { UndefinedParameterAndVariableVisitor } from "./src/visitors/UndefinedParameterAndVariableVisitor";
 export { UndefinedVariablePropertyVisitor } from "./src/visitors/UndefinedVariablePropertyVisitor";
+export { UnrecognizedFunctionVisitor } from "./src/visitors/UnrecognizedFunctionVisitor";
 export { Completion };
 export { Json };
 export { Language };

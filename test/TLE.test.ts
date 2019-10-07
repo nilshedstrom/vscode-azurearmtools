@@ -6,7 +6,7 @@
 // tslint:disable:no-non-null-assertion
 
 import * as assert from "assert";
-import { AzureRMAssets, DeploymentTemplate, FindReferencesVisitor, FunctionsMetadata, IncorrectArgumentsCountIssue, IncorrectFunctionArgumentCountVisitor, Language, PositionContext, Reference, ScopeContext, TemplateScope, TLE, UndefinedParameterAndVariableVisitor, UndefinedVariablePropertyVisitor } from "../extension.bundle";
+import { AzureRMAssets, DeploymentTemplate, FindReferencesVisitor, FunctionMetadata, FunctionsMetadata, IncorrectArgumentsCountIssue, IncorrectFunctionArgumentCountVisitor, Language, PositionContext, Reference, ScopeContext, TemplateScope, TLE, UndefinedParameterAndVariableVisitor, UndefinedVariablePropertyVisitor, UnrecognizedBuiltinFunctionIssue, UnrecognizedFunctionVisitor } from "../extension.bundle";
 import { assertNotNull } from "./support/assertNotNull";
 
 suite("TLE", () => {
@@ -1934,41 +1934,26 @@ suite("TLE", () => {
 
     suite("UnrecognizedFunctionVisitor", () => {
         suite("visit(tle.Value)", () => {
-            /* asdf
-const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionMetadata("CONCAT", "", "", 1, 2, [])]);
-
-            test("with null", () => {
-                const visitor = TLE.UnrecognizedFunctionVisitor.visit( null, functionMetadata);
-                assert(visitor);
-                assert.deepStrictEqual([], visitor.errors);
-            });
-
-            test("with undefined", () => {
-                // tslint:disable-next-line:no-any
-                const visitor = TLE.UnrecognizedFunctionVisitor.visit(<any>undefined, functionMetadata);
-                assert(visitor);
-                assert.deepStrictEqual([], visitor.errors);
-            });
+            const functionMetadata: FunctionsMetadata = new FunctionsMetadata([new FunctionMetadata("CONCAT", "", "", 1, 2, [])]);
 
             test("with recognized function", () => {
-                const tleParseResult = parse("'[concat()]'");
-                const visitor = TLE.UnrecognizedFunctionVisitor.visit(tleParseResult.expression, functionMetadata);
+                const tleParseResult = parseExpressionWithScope("'[concat()]'");
+                const visitor = UnrecognizedFunctionVisitor.visit(tleParseResult.scope, tleParseResult.expression, functionMetadata);
                 assert(visitor);
                 assert.deepStrictEqual([], visitor.errors);
             });
 
             test("with unrecognized function", () => {
-                const tleParseResult = parse("'[concatenate()]'");
-                const visitor = TLE.UnrecognizedFunctionVisitor.visit(tleParseResult.expression, functionMetadata);
+                const tleParseResult = parseExpressionWithScope("'[concatenate()]'");
+                const visitor = UnrecognizedFunctionVisitor.visit(tleParseResult.scope, tleParseResult.expression, functionMetadata);
                 assert(visitor);
                 assert.deepStrictEqual(
                     [
-                        new UnrecognizedFunctionIssue(new Language.Span(2, 11), "concatenate")
+                        new UnrecognizedBuiltinFunctionIssue(new Language.Span(2, 11), "concatenate")
                     ],
                     visitor.errors);
                 assert.equal(visitor.errors[0].message, "Unrecognized function name 'concatenate'.");
             });
-            */
         });
     });
 

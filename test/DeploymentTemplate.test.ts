@@ -270,28 +270,22 @@ suite("DeploymentTemplate", () => {
             });
         });
 
-        //asdf
-        // test("with one user function where function name matches a built-in function name", () => {
-        //     const dt = new DeploymentTemplate(
-        //         stringify({
-        //             "name": "[contoso.reference()]", // This is not a call to the built-in "reference" function
-        //             "functions": [
-        //                 {
-        //                     "namespace": "contoso",
-        //                     "members": {
-        //                         "reference": {
-        //                         }
-        //                     }
-        //                 }
-        //             ]
-        //         }),
-        //         "id");
-        //     const expectedErrors = [
-        //     ];
-        //     return dt.errors.then((errors: Language.Issue[]) => {
-        //         assert.deepStrictEqual(errors, expectedErrors);
-        //     });
-        // });
+        test("with one user function where function name matches a built-in function name", async () => {
+            await parseTemplate(
+                {
+                    "name": "[contoso.reference()]", // This is not a call to the built-in "reference" function
+                    "functions": [
+                        {
+                            "namespace": "contoso",
+                            "members": {
+                                "reference": {
+                                }
+                            }
+                        }
+                    ]
+                },
+                []);
+        });
 
         test("with one unrecognized user function where function name matches a built-in function name", () => {
             const dt = new DeploymentTemplate(
@@ -322,37 +316,35 @@ suite("DeploymentTemplate", () => {
             });
         });
 
-        //asdf
-        // test("can't reference variables from within user function", () => { //asdf
-        //     const dt = new DeploymentTemplate(
-        //         stringify(
-        //             {
-        //                 "name": "[contoso.blah('prefix')]",
-        //                 "variables": {
-        //                     "nope": "nope"
-        //                 },
-        //                 "functions": [
-        //                     {
-        //                         "namespace": "contoso",
-        //                         "members": {
-        //                             "foo": {
-        //                                 "output": {
-        //                                     "type": "string",
-        //                                     "value": "[concat(variables('nope'))]"
-        //                                 }
-        //                             }
-        //                         }
-        //                     }
-        //                 ]
-        //             }),
-        //         "id");
-        //     const expectedErrors = [
-        //         new InvalidFunctionContextIssue(new Language.Span(20, 4), "variables", "Cannot reference 'variables' inside of a function")
-        //     ];
-        //     return dt.errors.then((errors: Language.Issue[]) => {
-        //         assert.deepStrictEqual(errors, expectedErrors);
-        //     });
-        // });
+        test("can't reference variables from within user function", async () => {
+            const dt = new DeploymentTemplate(
+                stringify(
+                    {
+                        "name": "hello",
+                        "variables": {
+                            "nope": "nope"
+                        },
+                        "functions": [
+                            {
+                                "namespace": "contoso",
+                                "members": {
+                                    "foo": {
+                                        "output": {
+                                            "type": "string",
+                                            "value": "[concat(variables('nope'))]"
+                                        }
+                                    }
+                                }
+                            }
+                        ]
+                    }),
+                "id");
+            const expectedErrors = [
+                new Language.Issue(new Language.Span(243, 6), "User functions cannot reference variables")
+            ];
+            const errors: Language.Issue[] = await dt.errorsPromise;
+            assert.deepStrictEqual(errors, expectedErrors);
+        });
 
         test("with reference() call in variable definition", () => {
             const dt = new DeploymentTemplate(`{ "variables": { "a": "[reference('test')]" } }`, "id");
@@ -634,7 +626,7 @@ suite("DeploymentTemplate", () => {
 
         test("with empty", () => {
             const dt = new DeploymentTemplate("{ 'parameters': { 'apples': { 'type': 'string' }, 'bananas': { 'type': 'integer' } } }", "id");
-            assert.throws(() => { dt.topLevelScope.getParameterDefinition(""); }); //asdf need scope tests for stuff like this?
+            assert.throws(() => { dt.topLevelScope.getParameterDefinition(""); });
         });
 
         test("with no parameters definition", () => {
@@ -717,7 +709,7 @@ suite("DeploymentTemplate", () => {
             assert.deepStrictEqual(apples.name.toString(), "Apples");
         });
 
-        //asdf
+        // CONSIDER: Does JavaScript support this?  It's low priority
         // test("with case insensitive match, Unicode", () => {
         //     // Should always match the last one defined when multiple have the same name
         //     const dt = new DeploymentTemplate("{ 'parameters': { 'Strasse': { 'type': 'string' }, 'Straße': { 'type': 'integer' } } }", "id");
@@ -1103,22 +1095,21 @@ suite("DeploymentTemplate", () => {
                     ]);
             });
 
-            // asdf
-            // testWithLanguageServer("expecting error: reference in variable definition inside user function", async function (this: ITestCallbackContext): Promise<void> {
-            //     await testDiagnostics(
-            //         {
-            //             "variables": {
-            //                 "a": "[reference('test')]"
-            //             },
-            //         },
-            //         {
-            //             includeSources: [sources.expressions]
-            //         },
-            //         [
-            //             "Error: reference() cannot be invoked inside of a variable definition. (arm-template (expressions))",
-            //             "Warning: The variable 'a' is never used. (arm-template (expressions))"
-            //         ]);
-            // });
+            testWithLanguageServer("expecting error: reference in variable definition inside user function", async function (this: ITestCallbackContext): Promise<void> {
+                await testDiagnostics(
+                    {
+                        "variables": {
+                            "a": "[reference('test')]"
+                        },
+                    },
+                    {
+                        includeSources: [sources.expressions]
+                    },
+                    [
+                        "Error: reference() cannot be invoked inside of a variable definition. (arm-template (expressions))",
+                        "Warning: The variable 'a' is never used. (arm-template (expressions))"
+                    ]);
+            });
         });
 
         suite("visitStringValue(Json.StringValue)", () => {
@@ -1262,21 +1253,25 @@ suite("DeploymentTemplate", () => {
         test("https://github.com/Microsoft/vscode-azurearmtools/issues/193", async () => {
             // Just make sure nothing throws
             let modifiedTemplate = template.replace('"type": "string"', '"type": string');
-            let dt = new DeploymentTemplate(modifiedTemplate, "id");
-            await dt.errorsPromise; // asdf test completions, etc.
+            let dt = await parseTemplate(modifiedTemplate);
+            dt.findReferences(Reference.ReferenceKind.Parameter, "adminUsername", dt.topLevelScope);
+            dt.findReferences(Reference.ReferenceKind.Variable, "resourceGroup", dt.topLevelScope);
+            dt.getFunctionCounts();
         });
 
         test("Unended string", async () => {
             const json = "{ \"";
-            let dt = new DeploymentTemplate(json, "id");
-            await dt.errorsPromise;
+            let dt = await parseTemplate(json);
+            dt.findReferences(Reference.ReferenceKind.Parameter, "adminUsername", dt.topLevelScope);
+            dt.findReferences(Reference.ReferenceKind.Variable, "resourceGroup", dt.topLevelScope);
             dt.getFunctionCounts();
         });
 
         test("No top-level object", async () => {
             const json = "\"hello\"";
-            let dt = new DeploymentTemplate(json, "id");
-            await dt.errorsPromise;
+            let dt = await parseTemplate(json);
+            dt.findReferences(Reference.ReferenceKind.Parameter, "adminUsername", dt.topLevelScope);
+            dt.findReferences(Reference.ReferenceKind.Variable, "resourceGroup", dt.topLevelScope);
             dt.getFunctionCounts();
         });
 
@@ -1291,8 +1286,10 @@ suite("DeploymentTemplate", () => {
                 "subnetRef": "[concat(variables('vne2tId'), '/subnets/', parameters('subnetName'))]"
             }
         }`;
-            const dt = new DeploymentTemplate(json, "id");
-            await dt.errorsPromise;
+            let dt = await parseTemplate(json);
+            dt.findReferences(Reference.ReferenceKind.Parameter, "adminUsername", dt.topLevelScope);
+            dt.findReferences(Reference.ReferenceKind.Variable, "resourceGroup", dt.topLevelScope);
+            dt.getFunctionCounts();
         });
 
         test("Malformed property", async () => {
@@ -1306,8 +1303,10 @@ suite("DeploymentTemplate", () => {
                 "subnetRef": "[concat(variables('vne2tId'), '/subnets/', parameters('subnetName'))]"
             }
         }`;
-            const dt = new DeploymentTemplate(json, "id");
-            await dt.errorsPromise;
+            let dt = await parseTemplate(json);
+            dt.findReferences(Reference.ReferenceKind.Parameter, "adminUsername", dt.topLevelScope);
+            dt.findReferences(Reference.ReferenceKind.Variable, "resourceGroup", dt.topLevelScope);
+            dt.getFunctionCounts();
         });
 
         test("typing character by character", async function (this: ITestCallbackContext): Promise<void> {
@@ -1319,8 +1318,10 @@ suite("DeploymentTemplate", () => {
             // Just make sure nothing throws
             for (let i = 0; i < template.length; ++i) {
                 let partialTemplate = template.slice(0, i);
-                let dt = new DeploymentTemplate(partialTemplate, "id");
-                await dt.errorsPromise;
+                let dt = await parseTemplate(partialTemplate);
+                dt.findReferences(Reference.ReferenceKind.Parameter, "adminUsername", dt.topLevelScope);
+                dt.findReferences(Reference.ReferenceKind.Variable, "resourceGroup", dt.topLevelScope);
+                dt.getFunctionCounts();
 
                 await exercisePositionContextAtRandomPointsInTheDoc(template, 0.1);
             }
@@ -1335,8 +1336,10 @@ suite("DeploymentTemplate", () => {
             // Just make sure nothing throws
             for (let i = 0; i < template.length; ++i) {
                 let partialTemplate = template.slice(i);
-                let dt = new DeploymentTemplate(partialTemplate, "id");
-                await dt.errorsPromise;
+                let dt = await parseTemplate(partialTemplate);
+                dt.findReferences(Reference.ReferenceKind.Parameter, "adminUsername", dt.topLevelScope);
+                dt.findReferences(Reference.ReferenceKind.Variable, "resourceGroup", dt.topLevelScope);
+                dt.getFunctionCounts();
 
                 await exercisePositionContextAtRandomPointsInTheDoc(template, 0.1);
             }
@@ -1352,8 +1355,10 @@ suite("DeploymentTemplate", () => {
             for (let i = 0; i < template.length; ++i) {
                 // Remove the single character at position i
                 let partialTemplate = template.slice(0, i) + template.slice(i + 1);
-                let dt = new DeploymentTemplate(partialTemplate, "id");
-                await dt.errorsPromise;
+                let dt = await parseTemplate(partialTemplate);
+                dt.findReferences(Reference.ReferenceKind.Parameter, "adminUsername", dt.topLevelScope);
+                dt.findReferences(Reference.ReferenceKind.Variable, "resourceGroup", dt.topLevelScope);
+                dt.getFunctionCounts();
 
                 await exercisePositionContextAtRandomPointsInTheDoc(template, 0.1);
             }
@@ -1392,8 +1397,10 @@ suite("DeploymentTemplate", () => {
                     modifiedTemplate = modifiedTemplate.slice(0, position) + s + modifiedTemplate.slice(position);
                 }
 
-                let dt = new DeploymentTemplate(modifiedTemplate, "id");
-                await dt.errorsPromise;
+                let dt = await parseTemplate(modifiedTemplate);
+                dt.findReferences(Reference.ReferenceKind.Parameter, "adminUsername", dt.topLevelScope);
+                dt.findReferences(Reference.ReferenceKind.Variable, "resourceGroup", dt.topLevelScope);
+                dt.getFunctionCounts();
 
                 await exercisePositionContextAtRandomPointsInTheDoc(template, 0.1);
             }

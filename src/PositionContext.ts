@@ -191,11 +191,9 @@ export class PositionContext {
                 && this.jsonValue instanceof Json.StringValue
             ) {
                 const tleParseResult = this._deploymentTemplate.getTLEParseResultFromJsonStringValue(this.jsonValue);
-                if (tleParseResult) {
-                    const tleCharacterIndex = this.documentCharacterIndex - this.jsonTokenStartIndex;
-                    const tleValue = tleParseResult.getValueAtCharacterIndex(tleCharacterIndex);
-                    return new TleInfo(tleParseResult, tleCharacterIndex, tleValue, tleParseResult.scope);
-                }
+                const tleCharacterIndex = this.documentCharacterIndex - this.jsonTokenStartIndex;
+                const tleValue = tleParseResult.getValueAtCharacterIndex(tleCharacterIndex);
+                return new TleInfo(tleParseResult, tleCharacterIndex, tleValue, tleParseResult.scope);
             }
             return null;
         });

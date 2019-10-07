@@ -11,8 +11,6 @@ import * as jsonTest from "./JSON.test";
 import { assertNotNull } from "./support/assertNotNull";
 
 suite("PositionContext", () => {
-    //asdf test with scopes and contexts
-
     suite("fromDocumentLineAndColumnIndexes(DeploymentTemplate,number,number)", () => {
         test("with null deploymentTemplate", () => {
             // tslint:disable-next-line:no-any
@@ -1220,7 +1218,7 @@ suite("PositionContext", () => {
                 };
             }
 
-            suite("Parameter defaultValue deep completion for objects", () => { //asdf add user functions
+            suite("Parameter defaultValue deep completion for objects", () => {
                 let { documentText, tokens } = getDocumentAndMarkers({
                     parameters: {
                         a: {
