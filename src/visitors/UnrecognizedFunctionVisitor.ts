@@ -3,8 +3,8 @@
 // ----------------------------------------------------------------------------
 
 import * as assets from "../AzureRMAssets";
+import { DeploymentTemplate } from "../DeploymentTemplate";
 import * as language from '../Language';
-import { TemplateScope } from "../TemplateScope";
 import { FunctionCallValue, Value, Visitor } from "../TLE";
 import { UnrecognizedBuiltinFunctionIssue, UnrecognizedUserFunctionIssue, UnrecognizedUserNamespaceIssue } from "../UnrecognizedFunctionIssues";
 
@@ -13,7 +13,7 @@ import { UnrecognizedBuiltinFunctionIssue, UnrecognizedUserFunctionIssue, Unreco
  */
 export class UnrecognizedFunctionVisitor extends Visitor {
     private _errors: language.Issue[] = [];
-    constructor(private _scope: TemplateScope, private _tleFunctions: assets.FunctionsMetadata) {
+    constructor(private dt: DeploymentTemplate, private _tleFunctions: assets.FunctionsMetadata) {
         super();
     }
     public get errors(): language.Issue[] {
@@ -21,11 +21,11 @@ export class UnrecognizedFunctionVisitor extends Visitor {
     }
     public visitFunctionCall(tleFunction: FunctionCallValue): void {
         const functionName: string = tleFunction.nameToken.stringValue;
-        if (tleFunction.namespaceToken) {//asdf method to find namespace+function name
+        if (tleFunction.namespaceToken) {
             // User-defined function reference
             const namespaceName: string = tleFunction.namespaceToken.stringValue;
             const namespaceSpan: language.Span = tleFunction.namespaceToken.span;
-            let namespaceDefinition = this._scope.getFunctionNamespaceDefinition(namespaceName);
+            let namespaceDefinition = this.dt.topLevelScope.getFunctionNamespaceDefinition(namespaceName);
             if (!namespaceDefinition) {
                 // Namespace not found
                 this._errors.push(new UnrecognizedUserNamespaceIssue(namespaceSpan, namespaceName));
@@ -45,8 +45,8 @@ export class UnrecognizedFunctionVisitor extends Visitor {
         }
         super.visitFunctionCall(tleFunction);
     }
-    public static visit(scope: TemplateScope, tleValue: Value | null, tleFunctions: assets.FunctionsMetadata): UnrecognizedFunctionVisitor {
-        let visitor = new UnrecognizedFunctionVisitor(scope, tleFunctions);
+    public static visit(dt: DeploymentTemplate, tleValue: Value | null, tleFunctions: assets.FunctionsMetadata): UnrecognizedFunctionVisitor {
+        let visitor = new UnrecognizedFunctionVisitor(dt, tleFunctions);
         if (tleValue) {
             tleValue.accept(visitor);
         }

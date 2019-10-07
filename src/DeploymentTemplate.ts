@@ -2,6 +2,7 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 // ----------------------------------------------------------------------------
 
+import { callWithTelemetryAndErrorHandlingSync } from "vscode-azureextensionui";
 import { AzureRMAssets, FunctionsMetadata } from "./AzureRMAssets";
 import { CachedPromise } from "./CachedPromise";
 import { CachedValue } from "./CachedValue";
@@ -188,7 +189,7 @@ export class DeploymentTemplate {
                             }
 
                             // Unrecognized function calls
-                            const tleUnrecognizedFunctionVisitor = UnrecognizedFunctionVisitor.UnrecognizedFunctionVisitor.visit(this._topLevelScope/*asdf?*/, tleExpression, functions);
+                            const tleUnrecognizedFunctionVisitor = UnrecognizedFunctionVisitor.UnrecognizedFunctionVisitor.visit(this, tleExpression, functions);
                             for (const error of tleUnrecognizedFunctionVisitor.errors) {
                                 parseErrors.push(error.translate(jsonTokenStartIndex));
                             }
@@ -333,7 +334,7 @@ export class DeploymentTemplate {
         return this._jsonParseResult.maxCharacterIndex;
     }
 
-    private getTopLevelParameterDefinitions(): ParameterDefinition[] { //asdf need cache?
+    private getTopLevelParameterDefinitions(): ParameterDefinition[] {
         return this._topLevelParameterDefinitions.getOrCacheValue(() => {
             const parameterDefinitions: ParameterDefinition[] = [];
 
@@ -434,32 +435,23 @@ export class DeploymentTemplate {
 
     /**
      * Get the TLE parse results from this JSON string.
-     * Can return null if the string is not reachable in the parsed
-     *   template tree.
      */
     public getTLEParseResultFromJsonStringValue(jsonStringValue: Json.StringValue): TLE.ParseResult | null {
-        const result = this.quotedStringToTleParseResultMap.get(jsonStringValue);
-        if (result) {
-            return result;
-        }
+        const result: TLE.ParseResult | undefined = callWithTelemetryAndErrorHandlingSync("getTLEParseResultFromJsonStringValue", context => {
+            context.errorHandling.suppressDisplay = true;
+            context.telemetry.suppressIfSuccessful = true;
 
-        const tleParseResult = TLE.Parser.parse(jsonStringValue.quotedValue, this.topLevelScope); //asdf?
-        // asdf cache?
-        return tleParseResult;
+            const cachedValue = this.quotedStringToTleParseResultMap.get(jsonStringValue);
 
-        //return result ? result : null;
-        // const result = this.getTLEParseResultFromString(jsonStringValue.toString());
-        // return result;
+            // We should have parsed every string value in the template file
+            assert(cachedValue, "Map did not contain the given Json.StringValue");
+
+            return cachedValue;
+        });
+
+        // tslint:disable-next-line: strict-boolean-expressions
+        return result || null;
     }
-
-    // // asdf be lazy?
-    // // Note: I don't think this should ever return null (unless not a string), but being defensive for now
-    // private getTLEParseResultFromString2(value: string): TLE.ParseResult | null {
-    //     assert(typeof value === "string");
-    //     const result: TLE.ParseResult | undefined = this.quotedStringToTleParseResultMap.get(value);
-    //     assert(result); // asdf why would this be null?  - probably best to be safe and remove this assert
-    //     return result ? result : null;
-    // }
 
     public findReferences(referenceType: Reference.ReferenceKind, referenceName: string, scope: TemplateScope): Reference.List {
         const result: Reference.List = new Reference.List(referenceType);
@@ -470,14 +462,14 @@ export class DeploymentTemplate {
                 case Reference.ReferenceKind.Parameter:
                     const parameterDefinition: IParameterDefinition | null = scope.getParameterDefinition(referenceName);
                     if (parameterDefinition) {
-                        result.add(parameterDefinition.name.unquotedSpan);
+                        result.add(parameterDefinition.name.unquotedSpan); //testpoint
                     }
                     break;
 
                 case Reference.ReferenceKind.Variable:
-                    const variableDefinition: Json.Property | null = scope.getVariableDefinition(referenceName); //asdf
+                    const variableDefinition: Json.Property | null = scope.getVariableDefinition(referenceName); //testpoint
                     if (variableDefinition) {
-                        result.add(variableDefinition.name.unquotedSpan);
+                        result.add(variableDefinition.name.unquotedSpan); //testpoint
                     }
                     break;
 
@@ -491,7 +483,7 @@ export class DeploymentTemplate {
                 const tleParseResult: TLE.ParseResult | null = this.getTLEParseResultFromJsonStringValue(jsonStringValue);
                 if (tleParseResult && tleParseResult.expression && tleParseResult.scope === scope) {
                     const visitor = FindReferencesVisitor.FindReferencesVisitor.visit(tleParseResult.expression, referenceType, referenceName);
-                    result.addAll(visitor.references.translate(jsonStringValue.span.startIndex)); //asdf unquotedspan?
+                    result.addAll(visitor.references.translate(jsonStringValue.span.startIndex)); //testpoint
                 }
             });
         }

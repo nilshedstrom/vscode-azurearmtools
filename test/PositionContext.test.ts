@@ -1199,7 +1199,7 @@ suite("PositionContext", () => {
 
             });
 
-            // asdfasdf merge
+            // CONSIDER: Use parseTemplateWithMarkers
             function getDocumentAndMarkers(document: object | string): { documentText: string; tokens: number[] } {
                 let tokens: number[] = [];
                 document = typeof document === "string" ? document : JSON.stringify(document);

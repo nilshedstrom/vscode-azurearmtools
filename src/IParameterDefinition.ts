@@ -14,11 +14,9 @@ export interface IParameterDefinition {
     type: Json.Value | null;
     span: language.Span;
 
-    // We don't currently need access to the parameter's "type" or other properties
+    // We don't currently need access to the top-level parameters' "type" other properties
 
-    supportsDescription: boolean;
+    // Description and defaultValue are only supported for top-level parameters
     description: string | null;
-
-    supportsDefaultValue: boolean; //asdf?
     defaultValue: Json.Value | null;
 }

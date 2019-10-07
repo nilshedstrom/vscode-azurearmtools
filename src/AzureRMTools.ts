@@ -349,7 +349,7 @@ export class AzureRMTools {
                     // Encode function name as "funcname(<actual-args>)[<min-expected>..<max-expected>]"
                     let encodedName = `${issue.functionName}(${issue.actual})[${issue.minExpected}..${issue.maxExpected}]`;
                     incorrectArgCounts.add(encodedName);
-                } //asdf user funcs?
+                }
             }
             properties.unrecognized = AzureRMTools.convertSetToJson(unrecognized);
             properties.incorrectArgs = AzureRMTools.convertSetToJson(incorrectArgCounts);
