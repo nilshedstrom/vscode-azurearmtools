@@ -193,7 +193,7 @@ export class AzureRMTools {
         stopwatch: Stopwatch
     ): void {
         const functionsInEachNamespace = deploymentTemplate.namespaceDefinitions.map(ns => ns.members.length);
-        const userFunctionsCount = functionsInEachNamespace.reduce((sum, count) => sum + count);
+        const userFunctionsCount = functionsInEachNamespace.reduce((sum, count) => sum + count, 0);
 
         ext.reporter.sendTelemetryEvent(
             "Deployment Template Opened",
