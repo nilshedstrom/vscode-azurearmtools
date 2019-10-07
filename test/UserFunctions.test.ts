@@ -454,7 +454,7 @@ suite("User functions", () => {
             await parseTemplate(
                 template,
                 [
-                    "Error: Undefined variable reference: 'var1'"
+                    "Error: User functions cannot reference variables"
                 ],
                 {
                     ignoreWarnings: true

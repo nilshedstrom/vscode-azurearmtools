@@ -55,7 +55,7 @@ export class TemplateScope {
         const unquotedParameterName = Utilities.unquote(parameterName);
         let parameterNameLC = unquotedParameterName.toLowerCase();
 
-        // Find the last definition that matches, because that's what Azure does asdf test
+        // Find the last definition that matches, because that's what Azure does if there are matching names
         for (let i = this.parameterDefinitions.length - 1; i >= 0; --i) {
             let pd = this.parameterDefinitions[i];
             if (pd.name.toString().toLowerCase() === parameterNameLC) {
@@ -102,15 +102,13 @@ export class TemplateScope {
         return null;
     }
 
-    // asdf: findNamespaceDefinitionsWithPrefix
-
     /**
      * If the function call is a variables() reference, return the related variable definition
      */
     public getVariableDefinitionFromFunctionCall(tleFunction: TLE.FunctionCallValue): Json.Property | null {
         let result: Json.Property | null = null;
 
-        if (tleFunction.isBuiltin("variables")) { // asdf
+        if (tleFunction.isCallToBuiltinWithName("variables")) {
             const variableName: TLE.StringValue | null = TLE.asStringValue(tleFunction.argumentExpressions[0]);
             if (variableName) {
                 result = this.getVariableDefinition(variableName.toString());
@@ -177,5 +175,9 @@ export class TemplateScope {
         }
 
         return result;
+    }
+
+    public get isInUserFunction(): boolean {
+        return this.scopeContext === ScopeContext.UserFunction;
     }
 }

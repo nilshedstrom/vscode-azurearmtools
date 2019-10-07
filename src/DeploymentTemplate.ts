@@ -455,7 +455,7 @@ export class DeploymentTemplate {
                     break;
 
                 case Reference.ReferenceKind.Variable:
-                    const variableDefinition: Json.Property | null = scope.getVariableDefinition(referenceName); //asdf
+                    const variableDefinition: Json.Property | null = scope.getVariableDefinition(referenceName);
                     if (variableDefinition) {
                         result.add(variableDefinition.name.unquotedSpan);
                     }
@@ -471,7 +471,7 @@ export class DeploymentTemplate {
                 const tleParseResult: TLE.ParseResult | null = this.getTLEParseResultFromJsonStringValue(jsonStringValue);
                 if (tleParseResult.expression && tleParseResult.scope === scope) {
                     const visitor = FindReferencesVisitor.FindReferencesVisitor.visit(tleParseResult.expression, referenceType, referenceName);
-                    result.addAll(visitor.references.translate(jsonStringValue.span.startIndex)); //asdf unquotedspan?
+                    result.addAll(visitor.references.translate(jsonStringValue.span.startIndex));
                 }
             });
         }

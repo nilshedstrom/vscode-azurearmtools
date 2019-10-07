@@ -75,7 +75,7 @@ export abstract class ParentValue extends Value {
 /**
  * A TLE value representing a string.  This can be either an entire JSON string that
  * is not an expression (e.g. "string value") or a single-quoted string value inside
- * of a JSON string that is an expression (e.g. "[concat('string value')]"). asdf is this true?
+ * of a JSON string that is an expression (e.g. "[concat('string value')]").
  *
  * CONSIDER: Differentiate between a string value that is an entire string vs a
  * single-quoted string inside an expression string
@@ -117,14 +117,14 @@ export class StringValue extends Value {
     }
 
     /**
-     * Checks whether the current position is at the argument of a 'parameters' function call //asdf test doesn't catch user functions
+     * Checks whether the current position is at the argument of a 'parameters' function call
      */
     public isParametersArgument(): boolean {
         return this.isBuiltinFunctionArgument("parameters");
     }
 
     /**
-     * Checks whether the current position is at the argument of a 'variables' function call //asdf test doesn't catch user functions
+     * Checks whether the current position is at the argument of a 'variables' function call
      */
     public isVariablesArgument(): boolean {
         return this.isBuiltinFunctionArgument("variables");
@@ -134,11 +134,11 @@ export class StringValue extends Value {
      * Checks whether the current position is at the argument of a call to the
      * built-in function with the given name
      */
-    private isBuiltinFunctionArgument(functionName: string): boolean { //asdf document
+    private isBuiltinFunctionArgument(functionName: string): boolean {
         const parent: Value | null = this.parent;
         return !!parent &&
             parent instanceof FunctionCallValue &&
-            parent.isBuiltin(functionName) &&
+            parent.isCallToBuiltinWithName(functionName) &&
             parent.argumentExpressions[0] === this;
     }
 
@@ -325,8 +325,8 @@ export class FunctionCallValue extends ParentValue {
     /**
      * Returns true if this is a function call to the built-in function with the given name
      */
-    public isBuiltin(functionName: string): boolean {
-        return this.doesNameMatch(null, functionName); //testpoint
+    public isCallToBuiltinWithName(functionName: string): boolean {
+        return this.doesNameMatch(null, functionName);
     }
 
     public doesNameMatch(namespaceName: string | null, name: string): boolean {
@@ -818,7 +818,7 @@ export class Parser {
         return expression;
     }
 
-    // tslint:disable-next-line:cyclomatic-complexity max-func-body-length // asdf
+    // tslint:disable-next-line:cyclomatic-complexity max-func-body-length // CONSIDER: refactor
     private static parseFunctionCall(tokenizer: Tokenizer, errors: language.Issue[]): FunctionCallValue {
         assert(tokenizer);
         assert(tokenizer.current, "tokenizer must have a current token.");

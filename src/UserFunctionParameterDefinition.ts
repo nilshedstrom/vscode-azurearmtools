@@ -16,7 +16,7 @@ export class UserFunctionParameterDefinition implements IParameterDefinition {
     }
 
     public static createIfValid(parameterObject: Json.ObjectValue): UserFunctionParameterDefinition | null {
-        const name = Json.asStringValue(parameterObject.getPropertyValue('name')); // asdf case insensitive
+        const name = Json.asStringValue(parameterObject.getPropertyValue('name'));
         if (name) {
             return new UserFunctionParameterDefinition(name, parameterObject);
         }

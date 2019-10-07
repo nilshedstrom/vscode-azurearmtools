@@ -59,19 +59,19 @@ export class UserFunctionDefinition {
         });
     }
 
-    public get parameterDefinitions(): UserFunctionParameterDefinition[] { //asdf extract?
+    public get parameterDefinitions(): UserFunctionParameterDefinition[] {
         return this._parameterDefinitions.getOrCacheValue(() => {
             const parameterDefinitions: UserFunctionParameterDefinition[] = [];
 
             // User-function parameters are an ordered array, not an object
-            const parametersArray: Json.ArrayValue | null = Json.asArrayValue(this.objectValue.getPropertyValue("parameters")); //testpoint
+            const parametersArray: Json.ArrayValue | null = Json.asArrayValue(this.objectValue.getPropertyValue("parameters"));
             if (parametersArray) {
                 for (const parameter of parametersArray.elements) {
                     const parameterObject = Json.asObjectValue(parameter);
                     if (parameterObject) {
                         const parameterDefinition = UserFunctionParameterDefinition.createIfValid(parameterObject);
                         if (parameterDefinition) {
-                            parameterDefinitions.push(parameterDefinition); //testpoint
+                            parameterDefinitions.push(parameterDefinition);
                         }
                     }
                 }

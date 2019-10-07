@@ -581,7 +581,7 @@ export abstract class Value {
 /**
  * A JSON object that contains properties.
  */
-export class ObjectValue extends Value { // asdf turn into real map
+export class ObjectValue extends Value {
     // Last set with the same (case-insensitive) key wins (just like in Azure template deployment)
     private _caseInsensitivePropertyMap: CachedValue<Map<string, Value | null>> = new CachedValue<Map<string, Value | null>>();
 
@@ -657,7 +657,7 @@ export class ObjectValue extends Value { // asdf turn into real map
      * Get the property names
      */
     public get propertyNames(): string[] {
-        return [...this.caseInsensitivePropertyMap.keys()]; // asdf return duplicates differing only by case?
+        return [...this.caseInsensitivePropertyMap.keys()];
     }
 
     public accept(visitor: Visitor): void {

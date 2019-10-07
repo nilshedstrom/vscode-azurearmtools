@@ -95,7 +95,6 @@ export class PositionContext {
         assert(documentColumnIndex >= 0, "documentColumnIndex cannot be negative");
         assert(documentColumnIndex <= deploymentTemplate.getMaxColumnIndex(documentLineIndex), `documentColumnIndex (${documentColumnIndex}) cannot be greater than the line's maximum index (${deploymentTemplate.getMaxColumnIndex(documentLineIndex)})`);
 
-        // asdf refactor with private constructor
         let context = new PositionContext();
         context._deploymentTemplate = deploymentTemplate;
         context._givenDocumentPosition = new language.Position(documentLineIndex, documentColumnIndex);
@@ -207,7 +206,8 @@ export class PositionContext {
     }
 
     /**
-     * asdf
+     * If this position is inside an expression, inside a reference to an interesting function/parameter/etc, then
+     * return an object with information about this reference and the corresponding definition
      */
     public async getReferenceSiteInfo(): Promise<null | IReferenceSite> {
         const tleInfo = this.tleInfo;
@@ -459,9 +459,9 @@ export class PositionContext {
             // The caret is between the function name and the left parenthesis (with whitespace between them)
             return await PositionContext.getMatchingFunctionCompletions("", this.emptySpanAtDocumentCharacterIndex); //testpoint
         } else {
-            if (tleValue.isBuiltin("parameters") && tleValue.argumentExpressions.length === 0) { //testpoint
+            if (tleValue.isCallToBuiltinWithName("parameters") && tleValue.argumentExpressions.length === 0) { //testpoint
                 return this.getMatchingParameterCompletions("", tleValue, tleCharacterIndex, scope); //testpoint
-            } else if (tleValue.isBuiltin("variables") && tleValue.argumentExpressions.length === 0) {
+            } else if (tleValue.isCallToBuiltinWithName("variables") && tleValue.argumentExpressions.length === 0) {
                 return this.getMatchingVariableCompletions("", tleValue, tleCharacterIndex, scope); //testpoint
             } else {
                 return await PositionContext.getMatchingFunctionCompletions("", this.emptySpanAtDocumentCharacterIndex); //testpoint
@@ -527,8 +527,7 @@ export class PositionContext {
                     case "builtinFunction":
                     case "userNamespace":
                     case "userFunction":
-                        return null; // asdf Not currently supported
-                        break;
+                        return null; // Not currently supported
                     default:
                         return assertNever(refInfo);
                 }
@@ -539,21 +538,20 @@ export class PositionContext {
             }
 
             // Handle when we're directly on the name in a parameter or variable definition (as opposed to a reference)
-            // asdf handle user function and user namespace
             if (referenceType === null) {
-                const jsonStringValue: Json.StringValue | null = Json.asStringValue(this.jsonValue); //testpoint
+                const jsonStringValue: Json.StringValue | null = Json.asStringValue(this.jsonValue);
                 if (jsonStringValue) {
-                    const unquotedString = jsonStringValue.unquotedValue; //testpoint
+                    const unquotedString = jsonStringValue.unquotedValue;
 
                     const parameterDefinition: IParameterDefinition | null = scope.getParameterDefinition(unquotedString);
-                    if (parameterDefinition && parameterDefinition.name.unquotedValue === unquotedString) { //asdf?
+                    if (parameterDefinition && parameterDefinition.name.unquotedValue === unquotedString) {
                         referenceName = unquotedString;
-                        referenceType = Reference.ReferenceKind.Parameter; //testpoint
+                        referenceType = Reference.ReferenceKind.Parameter;
                     } else {
-                        const variableDefinition: Json.Property | null = scope.getVariableDefinition(unquotedString); //testpoint
-                        if (variableDefinition && variableDefinition.name === jsonStringValue) { //testpoint
+                        const variableDefinition: Json.Property | null = scope.getVariableDefinition(unquotedString);
+                        if (variableDefinition && variableDefinition.name === jsonStringValue) {
                             referenceName = unquotedString;
-                            referenceType = Reference.ReferenceKind.Variable; //testpoint
+                            referenceType = Reference.ReferenceKind.Variable;
                         }
                     }
                 }

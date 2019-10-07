@@ -41,7 +41,7 @@ export class UserFunctionNamespaceDefinition {
         assert(_value);
     }
 
-    public static createIfValid(functionValue: Json.ObjectValue): UserFunctionNamespaceDefinition | null { //asdf
+    public static createIfValid(functionValue: Json.ObjectValue): UserFunctionNamespaceDefinition | null {
         let nameValue: Json.StringValue | null = Json.asStringValue(functionValue.getPropertyValue("namespace"));
         if (nameValue) {
             return new UserFunctionNamespaceDefinition(functionValue, nameValue);

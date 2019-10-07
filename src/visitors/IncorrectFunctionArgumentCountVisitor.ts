@@ -33,15 +33,15 @@ export class IncorrectFunctionArgumentCountVisitor extends Visitor {
             const namespaceName: string = tleFunction.namespaceToken.stringValue.toString();
             const nsDefinition: UserFunctionNamespaceDefinition | undefined = this._scope.getFunctionNamespaceDefinition(namespaceName);
 
-            // If not found, will be handled by the UnrecognizedFunctionVisitor another visitor
+            // If not found, will be handled by the UnrecognizedFunctionVisitor visitor
             if (!nsDefinition) {
-                return; //asdf testpoint
+                return;
             }
 
             const functionName: string = tleFunction.nameToken.stringValue.toString();
             const functionDefinition = nsDefinition.getMemberDefinition(functionName);
             if (!functionDefinition) {
-                return;  //asdf testpoint
+                return;
             }
 
             actualFullFunctionName = functionDefinition.fullName;

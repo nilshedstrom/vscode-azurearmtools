@@ -9,7 +9,7 @@ import { StringValue, Value, Visitor } from "../TLE";
 
 /**
  * A TLE visitor that searches a TLE value tree looking for references to the provided parameter or
- * variable. asdf
+ * variable.
  */
 export class FindReferencesVisitor extends Visitor {
     private _references: Reference.List;
