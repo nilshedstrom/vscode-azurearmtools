@@ -1098,8 +1098,8 @@ suite("DeploymentTemplate", () => {
                         includeSources: [sources.expressions]
                     },
                     [
-                        "Error: reference() cannot be invoked inside of a variable definition. (arm-template (expr))",
-                        "Warning: The variable 'a' is never used. (arm-template (expr))"
+                        "Error: reference() cannot be invoked inside of a variable definition. (arm-template (expressions))",
+                        "Warning: The variable 'a' is never used. (arm-template (expressions))"
                     ]);
             });
 
@@ -1115,8 +1115,8 @@ suite("DeploymentTemplate", () => {
             //             includeSources: [sources.expressions]
             //         },
             //         [
-            //             "Error: reference() cannot be invoked inside of a variable definition. (arm-template (expr))",
-            //             "Warning: The variable 'a' is never used. (arm-template (expr))"
+            //             "Error: reference() cannot be invoked inside of a variable definition. (arm-template (expressions))",
+            //             "Warning: The variable 'a' is never used. (arm-template (expressions))"
             //         ]);
             // });
         });

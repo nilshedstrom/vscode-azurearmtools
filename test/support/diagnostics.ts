@@ -18,7 +18,7 @@ import { DISABLE_LANGUAGE_SERVER_TESTS } from "../testConstants";
 import { getTempFilePath } from "./getTempFilePath";
 import { stringify } from "./stringify";
 
-export const diagnosticsTimeout = 30000; // CONSIDER: Use this long timeout only for first test, or for suite setup
+export const diagnosticsTimeout = 2 * 60 * 1000; // CONSIDER: Use this long timeout only for first test, or for suite setup
 export const testFolder = path.join(__dirname, '..', '..', '..', 'test');
 
 export interface Source {
