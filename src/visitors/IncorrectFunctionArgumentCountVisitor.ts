@@ -44,8 +44,7 @@ export class IncorrectFunctionArgumentCountVisitor extends Visitor {
                 return;  //asdf testpoint
             }
 
-            actualFullFunctionName = `${nsDefinition.namespaceName.toString()}.${functionDefinition.name.toString()}`;
-
+            actualFullFunctionName = functionDefinition.fullName;
             minimumArguments = maximumArguments = functionDefinition.parameterDefinitions.length;
         } else {
             // Built-in function call

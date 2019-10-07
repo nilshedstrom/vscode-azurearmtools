@@ -7,13 +7,22 @@ import { DeploymentTemplate } from "../../extension.bundle";
 import { Issue } from '../../src/Language';
 import { stringify } from "./stringify";
 
-export async function parseTemplate(template: string | {}, expectedErrors?: string[]): Promise<DeploymentTemplate> {
+export async function parseTemplate(template: string | {}, expected?: string[], options?: { ignoreWarnings: boolean }): Promise<DeploymentTemplate> {
     const json = typeof template === "string" ? template : stringify(template);
     const dt = new DeploymentTemplate(json, "id");
-    const errors: Issue[] = await dt.errors;
-    const errorMessages = errors.map(e => e.message);
-    if (expectedErrors) {
-        assert.deepStrictEqual(errorMessages, expectedErrors);
+
+    // Always run these even if not checking against expected, to verify nothing throws
+    const errors: Issue[] = await dt.errorsPromise;
+    const warnings: Issue[] = dt.warnings;
+    const errorMessages = errors.map(e => `Error: ${e.message}`);
+    const warningMessages = warnings.map(e => `Warning: ${e.message}`);
+
+    if (expected) {
+        let expectedMessages = errorMessages;
+        if (!options || !options.ignoreWarnings) {
+            expectedMessages = expectedMessages.concat(warningMessages);
+        }
+        assert.deepStrictEqual(expectedMessages, expected);
     }
 
     return dt;
@@ -34,16 +43,11 @@ interface Markers {
  */
 export async function parseTemplateWithMarkers(
     template: string | {},
-    expectedErrors?: string[]
+    expected?: string[],
+    options?: { ignoreWarnings: boolean }
 ): Promise<{ dt: DeploymentTemplate; markers: Markers }> {
-    const { text, markers } = getDocumentMarkers(template);
-    const dt = new DeploymentTemplate(text, "id");
-
-    if (expectedErrors) {
-        const errors: Issue[] = await dt.errors;
-        const errorMessages = errors.map(e => e.message);
-        assert.deepStrictEqual(errorMessages, expectedErrors);
-    }
+    const { text: templateWithoutMarkers, markers } = getDocumentMarkers(template);
+    const dt: DeploymentTemplate = await parseTemplate(templateWithoutMarkers, expected, options);
 
     return { dt, markers };
 }

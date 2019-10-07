@@ -43,7 +43,7 @@ export class UserFunctionNamespaceDefinition {
 
     public static createIfValid(functionValue: Json.ObjectValue): UserFunctionNamespaceDefinition | null { //asdf
         let nameValue: Json.StringValue | null = Json.asStringValue(functionValue.getPropertyValue("namespace"));
-        if (nameValue && nameValue.toString()) {
+        if (nameValue) {
             return new UserFunctionNamespaceDefinition(functionValue, nameValue);
         }
 
@@ -68,7 +68,7 @@ export class UserFunctionNamespaceDefinition {
                     let name: Json.StringValue = member.name;
                     let value = Json.asObjectValue(member.value);
                     if (value) {
-                        let func = new UserFunctionDefinition(name, value);
+                        let func = new UserFunctionDefinition(name, value, this.namespaceName.unquotedValue);
                         membersResult.push(func);
                     }
                 }

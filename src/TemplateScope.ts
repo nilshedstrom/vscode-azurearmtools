@@ -16,14 +16,6 @@ export enum ScopeContext {
     UserFunction = "UserFunction"
 }
 
-// export interface ITemplateScope {
-//     parameterDefinitions: IParameterDefinition[];
-//     variableDefinitions: Json.Property[];
-//     namespaceDefinitions: UserFunctionNamespaceDefinition[];
-
-//     scopeContext: ScopeContext;
-// }
-
 export class TemplateScope {
     /**
      * Constructor

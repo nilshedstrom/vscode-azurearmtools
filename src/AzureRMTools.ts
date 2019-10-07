@@ -192,7 +192,7 @@ export class AzureRMTools {
         deploymentTemplate: DeploymentTemplate,
         stopwatch: Stopwatch
     ): void {
-        const functionsInEachNamespace = deploymentTemplate.namespaceDefinitions.map(ns => ns.members.length);
+        const functionsInEachNamespace = deploymentTemplate.topLevelScope.namespaceDefinitions.map(ns => ns.members.length);
         const userFunctionsCount = functionsInEachNamespace.reduce((sum, count) => sum + count, 0);
 
         ext.reporter.sendTelemetryEvent(
@@ -205,9 +205,9 @@ export class AzureRMTools {
                 documentSizeInCharacters: document.getText().length,
                 parseDurationInMilliseconds: stopwatch.duration.totalMilliseconds,
                 lineCount: deploymentTemplate.lineCount,
-                paramsCount: deploymentTemplate.parameterDefinitions.length,
-                varsCount: deploymentTemplate.variableDefinitions.length,
-                namespacesCount: deploymentTemplate.namespaceDefinitions.length,
+                paramsCount: deploymentTemplate.topLevelScope.parameterDefinitions.length,
+                varsCount: deploymentTemplate.topLevelScope.variableDefinitions.length,
+                namespacesCount: deploymentTemplate.topLevelScope.namespaceDefinitions.length,
                 userFunctionsCount: userFunctionsCount
             });
 
@@ -220,7 +220,7 @@ export class AzureRMTools {
         callWithTelemetryAndErrorHandling('reportDeploymentTemplateErrors', async (actionContext: IActionContext): Promise<void> => {
             actionContext.telemetry.suppressIfSuccessful = true;
 
-            let parseErrors: language.Issue[] = await deploymentTemplate.errors;
+            let parseErrors: language.Issue[] = await deploymentTemplate.errorsPromise;
             const diagnostics: vscode.Diagnostic[] = [];
 
             for (const error of parseErrors) {
@@ -339,7 +339,7 @@ export class AzureRMTools {
             properties.functionCounts = JSON.stringify(functionsData);
 
             // Missing function names and functions with incorrect number of arguments
-            let issues: language.Issue[] = await deploymentTemplate.errors;
+            let issues: language.Issue[] = await deploymentTemplate.errorsPromise;
             let unrecognized = new Set<string>();
             let incorrectArgCounts = new Set<string>();
             for (const issue of issues) {

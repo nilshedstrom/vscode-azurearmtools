@@ -112,17 +112,17 @@ suite("DeploymentTemplate", () => {
             const dt = new DeploymentTemplate("{ 'variables': 12 }", "id");
             assert.deepStrictEqual("id", dt.documentId);
             assert.deepStrictEqual("{ 'variables': 12 }", dt.documentText);
-            assert.deepStrictEqual([], dt.variableDefinitions);
+            assert.deepStrictEqual([], dt.topLevelScope.variableDefinitions);
         });
 
         test("JSON stringValue with one variable definition", () => {
             const dt: DeploymentTemplate = new DeploymentTemplate("{ 'variables': { 'a': 'A' } }", "id");
             assert.deepStrictEqual(dt.documentId, "id");
             assert.deepStrictEqual(dt.documentText, "{ 'variables': { 'a': 'A' } }");
-            assert.deepStrictEqual(dt.variableDefinitions.length, 1);
-            assert.deepStrictEqual(dt.variableDefinitions[0].name.toString(), "a");
+            assert.deepStrictEqual(dt.topLevelScope.variableDefinitions.length, 1);
+            assert.deepStrictEqual(dt.topLevelScope.variableDefinitions[0].name.toString(), "a");
 
-            const variableDefinition: Json.StringValue | null = Json.asStringValue(dt.variableDefinitions[0].value);
+            const variableDefinition: Json.StringValue | null = Json.asStringValue(dt.topLevelScope.variableDefinitions[0].value);
             if (!variableDefinition) { throw new Error("failed"); }
             assert.deepStrictEqual(variableDefinition.span, new Language.Span(22, 3));
             assert.deepStrictEqual(variableDefinition.toString(), "A");
@@ -132,16 +132,16 @@ suite("DeploymentTemplate", () => {
             const dt = new DeploymentTemplate("{ 'variables': { 'a': 'A', 'b': 2 } }", "id");
             assert.deepStrictEqual("id", dt.documentId);
             assert.deepStrictEqual("{ 'variables': { 'a': 'A', 'b': 2 } }", dt.documentText);
-            assert.deepStrictEqual(dt.variableDefinitions.length, 2);
+            assert.deepStrictEqual(dt.topLevelScope.variableDefinitions.length, 2);
 
-            assert.deepStrictEqual(dt.variableDefinitions[0].name.toString(), "a");
-            const a: Json.StringValue | null = Json.asStringValue(dt.variableDefinitions[0].value);
+            assert.deepStrictEqual(dt.topLevelScope.variableDefinitions[0].name.toString(), "a");
+            const a: Json.StringValue | null = Json.asStringValue(dt.topLevelScope.variableDefinitions[0].value);
             if (!a) { throw new Error("failed"); }
             assert.deepStrictEqual(a.span, new Language.Span(22, 3));
             assert.deepStrictEqual(a.toString(), "A");
 
-            assert.deepStrictEqual(dt.variableDefinitions[1].name.toString(), "b");
-            const b: Json.NumberValue | null = Json.asNumberValue(dt.variableDefinitions[1].value);
+            assert.deepStrictEqual(dt.topLevelScope.variableDefinitions[1].name.toString(), "b");
+            const b: Json.NumberValue | null = Json.asNumberValue(dt.topLevelScope.variableDefinitions[1].value);
             if (!b) { throw new Error("failed"); }
             assert.deepStrictEqual(b.span, new Language.Span(32, 1));
         });
@@ -150,21 +150,21 @@ suite("DeploymentTemplate", () => {
     suite("errors", () => {
         test("with empty deployment template", () => {
             const dt = new DeploymentTemplate("", "id");
-            return dt.errors.then((errors: Language.Issue[]) => {
+            return dt.errorsPromise.then((errors: Language.Issue[]) => {
                 assert.deepStrictEqual(errors, []);
             });
         });
 
         test("with empty object deployment template", () => {
             const dt = new DeploymentTemplate("{}", "id");
-            return dt.errors.then((errors: Language.Issue[]) => {
+            return dt.errorsPromise.then((errors: Language.Issue[]) => {
                 assert.deepStrictEqual(errors, []);
             });
         });
 
         test("with one property deployment template", () => {
             const dt = new DeploymentTemplate("{ 'name': 'value' }", "id");
-            return dt.errors.then((errors: Language.Issue[]) => {
+            return dt.errorsPromise.then((errors: Language.Issue[]) => {
                 assert.deepStrictEqual(errors, []);
             });
         });
@@ -174,7 +174,7 @@ suite("DeploymentTemplate", () => {
             const expectedErrors = [
                 new Language.Issue(new Language.Span(20, 1), "Expected a right square bracket (']').")
             ];
-            return dt.errors.then((errors: Language.Issue[]) => {
+            return dt.errorsPromise.then((errors: Language.Issue[]) => {
                 assert.deepStrictEqual(errors, expectedErrors);
             });
         });
@@ -184,7 +184,7 @@ suite("DeploymentTemplate", () => {
             const expectedErrors = [
                 new Language.Issue(new Language.Span(23, 6), "Undefined parameter reference: \"test\"")
             ];
-            return dt.errors.then((errors: Language.Issue[]) => {
+            return dt.errorsPromise.then((errors: Language.Issue[]) => {
                 assert.deepStrictEqual(errors, expectedErrors);
             });
         });
@@ -194,7 +194,7 @@ suite("DeploymentTemplate", () => {
             const expectedErrors = [
                 new Language.Issue(new Language.Span(22, 6), "Undefined variable reference: \"test\"")
             ];
-            return dt.errors.then((errors: Language.Issue[]) => {
+            return dt.errorsPromise.then((errors: Language.Issue[]) => {
                 assert.deepStrictEqual(errors, expectedErrors);
             });
         });
@@ -204,7 +204,7 @@ suite("DeploymentTemplate", () => {
             const expectedErrors = [
                 new UnrecognizedUserNamespaceIssue(new Language.Span(12, 9), "namespace")
             ];
-            return dt.errors.then((errors: Language.Issue[]) => {
+            return dt.errorsPromise.then((errors: Language.Issue[]) => {
                 assert.deepStrictEqual(errors, expectedErrors);
             });
         });
@@ -237,7 +237,7 @@ suite("DeploymentTemplate", () => {
             const expectedErrors = [
                 new UnrecognizedUserFunctionIssue(new Language.Span(22, 4), "contoso", "blah")
             ];
-            return dt.errors.then((errors: Language.Issue[]) => {
+            return dt.errorsPromise.then((errors: Language.Issue[]) => {
                 assert.deepStrictEqual(errors, expectedErrors);
             });
         });
@@ -265,7 +265,7 @@ suite("DeploymentTemplate", () => {
                 "id");
             const expectedErrors = [
             ];
-            return dt.errors.then((errors: Language.Issue[]) => {
+            return dt.errorsPromise.then((errors: Language.Issue[]) => {
                 assert.deepStrictEqual(errors, expectedErrors);
             });
         });
@@ -317,7 +317,7 @@ suite("DeploymentTemplate", () => {
             const expectedErrors = [
                 new UnrecognizedUserFunctionIssue(new Language.Span(22, 9), "contoso", "reference")
             ];
-            return dt.errors.then((errors: Language.Issue[]) => {
+            return dt.errorsPromise.then((errors: Language.Issue[]) => {
                 assert.deepStrictEqual(errors, expectedErrors);
             });
         });
@@ -356,7 +356,7 @@ suite("DeploymentTemplate", () => {
 
         test("with reference() call in variable definition", () => {
             const dt = new DeploymentTemplate(`{ "variables": { "a": "[reference('test')]" } }`, "id");
-            return dt.errors.then((errors: Language.Issue[]) => {
+            return dt.errorsPromise.then((errors: Language.Issue[]) => {
                 assert.deepStrictEqual(
                     errors,
                     [new Language.Issue(new Language.Span(24, 9), "reference() cannot be invoked inside of a variable definition.")]
@@ -399,7 +399,7 @@ suite("DeploymentTemplate", () => {
 
         test("with reference() call inside a different expression in a variable definition", () => {
             const dt = new DeploymentTemplate(`{ "variables": { "a": "[concat(reference('test'))]" } }`, "id");
-            return dt.errors.then((errors: Language.Issue[]) => {
+            return dt.errorsPromise.then((errors: Language.Issue[]) => {
                 assert.deepStrictEqual(
                     errors,
                     [new Language.Issue(new Language.Span(31, 9), "reference() cannot be invoked inside of a variable definition.")]);
@@ -408,7 +408,7 @@ suite("DeploymentTemplate", () => {
 
         test("with unnamed property access on variable reference", () => {
             const dt = new DeploymentTemplate(`{ "variables": { "a": {} }, "z": "[variables('a').]" }`, "id");
-            return dt.errors.then((errors: Language.Issue[]) => {
+            return dt.errorsPromise.then((errors: Language.Issue[]) => {
                 assert.deepStrictEqual(
                     errors,
                     [new Language.Issue(new Language.Span(50, 1), "Expected a literal value.")]);
@@ -417,7 +417,7 @@ suite("DeploymentTemplate", () => {
 
         test("with property access on variable reference without variable name", () => {
             const dt = new DeploymentTemplate(`{ "variables": { "a": {} }, "z": "[variables().b]" }`, "id");
-            return dt.errors.then((errors: Language.Issue[]) => {
+            return dt.errorsPromise.then((errors: Language.Issue[]) => {
                 assert.deepStrictEqual(
                     errors,
                     [new IncorrectArgumentsCountIssue(new Language.Span(35, 11), "The function 'variables' takes 1 argument.", "variables", 0, 1, 1)]);
@@ -426,7 +426,7 @@ suite("DeploymentTemplate", () => {
 
         test("with property access on string variable reference", () => {
             const dt = new DeploymentTemplate(`{ "variables": { "a": "A" }, "z": "[variables('a').b]" }`, "id");
-            return dt.errors.then((errors: Language.Issue[]) => {
+            return dt.errorsPromise.then((errors: Language.Issue[]) => {
                 assert.deepStrictEqual(
                     errors,
                     [new Language.Issue(new Language.Span(51, 1), `Property "b" is not a defined property of "variables('a')".`)]);
@@ -435,7 +435,7 @@ suite("DeploymentTemplate", () => {
 
         test("with undefined variable reference child property", () => {
             const dt = new DeploymentTemplate(`{ "variables": { "a": {} }, "z": "[variables('a').b]" }`, "id");
-            return dt.errors.then((errors: Language.Issue[]) => {
+            return dt.errorsPromise.then((errors: Language.Issue[]) => {
                 assert.deepStrictEqual(
                     errors,
                     [new Language.Issue(new Language.Span(50, 1), `Property "b" is not a defined property of "variables('a')".`)]);
@@ -444,7 +444,7 @@ suite("DeploymentTemplate", () => {
 
         test("with undefined variable reference grandchild property", () => {
             const dt = new DeploymentTemplate(`{ "variables": { "a": { "b": {} } }, "z": "[variables('a').b.c]" }`, "id");
-            return dt.errors.then((errors: Language.Issue[]) => {
+            return dt.errorsPromise.then((errors: Language.Issue[]) => {
                 assert.deepStrictEqual(
                     errors,
                     [new Language.Issue(new Language.Span(61, 1), `Property "c" is not a defined property of "variables('a').b".`)]);
@@ -453,7 +453,7 @@ suite("DeploymentTemplate", () => {
 
         test("with undefined variable reference child and grandchild properties", () => {
             const dt = new DeploymentTemplate(`{ "variables": { "a": { "d": {} } }, "z": "[variables('a').b.c]" }`, "id");
-            return dt.errors.then((errors: Language.Issue[]) => {
+            return dt.errorsPromise.then((errors: Language.Issue[]) => {
                 assert.deepStrictEqual(
                     errors,
                     [new Language.Issue(new Language.Span(59, 1), `Property "b" is not a defined property of "variables('a')".`)]);
@@ -1263,20 +1263,20 @@ suite("DeploymentTemplate", () => {
             // Just make sure nothing throws
             let modifiedTemplate = template.replace('"type": "string"', '"type": string');
             let dt = new DeploymentTemplate(modifiedTemplate, "id");
-            await dt.errors; // asdf test completions, etc.
+            await dt.errorsPromise; // asdf test completions, etc.
         });
 
         test("Unended string", async () => {
             const json = "{ \"";
             let dt = new DeploymentTemplate(json, "id");
-            await dt.errors;
+            await dt.errorsPromise;
             dt.getFunctionCounts();
         });
 
         test("No top-level object", async () => {
             const json = "\"hello\"";
             let dt = new DeploymentTemplate(json, "id");
-            await dt.errors;
+            await dt.errorsPromise;
             dt.getFunctionCounts();
         });
 
@@ -1292,7 +1292,7 @@ suite("DeploymentTemplate", () => {
             }
         }`;
             const dt = new DeploymentTemplate(json, "id");
-            await dt.errors;
+            await dt.errorsPromise;
         });
 
         test("Malformed property", async () => {
@@ -1307,7 +1307,7 @@ suite("DeploymentTemplate", () => {
             }
         }`;
             const dt = new DeploymentTemplate(json, "id");
-            await dt.errors;
+            await dt.errorsPromise;
         });
 
         test("typing character by character", async function (this: ITestCallbackContext): Promise<void> {
@@ -1320,7 +1320,7 @@ suite("DeploymentTemplate", () => {
             for (let i = 0; i < template.length; ++i) {
                 let partialTemplate = template.slice(0, i);
                 let dt = new DeploymentTemplate(partialTemplate, "id");
-                await dt.errors;
+                await dt.errorsPromise;
 
                 await exercisePositionContextAtRandomPointsInTheDoc(template, 0.1);
             }
@@ -1336,7 +1336,7 @@ suite("DeploymentTemplate", () => {
             for (let i = 0; i < template.length; ++i) {
                 let partialTemplate = template.slice(i);
                 let dt = new DeploymentTemplate(partialTemplate, "id");
-                await dt.errors;
+                await dt.errorsPromise;
 
                 await exercisePositionContextAtRandomPointsInTheDoc(template, 0.1);
             }
@@ -1353,7 +1353,7 @@ suite("DeploymentTemplate", () => {
                 // Remove the single character at position i
                 let partialTemplate = template.slice(0, i) + template.slice(i + 1);
                 let dt = new DeploymentTemplate(partialTemplate, "id");
-                await dt.errors;
+                await dt.errorsPromise;
 
                 await exercisePositionContextAtRandomPointsInTheDoc(template, 0.1);
             }
@@ -1393,7 +1393,7 @@ suite("DeploymentTemplate", () => {
                 }
 
                 let dt = new DeploymentTemplate(modifiedTemplate, "id");
-                await dt.errors;
+                await dt.errorsPromise;
 
                 await exercisePositionContextAtRandomPointsInTheDoc(template, 0.1);
             }

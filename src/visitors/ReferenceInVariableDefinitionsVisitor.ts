@@ -28,7 +28,7 @@ export class ReferenceInVariableDefinitionsVisitor extends Json.Visitor {
     public visitStringValue(value: Json.StringValue): void {
         assert(value, "Cannot visit a null or undefined Json.StringValue.");
 
-        const tleParseResult: TLE.ParseResult | null = this._deploymentTemplate.getTLEParseResultFromJSONStringValue(value);
+        const tleParseResult: TLE.ParseResult | null = this._deploymentTemplate.getTLEParseResultFromJsonStringValue(value);
         if (tleParseResult && tleParseResult.expression) {
             const tleVisitor = new ReferenceInVariableDefinitionTLEVisitor();
             tleParseResult.expression.accept(tleVisitor);

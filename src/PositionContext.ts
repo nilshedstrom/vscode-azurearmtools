@@ -191,7 +191,7 @@ export class PositionContext {
                 && this.jsonValue
                 && this.jsonValue instanceof Json.StringValue
             ) {
-                const tleParseResult = this._deploymentTemplate.getTLEParseResultFromJSONStringValue(this.jsonValue);
+                const tleParseResult = this._deploymentTemplate.getTLEParseResultFromJsonStringValue(this.jsonValue);
                 if (tleParseResult) {
                     const tleCharacterIndex = this.documentCharacterIndex - this.jsonTokenStartIndex;
                     const tleValue = tleParseResult.getValueAtCharacterIndex(tleCharacterIndex);
