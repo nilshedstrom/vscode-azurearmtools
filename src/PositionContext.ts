@@ -458,9 +458,7 @@ export class PositionContext {
             return this.getMatchingParameterCompletions("", tleValue, tleCharacterIndex, scope); //testpoint
         } else if (tleValue.isCallToBuiltinWithName("variables") && tleValue.argumentExpressions.length === 0) {
             return this.getMatchingVariableCompletions("", tleValue, tleCharacterIndex, scope); //testpoint
-        }
-
-        if (tleValue.nameToken && tleValue.nameToken.span.contains(tleCharacterIndex, true)) {
+        } else if (tleValue.nameToken && tleValue.nameToken.span.contains(tleCharacterIndex, true)) {
             // The caret is inside the function's name (or a namespace before the period has been typed)
             const functionNameStartIndex: number = tleValue.nameToken.span.startIndex; //testpoint
             const functionNamePrefix: string = tleValue.nameToken.stringValue.substring(0, tleCharacterIndex - functionNameStartIndex);
@@ -481,8 +479,13 @@ export class PositionContext {
                 const namespaceCompletions = await PositionContext.getMatchingNamespaceCompletions(scope, functionNamePrefix, replaceSpan); //testpoint
                 return functionCompletions.concat(namespaceCompletions);
             }
-        } else if (functionNamespace && tleValue.periodToken && tleValue.periodToken.span.contains(tleCharacterIndex, true)) {
+        } else if (functionNamespaceName && tleValue.periodToken && tleValue.periodToken.span.contains(tleCharacterIndex, true)) {
             // The caret is on the period between a namespace and a function name
+            if (!functionNamespace) {
+                // Namespace not found, no completions
+                return [];
+            }
+
             const functionNameStartIndex: number = tleValue.nameToken ? tleValue.nameToken.span.startIndex : tleValue.periodToken.span.afterEndIndex; //testpoint
             const functionNamePrefix: string = tleValue.name ? tleValue.name.substring(0, tleCharacterIndex - functionNameStartIndex) : ""; //testpoint
 

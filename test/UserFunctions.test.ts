@@ -1520,7 +1520,9 @@ suite("User functions", () => {
             "functions": [
                 {
                     "namespace": "mixedCaseNamespace",
-                    "members": {}
+                    "members": {
+                        "howdy": {}
+                    }
                 },
                 {
                     "namespace": "udf",
@@ -1594,7 +1596,7 @@ suite("User functions", () => {
                         },
                         udf34: {
                         },
-                        mixedCase: {
+                        mixedCaseFunc: {
                         }
                     }
                 }
@@ -1687,7 +1689,7 @@ suite("User functions", () => {
                 createCompletionsTest('<output1>', 'udf.U!', [["udf.udf", "udf($0)"], ["udf.udf2", "udf2()$0"], ["udf.udf3", "udf3()$0"], ["udf.udf34", "udf34()$0"]]);
                 createCompletionsTest('<output1>', 'udf.uD!', [["udf.udf", "udf($0)"], ["udf.udf2", "udf2()$0"], ["udf.udf3", "udf3()$0"], ["udf.udf34", "udf34()$0"]]);
                 createCompletionsTest('<output1>', 'udf.udF!', [["udf.udf", "udf($0)"], ["udf.udf2", "udf2()$0"], ["udf.udf3", "udf3()$0"], ["udf.udf34", "udf34()$0"]]);
-                createCompletionsTest('<output1>', 'udf.MIXEDCase!', [["udf.mixedCase", "mixedCase()$0"]]);
+                createCompletionsTest('<output1>', 'udf.MIXEDCase!', [["udf.mixedCaseFunc", "mixedCaseFunc()$0"]]);
             });
 
             suite("Completing built-in functions inside functions", () => {
@@ -1706,7 +1708,7 @@ suite("User functions", () => {
 
             suite("Completing udf. gives udf's functions", () => {
                 createCompletionsTest('<output1>', 'udf.!', [
-                    ["udf.mixedCase", "mixedCase()$0"],
+                    ["udf.mixedCaseFunc", "mixedCaseFunc()$0"],
                     ["udf.string", "string($0)"],
                     ["udf.parameters", "parameters($0)"],
                     ["udf.udf", "udf($0)"],
@@ -1714,11 +1716,15 @@ suite("User functions", () => {
                     ["udf.udf3", "udf3()$0"],
                     ["udf.udf34", "udf34()$0"],
                 ]);
-                createCompletionsTest('<output1>', 'mixedcase.!', [["udf.mixedCase", "mixedCase()$0"]]);
+                createCompletionsTest('<output1>', 'mixedCaseNamespace.!', [["mixedCaseNamespace.howdy", "howdy()$0"]]);
+            });
+
+            suite("Completing udf. case-insensitive", () => {
+                createCompletionsTest('<output1>', 'MIXEDCASENAMESPACE.!', [["mixedCaseNamespace.howdy", "howdy()$0"]]);
             });
 
             suite("Completing <unknownnamespace>. gives empty", () => {
-                //asdf createCompletionsTest('<output1>', 'ud2.!', []);
+                createCompletionsTest('<output1>', 'ud2.!', []);
             });
 
         }); // end Completing UDF function names
