@@ -1736,7 +1736,7 @@ suite("User functions", () => {
             });
 
             suite("Matches namespaces and built-in functions", () => {
-                createCompletionsTest('<output1>', 'u!', [["udf", "udf.$0"], ["union", "union"], ["uniqueString", "uniqueString"], ["uri", "uri"], ["uriComponent", "uriComponent"], ["uriComponentToString", "uriComponentToString"]]);
+                createCompletionsTest('<output1>', 'u!', [["udf", "udf.$0"], ["union", "union($0)"], ["uniqueString", "uniqueString($0)"], ["uri", "uri($0)"], ["uriComponent", "uriComponent($0)"], ["uriComponentToString", "uriComponentToString($0)"]]);
             });
 
             test("Parameter names in outer scope");
