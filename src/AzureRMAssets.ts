@@ -16,12 +16,17 @@ export class AzureRMAssets {
     private static _functionsMetadataPromise: Promise<FunctionsMetadata> | undefined;
 
     // For test dependency injection only
-    public static setFunctionsMetadata(metadataString: string): void {
-        // tslint:disable-next-line:typedef
-        AzureRMAssets._functionsMetadataPromise = new Promise<FunctionsMetadata>(async (resolve, reject) => {
-            let array = BuiltinFunctionMetadata.fromString(metadataString);
-            resolve(new FunctionsMetadata(array));
-        });
+    public static setFunctionsMetadata(metadataString: string | undefined): void {
+        if (!metadataString) {
+            // Reset so next call to getFunctionsMetadata will retrieve real data
+            AzureRMAssets._functionsMetadataPromise = undefined;
+        } else {
+            // tslint:disable-next-line:typedef
+            AzureRMAssets._functionsMetadataPromise = new Promise<FunctionsMetadata>(async (resolve, reject) => {
+                let array = BuiltinFunctionMetadata.fromString(metadataString);
+                resolve(new FunctionsMetadata(array));
+            });
+        }
     }
 
     public static async getFunctionsMetadata(): Promise<FunctionsMetadata> {
@@ -109,7 +114,11 @@ export class BuiltinFunctionMetadata implements IFunctionMetadata {
         this._returnType = this.returnValueMembers.length > 0 ? 'object' : null;
     }
 
-    public get name(): string {
+    public get fullName(): string {
+        return this._name;
+    }
+
+    public get unqualifiedName(): string {
         return this._name;
     }
 

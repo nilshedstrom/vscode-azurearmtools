@@ -126,7 +126,7 @@ export class TemplateScope {
 
         let result: IParameterDefinition | null = null;
 
-        if (tleFunction.nameToken.stringValue === "parameters") {
+        if (tleFunction.name === "parameters") {
             const propertyName: TLE.StringValue | null = TLE.asStringValue(tleFunction.argumentExpressions[0]);
             if (propertyName) {
                 result = this.getParameterDefinition(propertyName.toString());
@@ -134,6 +134,32 @@ export class TemplateScope {
         }
 
         return result;
+    }
+
+    public findFunctionDefinitionsWithPrefix(namespace: UserFunctionNamespaceDefinition, functionNamePrefix: string): UserFunctionDefinition[] {
+        let results: UserFunctionDefinition[] = [];
+
+        let lowerCasedPrefix = functionNamePrefix.toLowerCase();
+        for (let member of namespace.members) {
+            if (member.name.unquotedValue.toLowerCase().startsWith(lowerCasedPrefix)) {
+                results.push(member);
+            }
+        }
+
+        return results;
+    }
+
+    public findNamespaceDefinitionsWithPrefix(namespaceNamePrefix: string): UserFunctionNamespaceDefinition[] {
+        let results: UserFunctionNamespaceDefinition[] = [];
+
+        let lowerCasedPrefix = namespaceNamePrefix.toLowerCase();
+        for (let ns of this.namespaceDefinitions) {
+            if (ns.namespaceName.unquotedValue.toLowerCase().startsWith(lowerCasedPrefix)) {
+                results.push(ns);
+            }
+        }
+
+        return results;
     }
 
     public findParameterDefinitionsWithPrefix(parameterNamePrefix: string): IParameterDefinition[] {
