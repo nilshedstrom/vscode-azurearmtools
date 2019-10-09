@@ -29,6 +29,11 @@ export class IncorrectFunctionArgumentCountVisitor extends Visitor {
         let minimumArguments: number | undefined;
         let maximumArguments: number | undefined;
 
+        const functionName: string | null = tleFunction.name;
+        if (!functionName) {
+            return;
+        }
+
         if (tleFunction.namespaceToken) {
             const namespaceName: string = tleFunction.namespaceToken.stringValue.toString();
             const nsDefinition: UserFunctionNamespaceDefinition | undefined = this._scope.getFunctionNamespaceDefinition(namespaceName);
@@ -38,7 +43,6 @@ export class IncorrectFunctionArgumentCountVisitor extends Visitor {
                 return;
             }
 
-            const functionName: string = tleFunction.nameToken.stringValue.toString();
             const functionDefinition = nsDefinition.getMemberDefinition(functionName);
             if (!functionDefinition) {
                 return;
@@ -48,12 +52,11 @@ export class IncorrectFunctionArgumentCountVisitor extends Visitor {
             minimumArguments = maximumArguments = functionDefinition.parameterDefinitions.length;
         } else {
             // Built-in function call
-            const parsedFunctionName: string = tleFunction.nameToken.stringValue;
-            let functionMetadata: assets.BuiltinFunctionMetadata | undefined = this._tleFunctions.findbyName(parsedFunctionName);
+            let functionMetadata: assets.BuiltinFunctionMetadata | undefined = this._tleFunctions.findbyName(functionName);
             if (!functionMetadata) {
                 return;
             }
-            actualFullFunctionName = functionMetadata.name;
+            actualFullFunctionName = functionMetadata.fullName;
 
             minimumArguments = functionMetadata.minimumArguments;
             // tslint:disable-next-line:max-line-length

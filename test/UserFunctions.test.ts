@@ -9,6 +9,8 @@ import * as assert from "assert";
 import { DeploymentTemplate, Hover, IReferenceSite, Language, Reference } from "../extension.bundle";
 import { IDeploymentTemplate } from "./support/diagnostics";
 import { parseTemplate, parseTemplateWithMarkers } from "./support/parseTemplate";
+import { stringify } from "./support/stringify";
+import { allTestDataExpectedCompletions } from "./TestData";
 
 suite("User functions", () => {
 
@@ -1212,7 +1214,7 @@ suite("User functions", () => {
 
         suite("UDF Find user function references", () => {
             // tslint:disable-next-line: no-suspicious-comment
-            if (false) { // TODO: feature not yet implemented
+            if (false) { // TODO: feature not yet implemented  asdf
                 test("At reference to user-defined function, cursor inside the namespace portion", async () => {
                     const { dt, markers: { udfDef, udfRefAtNs } } = await parseTemplateWithMarkers(userFuncsTemplate1, [], { ignoreWarnings: true });
 
@@ -1510,6 +1512,349 @@ suite("User functions", () => {
                 ]);
             });
         });
-    });
+    }); // suite Warnings
+
+    suite("UDF Completions", async () => {
+        const userFuncsTemplate2: IDeploymentTemplate = {
+            "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+            "contentVersion": "1.0.0.0",
+            "functions": [
+                {
+                    "namespace": "mixedCaseNamespace",
+                    "members": {
+                        "howdy": {}
+                    }
+                },
+                {
+                    "namespace": "udf",
+                    "members": {
+                        string: {
+                            "parameters": [
+                                {
+                                    "name": "year",
+                                    "type": "Int"
+                                },
+                                {
+                                    "name": "month",
+                                    // tslint:disable-next-line:no-any
+                                    "type": <any>123 // invalid type
+                                },
+                                {
+                                    "name": "day",
+                                    "type": "int"
+                                }
+                            ],
+                            "output": {
+                                "type": "string",
+                                "value": "[<stringOutputValue>]" // This will get replaced in the tests
+                            }
+                        },
+                        parameters: {
+                            "parameters": [
+                                {
+                                    "name": "year",
+                                    "type": "Int"
+                                },
+                                {
+                                    "name": "month",
+                                    // tslint:disable-next-line:no-any
+                                    "type": <any>123 // invalid type
+                                },
+                                {
+                                    "name": "day",
+                                    "type": "int"
+                                }
+                            ],
+                            "output": {
+                                "type": "string",
+                                "value": "[concat(string(parameters('year')), '-', string(parameters('month')), '-', string(parameters('day')))]"
+                            }
+                        },
+                        udf: {
+                            "parameters": [
+                                {
+                                    "name": "year",
+                                    "type": "Int"
+                                },
+                                {
+                                    "name": "month",
+                                    // tslint:disable-next-line:no-any
+                                    "type": <any>123 // invalid type
+                                },
+                                {
+                                    "name": "day",
+                                    "type": "int"
+                                }
+                            ],
+                            "output": {
+                                "type": "string",
+                                "value": "[concat(string(parameters('year')), '-', string(parameters('month')), '-', string(parameters('day')))]"
+                            }
+                        },
+                        udf2: {
+                        },
+                        udf3: {
+                        },
+                        udf34: {
+                        },
+                        mixedCaseFunc: {
+                        }
+                    }
+                }
+            ],
+            "resources": [
+                {
+                    "type": "Microsoft.Storage/storageAccounts",
+                    "name": "[parameters('year')]",
+                    "apiVersion": "[parameters('apiVersion')]",
+                    "location": "westus"
+                }
+            ],
+            "parameters": {
+                "year": {
+                    "type": "int",
+                    "defaultValue": 2010
+                },
+                "apiVersion": {
+                    "type": "int",
+                    "defaultValue": 2010
+                }
+            },
+            "variables": {
+                "var1": {
+                    "a": {
+                        "b": {
+                            "c": 16180339887498948482
+                        },
+                        "d": 42
+                    }
+                },
+                "var2": "[variables('var1')]"
+            },
+            "outputs": {
+                "output1": {
+                    "type": "int",
+                    "value": "[<output1>]" // This will get replaced in the tests
+                },
+                "output2": {
+                    "type": "string",
+                    "value": "[udf.string(2019, 10, 5)]" // Using user function udf.string
+                },
+                "output3": {
+                    "type": "string",
+                    "value": "[string(2019)]" // using built-in function 'string'
+                },
+                "output4": {
+                    "type": "string",
+                    "value": "<output4BeforeBrackets>['hello']"
+                }
+            }
+        };
+
+        const allBuiltinsExpectedCompletions = allTestDataExpectedCompletions(0, 0).map(c => <[string, string]>[c.name, c.insertText]);
+        const allNamespaceExpectedCompletions: [string, string][] = [["mixedCaseNamespace", "mixedCaseNamespace.$0"], ["udf", "udf.$0"]];
+        const allUdfNsFunctionsCompletions: [string, string][] = [
+            ["udf.mixedCaseFunc", "mixedCaseFunc()$0"],
+            ["udf.string", "string($0)"],
+            ["udf.parameters", "parameters($0)"],
+            ["udf.udf", "udf($0)"],
+            ["udf.udf2", "udf2()$0"],
+            ["udf.udf3", "udf3()$0"],
+            ["udf.udf34", "udf34()$0"]];
+        const allMixedCaseNsFunctionsCompletions: [string, string][] = [["mixedCaseNamespace.howdy", "howdy()$0"]];
+
+        function createCompletionsTest(find: string, replacementWithBang: string, expectedNamesAndInsertTexts: [string, string][]): void {
+            test(`Test UDF Completions: ${replacementWithBang}`, async () => {
+                const template = stringify(userFuncsTemplate2).replace(find, replacementWithBang);
+
+                const { dt, markers: { bang } } = await parseTemplateWithMarkers(template);
+                assert(bang, "Didn't find ! marker in text");
+                const pc = dt.getContextFromDocumentCharacterIndex(bang.index);
+                const completions = await pc.getCompletionItems();
+
+                const completionNames = completions.map(c => c.name).sort();
+                const completionInserts = completions.map(c => c.insertText).sort();
+
+                const expectedNames = expectedNamesAndInsertTexts.map(e => e[0]).sort();
+                const expectedInsertTexts = expectedNamesAndInsertTexts.map(e => e[1]).sort();
+
+                assert.deepStrictEqual(completionNames, expectedNames, "Completion names didn't match");
+                assert.deepStrictEqual(completionInserts, expectedInsertTexts, "Completion insert texts didn't match");
+            });
+        }
+
+        suite("Completing UDF function names", () => {
+            suite("Completing udf.xxx gives udf's functions starting with xxx - not found", () => {
+                createCompletionsTest('<output1>', 'udf.x!', []);
+                createCompletionsTest('<output1>', 'udf.udf35!', []);
+                createCompletionsTest('<output1>', 'udf.udf1!', []);
+            });
+
+            suite("Completing inside xxx in udf.xxx gives only udf's functions starting with xxx", () => {
+                // $0 indicates where the cursor should be placed after replacement
+                createCompletionsTest('<output1>', 'udf.p!', [["udf.parameters", "parameters($0)"]]);
+                createCompletionsTest('<output1>', 'udf.u!', [["udf.udf", "udf($0)"], ["udf.udf2", "udf2()$0"], ["udf.udf3", "udf3()$0"], ["udf.udf34", "udf34()$0"]]);
+                createCompletionsTest('<output1>', 'udf.ud!', [["udf.udf", "udf($0)"], ["udf.udf2", "udf2()$0"], ["udf.udf3", "udf3()$0"], ["udf.udf34", "udf34()$0"]]);
+                createCompletionsTest('<output1>', 'udf.udf!', [["udf.udf", "udf($0)"], ["udf.udf2", "udf2()$0"], ["udf.udf3", "udf3()$0"], ["udf.udf34", "udf34()$0"]]);
+                createCompletionsTest('<output1>', 'udf.udf2!', [["udf.udf2", "udf2()$0"]]);
+                createCompletionsTest('<output1>', 'udf.udf3!', [["udf.udf3", "udf3()$0"], ["udf.udf34", "udf34()$0"]]);
+                createCompletionsTest('<output1>', 'udf.udf34!', [["udf.udf34", "udf34()$0"]]);
+            });
+
+            suite("Completing udf.xxx gives udf's functions starting with xxx - case insensitive", () => {
+                createCompletionsTest('<output1>', 'udf.P!', [["udf.parameters", "parameters($0)"]]);
+                createCompletionsTest('<output1>', 'udf.U!', [["udf.udf", "udf($0)"], ["udf.udf2", "udf2()$0"], ["udf.udf3", "udf3()$0"], ["udf.udf34", "udf34()$0"]]);
+                createCompletionsTest('<output1>', 'udf.uD!', [["udf.udf", "udf($0)"], ["udf.udf2", "udf2()$0"], ["udf.udf3", "udf3()$0"], ["udf.udf34", "udf34()$0"]]);
+                createCompletionsTest('<output1>', 'udf.udF!', [["udf.udf", "udf($0)"], ["udf.udf2", "udf2()$0"], ["udf.udf3", "udf3()$0"], ["udf.udf34", "udf34()$0"]]);
+                createCompletionsTest('<output1>', 'udf.MIXEDCase!', [["udf.mixedCaseFunc", "mixedCaseFunc()$0"]]);
+            });
+
+            suite("Completing built-in functions inside functions", () => {
+                createCompletionsTest('<output1>', 'param!', [["parameters", "parameters($0)"]]);
+                createCompletionsTest('<output1>', 'p!', [["padLeft", "padLeft($0)"], ["parameters", "parameters($0)"], ["providers", "providers($0)"]]);
+                createCompletionsTest('<output1>', 'P!', [["padLeft", "padLeft($0)"], ["parameters", "parameters($0)"], ["providers", "providers($0)"]]);
+            });
+
+            suite("Completing built-in functions with UDF function names returns empty", () => {
+                createCompletionsTest('<output1>', 'udf1!', []);
+            });
+
+            suite("Completing udf.param does not find built-in parameters function", () => {
+                createCompletionsTest('<output1>', 'udf.param!', [["udf.parameters", "parameters($0)"]]);
+            });
+
+            suite("Completing udf. gives udf's functions", () => {
+                createCompletionsTest('<output1>', 'udf.!', allUdfNsFunctionsCompletions);
+                createCompletionsTest('<output1>', 'mixedCaseNamespace.!', allMixedCaseNsFunctionsCompletions);
+            });
+
+            suite("Completing udf. case-insensitive", () => {
+                createCompletionsTest('<output1>', 'MIXEDCASENAMESPACE.!', allMixedCaseNsFunctionsCompletions);
+            });
+
+            suite("Completing <unknownnamespace>. gives empty", () => {
+                createCompletionsTest('<output1>', 'ud2.!', []);
+            });
+
+            suite("Completing in middle of function name", () => {
+                createCompletionsTest("<output1>", "udf.!udf34", [["udf.mixedCaseFunc", "mixedCaseFunc()$0"], ["udf.string", "string($0)"], ["udf.parameters", "parameters($0)"], ["udf.udf", "udf($0)"], ["udf.udf2", "udf2()$0"], ["udf.udf3", "udf3()$0"], ["udf.udf34", "udf34()$0"]]);
+                createCompletionsTest("<output1>", "udf.u!df34", [["udf.udf", "udf($0)"], ["udf.udf2", "udf2()$0"], ["udf.udf3", "udf3()$0"], ["udf.udf34", "udf34()$0"]]);
+                createCompletionsTest("<output1>", "udf.udf3!4", [["udf.udf3", "udf3()$0"], ["udf.udf34", "udf34()$0"]]);
+                createCompletionsTest("<output1>", "udf.udf34!", [["udf.udf34", "udf34()$0"]]);
+                createCompletionsTest("<output1>", "udf.udf345!", []);
+            });
+        }); // end Completing UDF function names
+
+        suite("Completing UDF namespaces before a function name is typed", () => {
+            suite("Unknown namespace or built-in", () => {
+                createCompletionsTest('<output1>', 'xyz!', []);
+                createCompletionsTest('<output1>', 'udf2!', []);
+            });
+
+            suite("Only matches namespace", () => {
+                createCompletionsTest('<output1>', 'ud!', [["udf", "udf.$0"]]);
+                createCompletionsTest('<output1>', 'udf!', [["udf", "udf.$0"]]);
+                createCompletionsTest('<output1>', 'mixedCase!', [["mixedCaseNamespace", "mixedCaseNamespace.$0"]]);
+                createCompletionsTest('<output1>', 'mixedCaseNamespace!', [["mixedCaseNamespace", "mixedCaseNamespace.$0"]]);
+            });
+
+            suite("Only matches namespace - case insensitive", () => {
+                createCompletionsTest('<output1>', 'ud!', [["udf", "udf.$0"]]);
+                createCompletionsTest('<output1>', 'udf!', [["udf", "udf.$0"]]);
+                createCompletionsTest('<output1>', 'MIXEDCASE!', [["mixedCaseNamespace", "mixedCaseNamespace.$0"]]);
+                createCompletionsTest('<output1>', 'mixedCASENAMESPACE!', [["mixedCaseNamespace", "mixedCaseNamespace.$0"]]);
+            });
+
+            suite("Matches namespaces and built-in functions", () => {
+                createCompletionsTest('<output1>', 'u!', [["udf", "udf.$0"], ["uniqueString", "uniqueString($0)"], ["uri", "uri($0)"]]);
+            });
+        }); // end Completing UDF namespaces
+
+        suite("Completing UDF namespaces after a function name already exists", () => {
+            suite("Unknown namespace or built-in", () => {
+                createCompletionsTest('<output1>', 'x!yz.', []);
+                createCompletionsTest('<output1>', 'udf2!.', []);
+            });
+
+            suite("Matches namespaces and built-in functions", () => {
+                createCompletionsTest('<output1>', '!udf.string', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+                createCompletionsTest('<output1>', 'u!df.string', [["udf", "udf.$0"], ["uniqueString", "uniqueString($0)"], ["uri", "uri($0)"]]);
+                createCompletionsTest('<output1>', 'ud!f.abc', [["udf", "udf.$0"]]);
+                createCompletionsTest('<output1>', 'udf!.abc', [["udf", "udf.$0"]]);
+                createCompletionsTest('<output1>', 'mixed!Ca.abc', [["mixedCaseNamespace", "mixedCaseNamespace.$0"]]);
+            });
+
+            suite("Parameters in outer scope", () => {
+                createCompletionsTest('<output1>', 'parameters!', [["parameters", "parameters($0)"]]); // asdf should add all parameters to this
+                createCompletionsTest('<output1>', 'parameters(!', [["'year'", "'year')$0"], ["'apiVersion'", "'apiVersion')$0"]]);
+                createCompletionsTest('<output1>', 'parameters(!)', [["'year'", "'year')$0"], ["'apiVersion'", "'apiVersion')$0"]]);
+                createCompletionsTest('<output1>', "parameters('!y", [["'year'", "'year')$0"], ["'apiVersion'", "'apiVersion')$0"]]);
+                createCompletionsTest('<output1>', "parameters('y!", [["'year'", "'year')$0"]]);
+            });
+
+            suite("Parameters in function scope", () => {
+                // Parameter completions should only be parameters inside the function
+                createCompletionsTest('<stringOutputValue>', 'parameters!', [["parameters", "parameters($0)"]]);
+                createCompletionsTest('<stringOutputValue>', 'parameters(!', [["'year'", "'year')$0"], ["'day'", "'day')$0"], ["'month'", "'month')$0"]]);
+                createCompletionsTest('<stringOutputValue>', "parameters('y!", [["'year'", "'year')$0"]]);
+            });
+
+            suite("Variables in outer scope", () => {
+                createCompletionsTest('<output1>', 'variables!', [["variables", "variables($0)"]]);
+                createCompletionsTest('<output1>', 'variables(!', [["'var1'", "'var1')$0"], ["'var2'", "'var2')$0"]]);
+                createCompletionsTest('<output1>', 'variables(!)', [["'var1'", "'var1')$0"], ["'var2'", "'var2')$0"]]);
+                createCompletionsTest('<output1>', "variables('!y", [["'var1'", "'var1')$0"], ["'var2'", "'var2')$0"]]);
+                createCompletionsTest('<output1>', "variables('y!", []);
+                createCompletionsTest('<output1>', "variables('v!", [["'var1'", "'var1')$0"], ["'var2'", "'var2')$0"]]);
+                createCompletionsTest('<output1>', "variables('var1!", [["'var1'", "'var1')$0"]]);
+            });
+
+            suite("Variables in function scope", () => {
+                // asdf Ideally this would not return a 'variables' completion at all
+                createCompletionsTest('<stringOutputValue>', 'variables!', [["variables", "variables($0)"]]);
+
+                // No variables availabe in function scope
+                createCompletionsTest('<stringOutputValue>', 'variables(!', []);
+            });
+
+            suite("User namespaces and functions not available in function scope", () => {
+                createCompletionsTest('<stringOutputValue>', '!udf.string', [...allBuiltinsExpectedCompletions]);
+                createCompletionsTest('<stringOutputValue>', 'u!df.string', [["uniqueString", "uniqueString($0)"], ["uri", "uri($0)"]]);
+                createCompletionsTest('<stringOutputValue>', 'u!', [["uniqueString", "uniqueString($0)"], ["uri", "uri($0)"]]);
+                createCompletionsTest('<stringOutputValue>', 'udf!.string', []);
+                createCompletionsTest('<stringOutputValue>', 'udf.!', []);
+            });
+
+        }); // end Completing UDF namespaces after a function name already exists
+
+        suite("UDF completions in larger expression context", () => {
+            suite("Starting a new call", () => {
+                createCompletionsTest("<output1>", "!", [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+                createCompletionsTest("<output1>", ".!", [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+                createCompletionsTest("<output1>", " . !", [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+                createCompletionsTest("<output1>", " abc !", [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+                createCompletionsTest("<output1>", 'udf.string !', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+                createCompletionsTest("<output1>", '! udf.string', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+                createCompletionsTest("<output1>", '!udf .string()', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+                createCompletionsTest("<output1>", 'udf.string(!)', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+                createCompletionsTest("<output1>", "udf.string('a', !)", [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+
+                // The result here is somwhat ambiguous, but this is good enough
+                createCompletionsTest("<output1>", ' udf. ! string()', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+            });
+
+            suite("Whitespace not affecting the results", () => {
+                createCompletionsTest("<output1>", 'udf. !string()', allUdfNsFunctionsCompletions);
+                createCompletionsTest("<output1>", ' udf. !string()', allUdfNsFunctionsCompletions);
+            });
+
+            suite("Not in context of an expression", () => {
+                createCompletionsTest("<output4BeforeBrackets>", "!", []);
+                createCompletionsTest("<output4BeforeBrackets>", " !", []);
+                createCompletionsTest("<output4BeforeBrackets>", " ! ", []);
+            });
+        });
+
+    }); // suite UDF Completions
 
 }); // suite User Functions

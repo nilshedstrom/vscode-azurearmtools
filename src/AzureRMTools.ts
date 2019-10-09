@@ -454,6 +454,10 @@ export class AzureRMTools {
                             completionToAdd.kind = vscode.CompletionItemKind.Field;
                             break;
 
+                        case Completion.CompletionKind.Namespace:
+                            completionToAdd.kind = vscode.CompletionItemKind.Unit;
+                            break;
+
                         default:
                             assert.fail(`Unrecognized Completion.Type: ${completion.kind}`);
                             break;

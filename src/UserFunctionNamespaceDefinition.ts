@@ -50,6 +50,13 @@ export class UserFunctionNamespaceDefinition {
         return null;
     }
 
+    /**
+     * Convenient way of seeing what this object represents in the debugger, shouldn't be used for production code
+     */
+    public get __debugDisplay(): string {
+        return this.namespaceName.unquotedValue;
+    }
+
     public get namespaceName(): Json.StringValue {
         return this._name;
     }
@@ -79,8 +86,11 @@ export class UserFunctionNamespaceDefinition {
     }
 
     public getMemberDefinition(functionName: string): UserFunctionDefinition | undefined {
-        assert(!!functionName, "functionName cannot be null, undefined, or empty");
-        let functionNameLC = functionName.toLowerCase();
-        return this.members.find(fd => fd.name.toString().toLowerCase() === functionNameLC);
+        if (functionName) {
+            let functionNameLC = functionName.toLowerCase();
+            return this.members.find(fd => fd.name.toString().toLowerCase() === functionNameLC);
+        } else {
+            return undefined;
+        }
     }
 }
