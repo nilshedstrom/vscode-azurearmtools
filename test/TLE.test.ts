@@ -254,7 +254,7 @@ suite("TLE", () => {
                 let commaTokens = [];
                 let args = [];
                 let rightParenthesis = TLE.Token.createRightParenthesis(10);
-                let f = new TLE.FunctionCallValue(null, name, leftParenthesis, commaTokens, args, rightParenthesis);
+                let f = new TLE.FunctionCallValue(null, null, name, leftParenthesis, commaTokens, args, rightParenthesis);
                 assert.deepStrictEqual(name, f.nameToken);
                 assert.deepStrictEqual(leftParenthesis, f.leftParenthesisToken);
                 assert.deepStrictEqual(args, f.argumentExpressions);
@@ -269,7 +269,7 @@ suite("TLE", () => {
                 let args = [];
                 let rightParenthesis = TLE.Token.createRightParenthesis(10);
 
-                let f = new TLE.FunctionCallValue(null, name, null, commaTokens, args, rightParenthesis);
+                let f = new TLE.FunctionCallValue(null, null, name, null, commaTokens, args, rightParenthesis);
 
                 assert.deepStrictEqual(name, f.nameToken);
                 assert.deepStrictEqual(null, f.leftParenthesisToken);
@@ -284,7 +284,7 @@ suite("TLE", () => {
                 let rightParenthesis = TLE.Token.createRightParenthesis(10);
 
                 // tslint:disable-next-line:no-any
-                assert.throws(() => { new TLE.FunctionCallValue(null, name, leftParenthesis, commaTokens, <any>null, rightParenthesis); });
+                assert.throws(() => { new TLE.FunctionCallValue(null, null, name, leftParenthesis, commaTokens, <any>null, rightParenthesis); });
             });
 
             test("with null _rightParenthesisToken", () => {
@@ -293,7 +293,7 @@ suite("TLE", () => {
                 let leftParenthesis = TLE.Token.createLeftParenthesis(5);
                 let args = [];
 
-                let f = new TLE.FunctionCallValue(null, name, leftParenthesis, commaTokens, args, null);
+                let f = new TLE.FunctionCallValue(null, null, name, leftParenthesis, commaTokens, args, null);
 
                 assert.deepStrictEqual(name, f.nameToken);
                 assert.deepStrictEqual(leftParenthesis, f.leftParenthesisToken);
@@ -435,6 +435,7 @@ suite("TLE", () => {
                 const stringValue = new TLE.StringValue(TLE.Token.createQuotedString(17, "''"));
                 stringValue.parent = new TLE.FunctionCallValue(
                     null,
+                    null,
                     TLE.Token.createLiteral(3, "parameters"),
                     null,
                     [],
@@ -456,6 +457,7 @@ suite("TLE", () => {
 
                 const stringValue = new TLE.StringValue(TLE.Token.createQuotedString(17, "''"));
                 stringValue.parent = new TLE.FunctionCallValue(
+                    null,
                     null,
                     TLE.Token.createLiteral(3, "variables"),
                     null,
@@ -612,7 +614,7 @@ suite("TLE", () => {
                 let pr = parseExpressionWithScope("\"[concat\"");
                 assert(pr);
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
-                assert.deepStrictEqual(new TLE.FunctionCallValue(null, TLE.Token.createLiteral(2, "concat"), null, [], [], null), pr.expression);
+                assert.deepStrictEqual(new TLE.FunctionCallValue(null, null, TLE.Token.createLiteral(2, "concat"), null, [], [], null), pr.expression);
                 assert.equal(null, pr.rightSquareBracketToken);
                 assert.deepStrictEqual(
                     [
@@ -626,7 +628,7 @@ suite("TLE", () => {
                 let pr = parseExpressionWithScope("\"[concat.\"");
                 assert(pr);
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
-                assert.deepStrictEqual(new TLE.FunctionCallValue(null, TLE.Token.createLiteral(2, "concat"), null, [], [], null), pr.expression);
+                assert.deepStrictEqual(new TLE.FunctionCallValue(null, null, TLE.Token.createLiteral(2, "concat"), null, [], [], null), pr.expression);
                 assert.equal(null, pr.rightSquareBracketToken);
                 assert.deepStrictEqual(
                     [
@@ -641,7 +643,7 @@ suite("TLE", () => {
                 let pr = parseExpressionWithScope("\"[concat]\"");
                 assert(pr);
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
-                assert.deepStrictEqual(new TLE.FunctionCallValue(null, TLE.Token.createLiteral(2, "concat"), null, [], [], null), pr.expression);
+                assert.deepStrictEqual(new TLE.FunctionCallValue(null, null, TLE.Token.createLiteral(2, "concat"), null, [], [], null), pr.expression);
                 assert.deepStrictEqual(TLE.Token.createRightSquareBracket(8), pr.rightSquareBracketToken);
                 assert.deepStrictEqual(
                     [new Language.Issue(new Language.Span(2, 6), "Missing function argument list.")],
@@ -654,6 +656,7 @@ suite("TLE", () => {
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
                 assert.deepStrictEqual(
                     new TLE.FunctionCallValue(
+                        null,
                         null,
                         TLE.Token.createLiteral(2, "concat"),
                         TLE.Token.createLeftParenthesis(9),
@@ -677,6 +680,7 @@ suite("TLE", () => {
                 assert.deepStrictEqual(
                     new TLE.FunctionCallValue(
                         null,
+                        null,
                         TLE.Token.createLiteral(2, "concat"),
                         TLE.Token.createLeftParenthesis(9),
                         [],
@@ -695,6 +699,7 @@ suite("TLE", () => {
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
                 assert.deepStrictEqual(
                     new TLE.FunctionCallValue(
+                        null,
                         null,
                         TLE.Token.createLiteral(2, "concat"),
                         null,
@@ -717,6 +722,7 @@ suite("TLE", () => {
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(2), pr.leftSquareBracketToken);
                 assert.deepStrictEqual(
                     new TLE.FunctionCallValue(
+                        null,
                         null,
                         TLE.Token.createLiteral(4, "concat"),
                         TLE.Token.createLeftParenthesis(11),
@@ -775,6 +781,7 @@ suite("TLE", () => {
                 assert.deepStrictEqual(
                     new TLE.FunctionCallValue(
                         null,
+                        null,
                         TLE.Token.createLiteral(2, "concat"),
                         TLE.Token.createLeftParenthesis(8),
                         [],
@@ -795,6 +802,7 @@ suite("TLE", () => {
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
                 assert.deepStrictEqual(
                     new TLE.FunctionCallValue(
+                        null,
                         null,
                         TLE.Token.createLiteral(2, "concat"),
                         TLE.Token.createLeftParenthesis(8),
@@ -951,6 +959,7 @@ suite("TLE", () => {
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
                 assert.deepStrictEqual(
                     new TLE.FunctionCallValue(
+                        null,
                         null,
                         TLE.Token.createLiteral(2, "concat"),
                         TLE.Token.createLeftParenthesis(8),
@@ -1191,6 +1200,7 @@ suite("TLE", () => {
                 assert.deepStrictEqual(
                     new TLE.FunctionCallValue(
                         null,
+                        null,
                         TLE.Token.createLiteral(2, "resourceGroup"),
                         TLE.Token.createLeftParenthesis(15),
                         [],
@@ -1395,6 +1405,7 @@ suite("TLE", () => {
                 assert.deepStrictEqual(
                     new TLE.FunctionCallValue(
                         null,
+                        null,
                         TLE.Token.createLiteral(2, "hello"),
                         TLE.Token.createLeftParenthesis(7),
                         [],
@@ -1412,6 +1423,7 @@ suite("TLE", () => {
                 assert.deepStrictEqual(
                     new TLE.FunctionCallValue(
                         null,
+                        null,
                         TLE.Token.createLiteral(2, "hello"),
                         TLE.Token.createLeftParenthesis(14),
                         [],
@@ -1428,6 +1440,7 @@ suite("TLE", () => {
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
                 assert.deepStrictEqual(
                     new TLE.FunctionCallValue(
+                        null,
                         null,
                         TLE.Token.createLiteral(9, "hello"),
                         null,
@@ -1450,6 +1463,7 @@ suite("TLE", () => {
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
                 assert.deepStrictEqual(
                     new TLE.FunctionCallValue(
+                        null,
                         null,
                         TLE.Token.createLiteral(2, "hello"),
                         null,

@@ -86,8 +86,11 @@ export class UserFunctionNamespaceDefinition {
     }
 
     public getMemberDefinition(functionName: string): UserFunctionDefinition | undefined {
-        assert(!!functionName, "functionName cannot be null, undefined, or empty");
-        let functionNameLC = functionName.toLowerCase();
-        return this.members.find(fd => fd.name.toString().toLowerCase() === functionNameLC);
+        if (functionName) {
+            let functionNameLC = functionName.toLowerCase();
+            return this.members.find(fd => fd.name.toString().toLowerCase() === functionNameLC);
+        } else {
+            return undefined;
+        }
     }
 }

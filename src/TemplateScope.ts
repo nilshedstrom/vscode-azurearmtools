@@ -126,7 +126,7 @@ export class TemplateScope {
 
         let result: IParameterDefinition | null = null;
 
-        if (tleFunction.nameToken.stringValue === "parameters") {
+        if (tleFunction.name === "parameters") {
             const propertyName: TLE.StringValue | null = TLE.asStringValue(tleFunction.argumentExpressions[0]);
             if (propertyName) {
                 result = this.getParameterDefinition(propertyName.toString());

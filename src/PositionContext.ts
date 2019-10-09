@@ -225,7 +225,7 @@ export class PositionContext {
                         const definitionSpan: language.Span = nsDefinition.namespaceName.span;
                         return { kind: "userNamespace", userNamespace: nsDefinition, referenceSpan: referenceSpan, definitionSpan };
                     }
-                } else if (tleFuncCall.nameToken.span.contains(tleCharacterIndex)) {
+                } else if (tleFuncCall.nameToken && tleFuncCall.nameToken.span.contains(tleCharacterIndex)) {
                     if (tleFuncCall.namespaceToken) {
                         // Inside the name of a user-function reference
                         const ns = tleFuncCall.namespaceToken.stringValue;
@@ -419,20 +419,24 @@ export class PositionContext {
                 // We don't allow multiple levels of property access
                 // (resourceGroup().prop1.prop2) on functions other than variables/parameters,
                 // therefore checking that sourcesNameStack.length === 0
-                const functionName: string = functionSource.nameToken.stringValue;
-                let functionMetadataMatches: BuiltinFunctionMetadata[] = await AzureRMAssets.getFunctionMetadataFromPrefix(functionName);
-                assert(functionMetadataMatches);
+                const functionName: string | null = functionSource.name;
+                if (functionName) {
+                    let functionMetadataMatches: BuiltinFunctionMetadata[] = await AzureRMAssets.getFunctionMetadataFromPrefix(functionName);
+                    assert(functionMetadataMatches);
 
-                const result: Completion.Item[] = [];
-                if (functionMetadataMatches.length === 1) {
-                    const functionMetadata: BuiltinFunctionMetadata = functionMetadataMatches[0];
-                    for (const returnValueMember of functionMetadata.returnValueMembers) {
-                        if (propertyPrefix === "" || returnValueMember.toLowerCase().startsWith(propertyPrefix)) {
-                            result.push(PositionContext.createPropertyCompletionItem(returnValueMember, replaceSpan));
+                    const result: Completion.Item[] = [];
+                    if (functionMetadataMatches.length === 1) {
+                        const functionMetadata: BuiltinFunctionMetadata = functionMetadataMatches[0];
+                        for (const returnValueMember of functionMetadata.returnValueMembers) {
+                            if (propertyPrefix === "" || returnValueMember.toLowerCase().startsWith(propertyPrefix)) {
+                                result.push(PositionContext.createPropertyCompletionItem(returnValueMember, replaceSpan));
+                            }
                         }
-                    }
 
-                    return result;
+                        return result;
+                    }
+                } else {
+                    //testpoint
                 }
             }
         }
@@ -443,12 +447,20 @@ export class PositionContext {
     /**
      * Return completions when we're anywhere inside a function call expression
      */
+    // tslint:disable-next-line: cyclomatic-complexity //asdf
     private async getFunctionCallCompletions(tleValue: TLE.FunctionCallValue, tleCharacterIndex: number, scope: TemplateScope): Promise<Completion.Item[]> {
         const functionNamespaceName: string | null = tleValue.namespaceToken ? tleValue.namespaceToken.stringValue : null;
         // tslint:disable-next-line: strict-boolean-expressions
         const functionNamespace: UserFunctionNamespaceDefinition | null = (functionNamespaceName && scope.getFunctionNamespaceDefinition(functionNamespaceName)) || null;
 
-        if (tleValue.nameToken.span.contains(tleCharacterIndex, true)) {
+        // "parameters<POSITION>" or "variables<POSITION>"
+        if (tleValue.isCallToBuiltinWithName("parameters") && tleValue.argumentExpressions.length === 0) {
+            return this.getMatchingParameterCompletions("", tleValue, tleCharacterIndex, scope); //testpoint
+        } else if (tleValue.isCallToBuiltinWithName("variables") && tleValue.argumentExpressions.length === 0) {
+            return this.getMatchingVariableCompletions("", tleValue, tleCharacterIndex, scope); //testpoint
+        }
+
+        if (tleValue.nameToken && tleValue.nameToken.span.contains(tleCharacterIndex, true)) {
             // The caret is inside the function's name (or a namespace before the period has been typed)
             const functionNameStartIndex: number = tleValue.nameToken.span.startIndex; //testpoint
             const functionNamePrefix: string = tleValue.nameToken.stringValue.substring(0, tleCharacterIndex - functionNameStartIndex);
@@ -469,6 +481,20 @@ export class PositionContext {
                 const namespaceCompletions = await PositionContext.getMatchingNamespaceCompletions(scope, functionNamePrefix, replaceSpan); //testpoint
                 return functionCompletions.concat(namespaceCompletions);
             }
+        } else if (functionNamespace && tleValue.periodToken && tleValue.periodToken.span.contains(tleCharacterIndex, true)) {
+            // The caret is on the period between a namespace and a function name
+            const functionNameStartIndex: number = tleValue.nameToken ? tleValue.nameToken.span.startIndex : tleValue.periodToken.span.afterEndIndex; //testpoint
+            const functionNamePrefix: string = tleValue.name ? tleValue.name.substring(0, tleCharacterIndex - functionNameStartIndex) : ""; //testpoint
+
+            //asdf combine with above
+            let replaceSpan: language.Span;
+            if (functionNamePrefix.length === 0 || !tleValue.nameToken) { //testpoint asdf
+                replaceSpan = this.emptySpanAtDocumentCharacterIndex; //testpoint
+            } else {
+                replaceSpan = tleValue.nameToken.span.translate(this.jsonTokenStartIndex); //testpoint
+            }
+
+            return await PositionContext.getMatchingFunctionCompletions(scope, functionNamespace, functionNamePrefix, replaceSpan); //testpoint
         } else if (tleValue.namespaceToken && tleValue.namespaceToken.span.contains(tleCharacterIndex, true)) {
             // The caret is inside the UDF's namespace (e.g., the namespace and name already exist in the call)
             return await PositionContext.getMatchingFunctionCompletions(scope, functionNamespace, "", this.emptySpanAtDocumentCharacterIndex); //testpoint
@@ -476,13 +502,7 @@ export class PositionContext {
             // The caret is between the function name and the left parenthesis (with whitespace between them)
             return await PositionContext.getMatchingFunctionCompletions(scope, functionNamespace, "", this.emptySpanAtDocumentCharacterIndex); //testpoint
         } else {
-            if (tleValue.isCallToBuiltinWithName("parameters") && tleValue.argumentExpressions.length === 0) {
-                return this.getMatchingParameterCompletions("", tleValue, tleCharacterIndex, scope); //testpoint
-            } else if (tleValue.isCallToBuiltinWithName("variables") && tleValue.argumentExpressions.length === 0) {
-                return this.getMatchingVariableCompletions("", tleValue, tleCharacterIndex, scope); //testpoint
-            } else {
-                return await PositionContext.getMatchingFunctionCompletions(scope, functionNamespace, "", this.emptySpanAtDocumentCharacterIndex); //testpoint
-            }
+            return await PositionContext.getMatchingFunctionCompletions(scope, functionNamespace, "", this.emptySpanAtDocumentCharacterIndex); //testpoint
         }
     }
 
@@ -587,18 +607,18 @@ export class PositionContext {
                 functionToHelpWith = TLE.asFunctionCallValue(tleValue.parent);
             }
 
-            if (functionToHelpWith) {
+            if (functionToHelpWith && functionToHelpWith.name) {
                 let functionMetadata: IFunctionMetadata | undefined;
 
                 if (functionToHelpWith.namespaceToken) {
                     // Call to user-defined function
                     const namespace: string = functionToHelpWith.namespaceToken.stringValue;
-                    const name: string = functionToHelpWith.nameToken.stringValue;
+                    const name: string | null = functionToHelpWith.name;
                     const udfDefinition: UserFunctionDefinition | null = this.tleInfo.scope.getFunctionDefinition(namespace, name);
                     functionMetadata = udfDefinition ? UserFunctionMetadata.fromDefinition(udfDefinition) : undefined;
                 } else {
                     // Call to built-in function
-                    functionMetadata = await AzureRMAssets.getFunctionMetadataFromName(functionToHelpWith.nameToken.stringValue);
+                    functionMetadata = await AzureRMAssets.getFunctionMetadataFromName(functionToHelpWith.name);
                 }
                 if (functionMetadata) {
                     let currentArgumentIndex: number = 0;
@@ -619,6 +639,10 @@ export class PositionContext {
 
                     return new TLE.FunctionSignatureHelp(currentArgumentIndex, functionMetadata);
                 }
+            }
+
+            if (functionToHelpWith && !functionToHelpWith.name) {
+                //testpoint
             }
         }
 

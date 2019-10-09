@@ -1705,8 +1705,16 @@ suite("User functions", () => {
             });
 
             suite("Completing udf. gives udf's functions", () => {
-                //asdf createCompletionsTest('<output1>', 'udf.!', [["udf.string", "string"], ["udf.parameters", "parameters($0)"], ["udf.udf", "udf($0)"]]);
-                //asdf createCompletionsTest('<output1>', 'mixedcase.!', [["udf.mixedCase", "mixedCase()$0"]]);
+                createCompletionsTest('<output1>', 'udf.!', [
+                    ["udf.mixedCase", "mixedCase()$0"],
+                    ["udf.string", "string($0)"],
+                    ["udf.parameters", "parameters($0)"],
+                    ["udf.udf", "udf($0)"],
+                    ["udf.udf2", "udf2()$0"],
+                    ["udf.udf3", "udf3()$0"],
+                    ["udf.udf34", "udf34()$0"],
+                ]);
+                createCompletionsTest('<output1>', 'mixedcase.!', [["udf.mixedCase", "mixedCase()$0"]]);
             });
 
             suite("Completing <unknownnamespace>. gives empty", () => {
