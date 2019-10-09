@@ -9,6 +9,7 @@ import * as assert from "assert";
 import { DeploymentTemplate, Hover, IReferenceSite, Language, Reference } from "../extension.bundle";
 import { IDeploymentTemplate } from "./support/diagnostics";
 import { parseTemplate, parseTemplateWithMarkers } from "./support/parseTemplate";
+import { stringify } from "./support/stringify";
 
 suite("User functions", () => {
 
@@ -1510,6 +1511,143 @@ suite("User functions", () => {
                 ]);
             });
         });
-    });
+    }); // suite Warnings
+
+    suite("UDF Completions", async () => {
+        const userFuncsTemplate2: IDeploymentTemplate = {
+            "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+            "contentVersion": "1.0.0.0",
+            "functions": [
+                {
+                    "namespace": "udf",
+                    "members": {
+                        "string": {
+                            "parameters": [
+                                {
+                                    "name": "year",
+                                    "type": "Int"
+                                },
+                                {
+                                    "name": "month",
+                                    // tslint:disable-next-line:no-any
+                                    "type": <any>123 // invalid type
+                                },
+                                {
+                                    "name": "day",
+                                    "type": "int"
+                                }
+                            ],
+                            "output": {
+                                "type": "string",
+                                "value": "[concat(string(parameters('year')), '-', string(parameters('month')), '-', string(parameters('day')))]"
+                            }
+                        },
+                        "parameters": {
+                            "parameters": [
+                                {
+                                    "name": "year",
+                                    "type": "Int"
+                                },
+                                {
+                                    "name": "month",
+                                    // tslint:disable-next-line:no-any
+                                    "type": <any>123 // invalid type
+                                },
+                                {
+                                    "name": "day",
+                                    "type": "int"
+                                }
+                            ],
+                            "output": {
+                                "type": "string",
+                                "value": "[concat(string(parameters('year')), '-', string(parameters('month')), '-', string(parameters('day')))]"
+                            }
+                        },
+                        "udf": {
+                            "parameters": [
+                                {
+                                    "name": "year",
+                                    "type": "Int"
+                                },
+                                {
+                                    "name": "month",
+                                    // tslint:disable-next-line:no-any
+                                    "type": <any>123 // invalid type
+                                },
+                                {
+                                    "name": "day",
+                                    "type": "int"
+                                }
+                            ],
+                            "output": {
+                                "type": "string",
+                                "value": "[concat(string(parameters('year')), '-', string(parameters('month')), '-', string(parameters('day')))]"
+                            }
+                        }
+                    }
+            ],
+            "resources": [
+                {
+                    "type": "Microsoft.Storage/storageAccounts",
+                    "name": "[parameters('year')]",
+                    "apiVersion": "[parameters('apiVersion')]",
+                    "location": "westus"
+                }
+            ],
+            "parameters": {
+                "year": {
+                    "type": "int",
+                    "defaultValue": 2010
+                },
+                "apiVersion": {
+                    "type": "int",
+                    "defaultValue": 2010
+                }
+            },
+            "variables": {
+                "var1": {
+                    "a": {
+                        "b": {
+                            "c": 16180339887498948482
+                        },
+                        "d": 42
+                    }
+                },
+                "var2": "[variables('var1')]"
+            },
+            "outputs": {
+                "output1": {
+                    "type": "int",
+                    "value": "[<output1>]"
+                },
+                "output2": {
+                    "type": "string",
+                    "value": "[udf.string(2019, 10, 5)]" // Using user function udf.string
+                },
+                "output3": {
+                    "type": "string",
+                    "value": "[string(2019)]" // using built-in function 'string'
+                }
+            }
+        };
+
+        async function testCompletions(find: string, replacementWithBang: string, expected: string[]): Promise<void> {
+            const template = stringify(userFuncsTemplate2).replace(find, replacementWithBang);
+
+            const { dt, markers: { bang } } = await parseTemplateWithMarkers(template);
+            const pc = dt.getContextFromDocumentCharacterIndex(bang.index);
+            const completions = await pc.getCompletionItems();
+            const completionNames = completions.map(c => c.name);
+            assert.deepStrictEqual(completionNames, expected);
+        }
+
+        test("Completing udf.param does not find parameters function", async () => {
+            await testCompletions('<output1>', 'udf.param!', []);
+        });
+
+        test("Completing udf. gives udf's functions", async () => {
+            await testCompletions('<output1>', 'udf.!', ["string", "parameters", "udf"]);
+        });
+    }); // suite UDF Completions
 
 }); // suite User Functions

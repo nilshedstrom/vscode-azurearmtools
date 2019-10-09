@@ -321,7 +321,7 @@ export class PositionContext {
                 // No TLE value here. For instance, expression is empty, or before/after/on the square brackets
                 if (PositionContext.isInsideSquareBrackets(tleInfo.tleParseResult, tleInfo.tleCharacterIndex)) {
                     // Inside brackets, so complete with all valid functions
-                    return await PositionContext.getMatchingFunctionCompletions("", this.emptySpanAtDocumentCharacterIndex);
+                    return await PositionContext.getMatchingFunctionCompletions(null, "", this.emptySpanAtDocumentCharacterIndex); //asdf
                 } else {
                     return [];
                 }
@@ -441,6 +441,8 @@ export class PositionContext {
      * Return completions when we're anywhere inside a function call expression
      */
     private async getFunctionCallCompletions(tleValue: TLE.FunctionCallValue, tleCharacterIndex: number, scope: TemplateScope): Promise<Completion.Item[]> {
+        const functionNamespace: string | null = tleValue.namespaceToken ? tleValue.namespaceToken.stringValue : null;
+
         if (tleValue.nameToken.span.contains(tleCharacterIndex, true)) {
             // The caret is inside the TLE function's name
             const functionNameStartIndex: number = tleValue.nameToken.span.startIndex;
@@ -453,17 +455,17 @@ export class PositionContext {
                 replaceSpan = tleValue.nameToken.span.translate(this.jsonTokenStartIndex);
             }
 
-            return await PositionContext.getMatchingFunctionCompletions(functionNamePrefix, replaceSpan);
+            return await PositionContext.getMatchingFunctionCompletions(functionNamespace, functionNamePrefix, replaceSpan);
         } else if (tleValue.leftParenthesisToken && tleCharacterIndex <= tleValue.leftParenthesisToken.span.startIndex) {
             // The caret is between the function name and the left parenthesis (with whitespace between them)
-            return await PositionContext.getMatchingFunctionCompletions("", this.emptySpanAtDocumentCharacterIndex);
+            return await PositionContext.getMatchingFunctionCompletions(functionNamespace, "", this.emptySpanAtDocumentCharacterIndex);
         } else {
             if (tleValue.isCallToBuiltinWithName("parameters") && tleValue.argumentExpressions.length === 0) {
                 return this.getMatchingParameterCompletions("", tleValue, tleCharacterIndex, scope);
             } else if (tleValue.isCallToBuiltinWithName("variables") && tleValue.argumentExpressions.length === 0) {
                 return this.getMatchingVariableCompletions("", tleValue, tleCharacterIndex, scope);
             } else {
-                return await PositionContext.getMatchingFunctionCompletions("", this.emptySpanAtDocumentCharacterIndex);
+                return await PositionContext.getMatchingFunctionCompletions(functionNamespace, "", this.emptySpanAtDocumentCharacterIndex);
             }
         }
     }
@@ -611,28 +613,34 @@ export class PositionContext {
      * Given a function name prefix and replacement span, return a list of completions for functions
      * starting with that prefix
      */
-    private static async getMatchingFunctionCompletions(prefix: string, replaceSpan: language.Span): Promise<Completion.Item[]> {
-        let functionMetadataMatches: BuiltinFunctionMetadata[];
-        if (prefix === "") {
-            functionMetadataMatches = (await AzureRMAssets.getFunctionsMetadata()).functionMetadata;
+    private static async getMatchingFunctionCompletions(namespace: string | null, prefix: string, replaceSpan: language.Span): Promise<Completion.Item[]> {
+        if (namespace) {
+            // User-defined function
+            return [];
         } else {
-            functionMetadataMatches = (await AzureRMAssets.getFunctionMetadataFromPrefix(prefix));
-        }
-
-        const completionItems: Completion.Item[] = [];
-        for (const functionMetadata of functionMetadataMatches) {
-            const name: string = functionMetadata.name;
-
-            let insertText: string = name;
-            if (functionMetadata.maximumArguments === 0) {
-                insertText += "()$0";
+            // Built-in function
+            let functionMetadataMatches: BuiltinFunctionMetadata[];
+            if (prefix === "") {
+                functionMetadataMatches = (await AzureRMAssets.getFunctionsMetadata()).functionMetadata;
             } else {
-                insertText += "($0)";
+                functionMetadataMatches = (await AzureRMAssets.getFunctionMetadataFromPrefix(prefix));
             }
 
-            completionItems.push(new Completion.Item(name, insertText, replaceSpan, `(function) ${functionMetadata.usage}`, functionMetadata.description, Completion.CompletionKind.Function));
+            const completionItems: Completion.Item[] = [];
+            for (const functionMetadata of functionMetadataMatches) {
+                const name: string = functionMetadata.name;
+
+                let insertText: string = name;
+                if (functionMetadata.maximumArguments === 0) {
+                    insertText += "()$0";
+                } else {
+                    insertText += "($0)";
+                }
+
+                completionItems.push(new Completion.Item(name, insertText, replaceSpan, `(function) ${functionMetadata.usage}`, functionMetadata.description, Completion.CompletionKind.Function));
+            }
+            return completionItems;
         }
-        return completionItems;
     }
 
     private getMatchingParameterCompletions(prefix: string, tleValue: TLE.StringValue | TLE.FunctionCallValue, tleCharacterIndex: number, scope: TemplateScope): Completion.Item[] {
