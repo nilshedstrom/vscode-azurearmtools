@@ -27,6 +27,13 @@ export class UserFunctionDefinition {
         assert(objectValue);
     }
 
+    /**
+     * Convenient way of seeing what this object represents in the debugger, shouldn't be used for production code
+     */
+    public get __debugDisplay(): string {
+        return this.fullName;
+    }
+
     public get scope(): TemplateScope {
         return this._scope.getOrCacheValue(() => {
             // Each user function has a scope of its own

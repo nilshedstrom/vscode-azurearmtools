@@ -286,7 +286,7 @@ export class PositionContext {
                     return new Hover.UserFunctionInfo(refSiteInfo.userFunction, span);
                 case "builtinFunction":
                     const functionMetadata = refSiteInfo.functionMetadata;
-                    return new Hover.FunctionInfo(functionMetadata.name, functionMetadata.usage, functionMetadata.description, span);
+                    return new Hover.FunctionInfo(functionMetadata.fullName, functionMetadata.usage, functionMetadata.description, span);
                 case "parameter":
                     return Hover.ParameterReferenceInfo.fromDefinition(refSiteInfo.parameter, span);
                 case "variable":
@@ -318,20 +318,23 @@ export class PositionContext {
             const scope: TemplateScope = tleInfo.scope;
 
             if (!tleValue || !tleValue.contains(tleInfo.tleCharacterIndex)) {
-                // No TLE value here. For instance, expression is empty, or before/after/on the square brackets
+                // No TLE value here. For instance, expression is empty, or before/after/on the square brackets asdf
                 if (PositionContext.isInsideSquareBrackets(tleInfo.tleParseResult, tleInfo.tleCharacterIndex)) {
-                    // Inside brackets, so complete with all valid functions
-                    return await PositionContext.getMatchingFunctionCompletions(null, "", this.emptySpanAtDocumentCharacterIndex); //asdf
+                    // Inside brackets, so complete with all valid functions and namespaces
+                    const replaceSpan = this.emptySpanAtDocumentCharacterIndex;
+                    const functionCompletions = await PositionContext.getMatchingFunctionCompletions(scope, null, "", replaceSpan);
+                    const namespaceCompletions = await PositionContext.getMatchingNamespaceCompletions(scope, "", replaceSpan); //testpoint
+                    return functionCompletions.concat(namespaceCompletions);
                 } else {
-                    return [];
+                    return []; // testpoint
                 }
 
             } else if (tleValue instanceof TLE.FunctionCallValue) {
-                return this.getFunctionCallCompletions(tleValue, tleInfo.tleCharacterIndex, scope);
+                return this.getFunctionCallCompletions(tleValue, tleInfo.tleCharacterIndex, scope); //testpoint
             } else if (tleValue instanceof TLE.StringValue) {
-                return this.getStringLiteralCompletions(tleValue, tleInfo.tleCharacterIndex, scope);
+                return this.getStringLiteralCompletions(tleValue, tleInfo.tleCharacterIndex, scope); //testpoint
             } else if (tleValue instanceof TLE.PropertyAccess) {
-                return await this.getPropertyAccessCompletions(tleValue, tleInfo.tleCharacterIndex, scope);
+                return await this.getPropertyAccessCompletions(tleValue, tleInfo.tleCharacterIndex, scope); //testpoint
             }
 
             return [];
@@ -441,11 +444,13 @@ export class PositionContext {
      * Return completions when we're anywhere inside a function call expression
      */
     private async getFunctionCallCompletions(tleValue: TLE.FunctionCallValue, tleCharacterIndex: number, scope: TemplateScope): Promise<Completion.Item[]> {
-        const functionNamespace: string | null = tleValue.namespaceToken ? tleValue.namespaceToken.stringValue : null;
+        const functionNamespaceName: string | null = tleValue.namespaceToken ? tleValue.namespaceToken.stringValue : null;
+        // tslint:disable-next-line: strict-boolean-expressions
+        const functionNamespace: UserFunctionNamespaceDefinition | null = (functionNamespaceName && scope.getFunctionNamespaceDefinition(functionNamespaceName)) || null;
 
         if (tleValue.nameToken.span.contains(tleCharacterIndex, true)) {
-            // The caret is inside the TLE function's name
-            const functionNameStartIndex: number = tleValue.nameToken.span.startIndex;
+            // The caret is inside the function's name (or a namespace before the period has been typed)
+            const functionNameStartIndex: number = tleValue.nameToken.span.startIndex; //testpoint
             const functionNamePrefix: string = tleValue.nameToken.stringValue.substring(0, tleCharacterIndex - functionNameStartIndex);
 
             let replaceSpan: language.Span;
@@ -455,17 +460,28 @@ export class PositionContext {
                 replaceSpan = tleValue.nameToken.span.translate(this.jsonTokenStartIndex);
             }
 
-            return await PositionContext.getMatchingFunctionCompletions(functionNamespace, functionNamePrefix, replaceSpan);
+            const functionCompletions = await PositionContext.getMatchingFunctionCompletions(scope, functionNamespace, functionNamePrefix, replaceSpan); //testpoint
+            if (functionNamespace) {
+                // If namespace is already specified, we only need function completions
+                return functionCompletions;
+            } else {
+                // Namespace has not been specified, so we should complete for them as well
+                const namespaceCompletions = await PositionContext.getMatchingNamespaceCompletions(scope, functionNamePrefix, replaceSpan); //testpoint
+                return functionCompletions.concat(namespaceCompletions);
+            }
+        } else if (tleValue.namespaceToken && tleValue.namespaceToken.span.contains(tleCharacterIndex, true)) {
+            // The caret is inside the UDF's namespace (e.g., the namespace and name already exist in the call)
+            return await PositionContext.getMatchingFunctionCompletions(scope, functionNamespace, "", this.emptySpanAtDocumentCharacterIndex); //testpoint
         } else if (tleValue.leftParenthesisToken && tleCharacterIndex <= tleValue.leftParenthesisToken.span.startIndex) {
             // The caret is between the function name and the left parenthesis (with whitespace between them)
-            return await PositionContext.getMatchingFunctionCompletions(functionNamespace, "", this.emptySpanAtDocumentCharacterIndex);
+            return await PositionContext.getMatchingFunctionCompletions(scope, functionNamespace, "", this.emptySpanAtDocumentCharacterIndex); //testpoint
         } else {
             if (tleValue.isCallToBuiltinWithName("parameters") && tleValue.argumentExpressions.length === 0) {
-                return this.getMatchingParameterCompletions("", tleValue, tleCharacterIndex, scope);
+                return this.getMatchingParameterCompletions("", tleValue, tleCharacterIndex, scope); //testpoint
             } else if (tleValue.isCallToBuiltinWithName("variables") && tleValue.argumentExpressions.length === 0) {
-                return this.getMatchingVariableCompletions("", tleValue, tleCharacterIndex, scope);
+                return this.getMatchingVariableCompletions("", tleValue, tleCharacterIndex, scope); //testpoint
             } else {
-                return await PositionContext.getMatchingFunctionCompletions(functionNamespace, "", this.emptySpanAtDocumentCharacterIndex);
+                return await PositionContext.getMatchingFunctionCompletions(scope, functionNamespace, "", this.emptySpanAtDocumentCharacterIndex); //testpoint
             }
         }
     }
@@ -496,7 +512,7 @@ export class PositionContext {
     }
 
     private static createPropertyCompletionItem(propertyName: string, replaceSpan: language.Span): Completion.Item {
-        return new Completion.Item(propertyName, `${propertyName}$0`, replaceSpan, "(property)", "", Completion.CompletionKind.Property);
+        return Completion.Item.fromPropertyName(propertyName, replaceSpan);
     }
 
     // Returns null if references are not supported at this location.
@@ -610,37 +626,32 @@ export class PositionContext {
     }
 
     /**
-     * Given a function name prefix and replacement span, return a list of completions for functions
-     * starting with that prefix
+     * Given a possible namespace name plus a function name prefix and replacement span, return a list
+     * of completions for functions or namespaces starting with that prefix
      */
-    private static async getMatchingFunctionCompletions(namespace: string | null, prefix: string, replaceSpan: language.Span): Promise<Completion.Item[]> {
+    private static async getMatchingFunctionCompletions(scope: TemplateScope, namespace: UserFunctionNamespaceDefinition | null, functionNamePrefix: string, replaceSpan: language.Span): Promise<Completion.Item[]> {
+        let matches: IFunctionMetadata[];
+
         if (namespace) {
             // User-defined function
-            return [];
+            matches = scope.findFunctionDefinitionsWithPrefix(namespace, functionNamePrefix).map(fd => UserFunctionMetadata.fromDefinition(fd));
         } else {
             // Built-in function
-            let functionMetadataMatches: BuiltinFunctionMetadata[];
-            if (prefix === "") {
-                functionMetadataMatches = (await AzureRMAssets.getFunctionsMetadata()).functionMetadata;
-            } else {
-                functionMetadataMatches = (await AzureRMAssets.getFunctionMetadataFromPrefix(prefix));
-            }
-
-            const completionItems: Completion.Item[] = [];
-            for (const functionMetadata of functionMetadataMatches) {
-                const name: string = functionMetadata.name;
-
-                let insertText: string = name;
-                if (functionMetadata.maximumArguments === 0) {
-                    insertText += "()$0";
-                } else {
-                    insertText += "($0)";
-                }
-
-                completionItems.push(new Completion.Item(name, insertText, replaceSpan, `(function) ${functionMetadata.usage}`, functionMetadata.description, Completion.CompletionKind.Function));
-            }
-            return completionItems;
+            matches = functionNamePrefix === "" ?
+                (await AzureRMAssets.getFunctionsMetadata()).functionMetadata :
+                await AzureRMAssets.getFunctionMetadataFromPrefix(functionNamePrefix);
         }
+
+        return matches.map(m => Completion.Item.fromFunctionMetadata(m, replaceSpan));
+    }
+
+    /**
+     * Given a possible namespace name plus a function name prefix and replacement span, return a list
+     * of completions for functions or namespaces starting with that prefix
+     */
+    private static async getMatchingNamespaceCompletions(scope: TemplateScope, namespacePrefix: string, replaceSpan: language.Span): Promise<Completion.Item[]> {
+        const matches: UserFunctionNamespaceDefinition[] = scope.findNamespaceDefinitionsWithPrefix(namespacePrefix);
+        return matches.map(m => Completion.Item.fromNamespaceDefinition(m, replaceSpan));
     }
 
     private getMatchingParameterCompletions(prefix: string, tleValue: TLE.StringValue | TLE.FunctionCallValue, tleCharacterIndex: number, scope: TemplateScope): Completion.Item[] {
@@ -649,16 +660,7 @@ export class PositionContext {
         const parameterCompletions: Completion.Item[] = [];
         const parameterDefinitionMatches: IParameterDefinition[] = scope.findParameterDefinitionsWithPrefix(prefix);
         for (const parameterDefinition of parameterDefinitionMatches) {
-            const name: string = `'${parameterDefinition.name}'`;
-            parameterCompletions.push(
-                new Completion.Item(
-                    name,
-                    `${name}${replaceSpanInfo.includeRightParenthesisInCompletion ? ")" : ""}$0`,
-                    replaceSpanInfo.replaceSpan,
-                    `(parameter)`,
-                    // tslint:disable-next-line: strict-boolean-expressions
-                    parameterDefinition.description,
-                    Completion.CompletionKind.Parameter));
+            parameterCompletions.push(Completion.Item.fromParameterDefinition(parameterDefinition, replaceSpanInfo.replaceSpan, replaceSpanInfo.includeRightParenthesisInCompletion));
         }
         return parameterCompletions;
     }
@@ -669,8 +671,7 @@ export class PositionContext {
         const variableCompletions: Completion.Item[] = [];
         const variableDefinitionMatches: Json.Property[] = scope.findVariableDefinitionsWithPrefix(prefix);
         for (const variableDefinition of variableDefinitionMatches) {
-            const variableName: string = `'${variableDefinition.name.toString()}'`;
-            variableCompletions.push(new Completion.Item(variableName, `${variableName}${replaceSpanInfo.includeRightParenthesisInCompletion ? ")" : ""}$0`, replaceSpanInfo.replaceSpan, `(variable)`, "", Completion.CompletionKind.Variable));
+            variableCompletions.push(Completion.Item.fromVariableDefinition(variableDefinition, replaceSpanInfo.replaceSpan, replaceSpanInfo.includeRightParenthesisInCompletion));
         }
         return variableCompletions;
     }

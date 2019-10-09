@@ -109,7 +109,11 @@ export class BuiltinFunctionMetadata implements IFunctionMetadata {
         this._returnType = this.returnValueMembers.length > 0 ? 'object' : null;
     }
 
-    public get name(): string {
+    public get fullName(): string {
+        return this._name;
+    }
+
+    public get unqualifiedName(): string {
         return this._name;
     }
 

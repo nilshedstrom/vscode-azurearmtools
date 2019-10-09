@@ -1289,7 +1289,7 @@ suite("PositionContext", () => {
                 assert(functionSignatureHelp);
                 assert.deepStrictEqual(functionSignatureHelp.activeParameterIndex, 0);
                 assert(functionSignatureHelp.functionMetadata);
-                assert.deepStrictEqual(functionSignatureHelp.functionMetadata.name, "concat");
+                assert.deepStrictEqual(functionSignatureHelp.functionMetadata.fullName, "concat");
             });
         });
 
@@ -1300,7 +1300,7 @@ suite("PositionContext", () => {
                 assert(functionSignatureHelp);
                 assert.deepStrictEqual(functionSignatureHelp.activeParameterIndex, 0);
                 assert(functionSignatureHelp.functionMetadata);
-                assert.deepStrictEqual(functionSignatureHelp.functionMetadata.name, "concat");
+                assert.deepStrictEqual(functionSignatureHelp.functionMetadata.fullName, "concat");
             });
         });
 
@@ -1311,7 +1311,7 @@ suite("PositionContext", () => {
                 assert(functionSignatureHelp);
                 assert.deepStrictEqual(functionSignatureHelp.activeParameterIndex, 1);
                 assert(functionSignatureHelp.functionMetadata);
-                assert.deepStrictEqual(functionSignatureHelp.functionMetadata.name, "concat");
+                assert.deepStrictEqual(functionSignatureHelp.functionMetadata.fullName, "concat");
             });
         });
 
@@ -1322,7 +1322,7 @@ suite("PositionContext", () => {
                 assert(functionSignatureHelp);
                 assert.deepStrictEqual(functionSignatureHelp.activeParameterIndex, 2);
                 assert(functionSignatureHelp.functionMetadata);
-                assert.deepStrictEqual(functionSignatureHelp.functionMetadata.name, "concat");
+                assert.deepStrictEqual(functionSignatureHelp.functionMetadata.fullName, "concat");
             });
         });
 
@@ -1333,7 +1333,7 @@ suite("PositionContext", () => {
                 assert(functionSignatureHelp);
                 assert.deepStrictEqual(functionSignatureHelp.activeParameterIndex, 3);
                 assert(functionSignatureHelp.functionMetadata);
-                assert.deepStrictEqual(functionSignatureHelp.functionMetadata.name, "concat");
+                assert.deepStrictEqual(functionSignatureHelp.functionMetadata.fullName, "concat");
             });
         });
 
@@ -1344,7 +1344,7 @@ suite("PositionContext", () => {
                 assert(functionSignatureHelp);
                 assert.deepStrictEqual(functionSignatureHelp.activeParameterIndex, 3);
                 assert(functionSignatureHelp.functionMetadata);
-                assert.deepStrictEqual(functionSignatureHelp.functionMetadata.name, "concat");
+                assert.deepStrictEqual(functionSignatureHelp.functionMetadata.fullName, "concat");
             });
         });
 
@@ -1355,7 +1355,7 @@ suite("PositionContext", () => {
                 assert(functionSignatureHelp);
                 assert.deepStrictEqual(functionSignatureHelp.activeParameterIndex, 4);
                 assert(functionSignatureHelp.functionMetadata);
-                assert.deepStrictEqual(functionSignatureHelp.functionMetadata.name, "resourceId");
+                assert.deepStrictEqual(functionSignatureHelp.functionMetadata.fullName, "resourceId");
             });
         });
 
@@ -1457,6 +1457,7 @@ suite("PositionContext", () => {
 
             const expectedUdfConcatMetadata = new UserFunctionMetadata(
                 "udf.concat",
+                "concat",
                 `udf.concat(p1 [string], p2 [string]) [string]`,
                 "User-defined function",
                 [
@@ -1514,6 +1515,7 @@ suite("PositionContext", () => {
                         0,
                         new UserFunctionMetadata(
                             "udf.random",
+                            "random",
                             `udf.random() [int]`,
                             "User-defined function",
                             [],
@@ -1527,6 +1529,7 @@ suite("PositionContext", () => {
                         0,
                         new UserFunctionMetadata(
                             "udf.double",
+                            "double",
                             `udf.double(number [int]) [int]`,
                             "User-defined function",
                             [
@@ -1543,6 +1546,7 @@ suite("PositionContext", () => {
                         0,
                         new UserFunctionMetadata(
                             "udf.mysterious",
+                            "mysterious",
                             `udf.mysterious(p1 [secureobject], p2) [int]`,
                             "User-defined function",
                             [
@@ -1560,6 +1564,7 @@ suite("PositionContext", () => {
                         0,
                         new UserFunctionMetadata(
                             "udf.badreturn",
+                            "badreturn",
                             `udf.badreturn()`,
                             "User-defined function",
                             [

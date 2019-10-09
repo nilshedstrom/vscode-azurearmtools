@@ -50,6 +50,13 @@ export class UserFunctionNamespaceDefinition {
         return null;
     }
 
+    /**
+     * Convenient way of seeing what this object represents in the debugger, shouldn't be used for production code
+     */
+    public get __debugDisplay(): string {
+        return this.namespaceName.unquotedValue;
+    }
+
     public get namespaceName(): Json.StringValue {
         return this._name;
     }

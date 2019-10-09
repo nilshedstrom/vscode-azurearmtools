@@ -136,6 +136,32 @@ export class TemplateScope {
         return result;
     }
 
+    public findFunctionDefinitionsWithPrefix(namespace: UserFunctionNamespaceDefinition, functionNamePrefix: string): UserFunctionDefinition[] {
+        let results: UserFunctionDefinition[] = [];
+
+        let lowerCasedPrefix = functionNamePrefix.toLowerCase();
+        for (let member of namespace.members) {
+            if (member.name.unquotedValue.toLowerCase().startsWith(lowerCasedPrefix)) {
+                results.push(member);
+            }
+        }
+
+        return results;
+    }
+
+    public findNamespaceDefinitionsWithPrefix(namespaceNamePrefix: string): UserFunctionNamespaceDefinition[] {
+        let results: UserFunctionNamespaceDefinition[] = [];
+
+        let lowerCasedPrefix = namespaceNamePrefix.toLowerCase();
+        for (let ns of this.namespaceDefinitions) {
+            if (ns.namespaceName.unquotedValue.toLowerCase().startsWith(lowerCasedPrefix)) {
+                results.push(ns);
+            }
+        }
+
+        return results;
+    }
+
     public findParameterDefinitionsWithPrefix(parameterNamePrefix: string): IParameterDefinition[] {
         assert(parameterNamePrefix !== null, "parameterNamePrefix cannot be null");
         assert(parameterNamePrefix !== undefined, "parameterNamePrefix cannot be undefined");

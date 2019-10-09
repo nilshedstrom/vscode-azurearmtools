@@ -53,7 +53,7 @@ export class IncorrectFunctionArgumentCountVisitor extends Visitor {
             if (!functionMetadata) {
                 return;
             }
-            actualFullFunctionName = functionMetadata.name;
+            actualFullFunctionName = functionMetadata.fullName;
 
             minimumArguments = functionMetadata.minimumArguments;
             // tslint:disable-next-line:max-line-length

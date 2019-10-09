@@ -1519,9 +1519,13 @@ suite("User functions", () => {
             "contentVersion": "1.0.0.0",
             "functions": [
                 {
+                    "namespace": "mixedCaseNamespace",
+                    "members": {}
+                },
+                {
                     "namespace": "udf",
                     "members": {
-                        "string": {
+                        string: {
                             "parameters": [
                                 {
                                     "name": "year",
@@ -1542,7 +1546,7 @@ suite("User functions", () => {
                                 "value": "[concat(string(parameters('year')), '-', string(parameters('month')), '-', string(parameters('day')))]"
                             }
                         },
-                        "parameters": {
+                        parameters: {
                             "parameters": [
                                 {
                                     "name": "year",
@@ -1563,7 +1567,7 @@ suite("User functions", () => {
                                 "value": "[concat(string(parameters('year')), '-', string(parameters('month')), '-', string(parameters('day')))]"
                             }
                         },
-                        "udf": {
+                        udf: {
                             "parameters": [
                                 {
                                     "name": "year",
@@ -1583,8 +1587,17 @@ suite("User functions", () => {
                                 "type": "string",
                                 "value": "[concat(string(parameters('year')), '-', string(parameters('month')), '-', string(parameters('day')))]"
                             }
+                        },
+                        udf2: {
+                        },
+                        udf3: {
+                        },
+                        udf34: {
+                        },
+                        mixedCase: {
                         }
                     }
+                }
             ],
             "resources": [
                 {
@@ -1631,23 +1644,111 @@ suite("User functions", () => {
             }
         };
 
-        async function testCompletions(find: string, replacementWithBang: string, expected: string[]): Promise<void> {
-            const template = stringify(userFuncsTemplate2).replace(find, replacementWithBang);
+        function createCompletionsTest(find: string, replacementWithBang: string, expectedNamesAndInsertTexts: [string, string][]): void {
+            test(`Test UDF Completions: ${replacementWithBang}`, async () => {
+                const template = stringify(userFuncsTemplate2).replace(find, replacementWithBang);
 
-            const { dt, markers: { bang } } = await parseTemplateWithMarkers(template);
-            const pc = dt.getContextFromDocumentCharacterIndex(bang.index);
-            const completions = await pc.getCompletionItems();
-            const completionNames = completions.map(c => c.name);
-            assert.deepStrictEqual(completionNames, expected);
+                const { dt, markers: { bang } } = await parseTemplateWithMarkers(template);
+                assert(bang, "Didn't find ! marker in text");
+                const pc = dt.getContextFromDocumentCharacterIndex(bang.index);
+                const completions = await pc.getCompletionItems();
+
+                const completionNames = completions.map(c => c.name).sort();
+                const completionInserts = completions.map(c => c.insertText).sort();
+
+                const expectedNames = expectedNamesAndInsertTexts.map(e => e[0]).sort();
+                const expectedInsertTexts = expectedNamesAndInsertTexts.map(e => e[1]).sort();
+
+                assert.deepStrictEqual(completionNames, expectedNames, "Completion names didn't match");
+                assert.deepStrictEqual(completionInserts, expectedInsertTexts, "Completion insert texts didn't match");
+            });
         }
 
-        test("Completing udf.param does not find parameters function", async () => {
-            await testCompletions('<output1>', 'udf.param!', []);
-        });
+        suite("Completing UDF function names", () => {
+            suite("Completing udf.xxx gives udf's functions starting with xxx - not found", () => {
+                createCompletionsTest('<output1>', 'udf.x!', []);
+                createCompletionsTest('<output1>', 'udf.udf35!', []);
+                createCompletionsTest('<output1>', 'udf.udf1!', []);
+            });
 
-        test("Completing udf. gives udf's functions", async () => {
-            await testCompletions('<output1>', 'udf.!', ["string", "parameters", "udf"]);
-        });
+            suite("Completing udf.xxx gives udf's functions starting with xxx", () => {
+                // $0 indicates where the cursor should be placed after replacement
+                createCompletionsTest('<output1>', 'udf.p!', [["udf.parameters", "parameters($0)"]]);
+                createCompletionsTest('<output1>', 'udf.u!', [["udf.udf", "udf($0)"], ["udf.udf2", "udf2()$0"], ["udf.udf3", "udf3()$0"], ["udf.udf34", "udf34()$0"]]);
+                createCompletionsTest('<output1>', 'udf.ud!', [["udf.udf", "udf($0)"], ["udf.udf2", "udf2()$0"], ["udf.udf3", "udf3()$0"], ["udf.udf34", "udf34()$0"]]);
+                createCompletionsTest('<output1>', 'udf.udf!', [["udf.udf", "udf($0)"], ["udf.udf2", "udf2()$0"], ["udf.udf3", "udf3()$0"], ["udf.udf34", "udf34()$0"]]);
+                createCompletionsTest('<output1>', 'udf.udf2!', [["udf.udf2", "udf2()$0"]]);
+                createCompletionsTest('<output1>', 'udf.udf3!', [["udf.udf3", "udf3()$0"], ["udf.udf34", "udf34()$0"]]);
+                createCompletionsTest('<output1>', 'udf.udf34!', [["udf.udf34", "udf34()$0"]]);
+            });
+
+            suite("Completing udf.xxx gives udf's functions starting with xxx - case insensitive", () => {
+                createCompletionsTest('<output1>', 'udf.P!', [["udf.parameters", "parameters($0)"]]);
+                createCompletionsTest('<output1>', 'udf.U!', [["udf.udf", "udf($0)"], ["udf.udf2", "udf2()$0"], ["udf.udf3", "udf3()$0"], ["udf.udf34", "udf34()$0"]]);
+                createCompletionsTest('<output1>', 'udf.uD!', [["udf.udf", "udf($0)"], ["udf.udf2", "udf2()$0"], ["udf.udf3", "udf3()$0"], ["udf.udf34", "udf34()$0"]]);
+                createCompletionsTest('<output1>', 'udf.udF!', [["udf.udf", "udf($0)"], ["udf.udf2", "udf2()$0"], ["udf.udf3", "udf3()$0"], ["udf.udf34", "udf34()$0"]]);
+                createCompletionsTest('<output1>', 'udf.MIXEDCase!', [["udf.mixedCase", "mixedCase()$0"]]);
+            });
+
+            suite("Completing built-in functions inside functions", () => {
+                createCompletionsTest('<output1>', 'param!', [["parameters", "parameters($0)"]]);
+                createCompletionsTest('<output1>', 'p!', [["padLeft", "padLeft($0)"], ["parameters", "parameters($0)"], ["providers", "providers($0)"]]);
+                createCompletionsTest('<output1>', 'P!', [["padLeft", "padLeft($0)"], ["parameters", "parameters($0)"], ["providers", "providers($0)"]]);
+            });
+
+            suite("Completing built-in functions with UDF function names returns empty", () => {
+                createCompletionsTest('<output1>', 'udf1!', []);
+            });
+
+            suite("Completing udf.param does not find built-in parameters function", () => {
+                createCompletionsTest('<output1>', 'udf.param!', [["udf.parameters", "parameters($0)"]]);
+            });
+
+            suite("Completing udf. gives udf's functions", () => {
+                //asdf createCompletionsTest('<output1>', 'udf.!', [["udf.string", "string"], ["udf.parameters", "parameters($0)"], ["udf.udf", "udf($0)"]]);
+                //asdf createCompletionsTest('<output1>', 'mixedcase.!', [["udf.mixedCase", "mixedCase()$0"]]);
+            });
+
+            suite("Completing <unknownnamespace>. gives empty", () => {
+                //asdf createCompletionsTest('<output1>', 'ud2.!', []);
+            });
+
+        }); // end Completing UDF function names
+
+        suite("Completing UDF namespaces", () => {
+            suite("Unknown namespace or built-in", () => {
+                createCompletionsTest('<output1>', 'xyz!', []);
+                createCompletionsTest('<output1>', 'udf2!', []);
+            });
+
+            suite("Only matches namespace", () => {
+                createCompletionsTest('<output1>', 'ud!', [["udf", "udf.$0"]]);
+                createCompletionsTest('<output1>', 'udf!', [["udf", "udf.$0"]]);
+                createCompletionsTest('<output1>', 'mixedCase!', [["mixedCaseNamespace", "mixedCaseNamespace.$0"]]);
+                createCompletionsTest('<output1>', 'mixedCaseNamespace!', [["mixedCaseNamespace", "mixedCaseNamespace.$0"]]);
+            });
+
+            suite("Only matches namespace - case insensitive", () => {
+                createCompletionsTest('<output1>', 'ud!', [["udf", "udf.$0"]]);
+                createCompletionsTest('<output1>', 'udf!', [["udf", "udf.$0"]]);
+                createCompletionsTest('<output1>', 'MIXEDCASE!', [["mixedCaseNamespace", "mixedCaseNamespace.$0"]]);
+                createCompletionsTest('<output1>', 'mixedCASENAMESPACE!', [["mixedCaseNamespace", "mixedCaseNamespace.$0"]]);
+            });
+
+            suite("Matches namespaces and built-in functions", () => {
+                createCompletionsTest('<output1>', 'u!', [["udf", "udf.$0"], ["union", "union"], ["uniqueString", "uniqueString"], ["uri", "uri"], ["uriComponent", "uriComponent"], ["uriComponentToString", "uriComponentToString"]]);
+            });
+
+            test("Parameter names in outer scope");
+            test("Parameter names in function scope");
+            test("Variables function doesn't show up in function scope");
+            test("Variables names in outer scope");
+            test("Variables names in function scope");
+            test("User functions in function scope");
+            test("User namespaces in function scope");
+
+        }); // end Completing UDF namespaces
+
     }); // suite UDF Completions
 
 }); // suite User Functions
