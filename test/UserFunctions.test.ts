@@ -1707,7 +1707,9 @@ suite("User functions", () => {
             });
 
             suite("Completing udf. gives udf's functions", () => {
-                createCompletionsTest('<output1>', 'udf.!', [
+                createCompletionsTest(
+                    '<output1>',
+                    'udf.!', [
                     ["udf.mixedCaseFunc", "mixedCaseFunc()$0"],
                     ["udf.string", "string($0)"],
                     ["udf.parameters", "parameters($0)"],
@@ -1727,9 +1729,16 @@ suite("User functions", () => {
                 createCompletionsTest('<output1>', 'ud2.!', []);
             });
 
+            suite("Completing in middle of function name", () => {
+                createCompletionsTest("<output1>", "udf.!udf34", [["udf.mixedCaseFunc", "mixedCaseFunc()$0"], ["udf.string", "string($0)"], ["udf.parameters", "parameters($0)"], ["udf.udf", "udf($0)"], ["udf.udf2", "udf2()$0"], ["udf.udf3", "udf3()$0"], ["udf.udf34", "udf34()$0"]]);
+                createCompletionsTest("<output1>", "udf.u!df34", [["udf.udf", "udf($0)"], ["udf.udf2", "udf2()$0"], ["udf.udf3", "udf3()$0"], ["udf.udf34", "udf34()$0"]]);
+                createCompletionsTest("<output1>", "udf.udf3!4", [["udf.udf3", "udf3()$0"], ["udf.udf34", "udf34()$0"]]);
+                createCompletionsTest("<output1>", "udf.udf34!", [["udf.udf34", "udf34()$0"]]);
+                createCompletionsTest("<output1>", "udf.udf345!", []);
+            });
         }); // end Completing UDF function names
 
-        suite("Completing UDF namespaces", () => {
+        suite("Completing UDF namespaces before a function name is typed", () => {
             suite("Unknown namespace or built-in", () => {
                 createCompletionsTest('<output1>', 'xyz!', []);
                 createCompletionsTest('<output1>', 'udf2!', []);
@@ -1762,6 +1771,35 @@ suite("User functions", () => {
             test("User namespaces in function scope");
 
         }); // end Completing UDF namespaces
+
+        suite("Completing UDF namespaces after a function name already exists", () => {
+            suite("Unknown namespace or built-in", () => {
+                createCompletionsTest('<output1>', 'x!yz.', []);
+                createCompletionsTest('<output1>', 'udf2!.', []);
+            });
+
+            suite("Only matches namespace", () => {
+                createCompletionsTest('<output1>', 'ud!f.abc', [["udf", "udf.$0"]]);
+                createCompletionsTest('<output1>', 'udf!.abc', [["udf", "udf.$0"]]);
+                createCompletionsTest('<output1>', 'mixed!Ca.abc', [["mixedCaseNamespace", "mixedCaseNamespace.$0"]]);
+            });
+
+            suite("Matches namespaces and built-in functions", () => {
+                createCompletionsTest('<output1>', 'u!df.string', [["udf", "udf.$0"], ["union", "union($0)"], ["uniqueString", "uniqueString($0)"], ["uri", "uri($0)"], ["uriComponent", "uriComponent($0)"], ["uriComponentToString", "uriComponentToString($0)"]]);
+            });
+
+            test("Parameter names in outer scope");
+            test("Parameter names in function scope");
+            test("Variables function doesn't show up in function scope");
+            test("Variables names in outer scope");
+            test("Variables names in function scope");
+            test("User functions in function scope");
+            test("User namespaces in function scope");
+
+        }); // end Completing UDF namespaces after a function name already exists
+
+        //createCompletionsTest("<output1>", "!", []); //asdf
+        //createCompletionsTest("<output1>", ".!", []); //asdf
 
     }); // suite UDF Completions
 
