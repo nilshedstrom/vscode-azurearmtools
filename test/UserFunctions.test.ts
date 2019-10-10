@@ -1647,6 +1647,9 @@ suite("User functions", () => {
             }
         };
 
+        const allBuiltinsExpectedCompletions = allTestDataExpectedCompletions(0, 0).map(c => <[string, string]>[c.name, c.insertText]);
+        const allNamespaceExpectedCompletions: [string, string][] = [["mixedCaseNamespace", "mixedCaseNamespace.$0"], ["udf", "udf.$0"]];
+
         function createCompletionsTest(find: string, replacementWithBang: string, expectedNamesAndInsertTexts: [string, string][]): void {
             test(`Test UDF Completions: ${replacementWithBang}`, async () => {
                 const template = stringify(userFuncsTemplate2).replace(find, replacementWithBang);
@@ -1780,8 +1783,7 @@ suite("User functions", () => {
             });
 
             suite("Matches namespaces and built-in functions", () => {
-                const allBuiltins = allTestDataExpectedCompletions(0, 0).map(c => <[string, string]>[c.name, c.insertText]);
-                createCompletionsTest('<output1>', '!udf.string', [["mixedCaseNamespace", "mixedCaseNamespace.$0"], ["udf", "udf.$0"], ...allBuiltins]);
+                createCompletionsTest('<output1>', '!udf.string', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
                 createCompletionsTest('<output1>', 'u!df.string', [["udf", "udf.$0"], ["uniqueString", "uniqueString($0)"], ["uri", "uri($0)"]]);
                 createCompletionsTest('<output1>', 'ud!f.abc', [["udf", "udf.$0"]]);
                 createCompletionsTest('<output1>', 'udf!.abc', [["udf", "udf.$0"]]);
@@ -1801,7 +1803,16 @@ suite("User functions", () => {
         //createCompletionsTest("<output1>", "!", []); //asdf
         //createCompletionsTest("<output1>", ".!", []); //asdf
 
-        test("UDF completions in larger expression context");
+        suite("UDF completions in larger expression context", () => {
+            createCompletionsTest("<output1>", 'udf.string !', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+            createCompletionsTest("<output1>", '! udf.string', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+            createCompletionsTest("<output1>", '!udf .string()', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+            createCompletionsTest("<output1>", 'udf. !string()', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+            createCompletionsTest("<output1>", 'udf.string(!)', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+            createCompletionsTest("<output1>", "udf.string('a', !)", [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+
+            //asdf
+        });
 
     }); // suite UDF Completions
 

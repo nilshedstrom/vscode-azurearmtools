@@ -466,32 +466,25 @@ export class PositionContext {
         if (tleValue.nameToken && tleValue.nameToken.span.contains(tleCharacterIndex, true)) {
             // The caret is inside the function's name (or a namespace before the period has been typed), so one of
             // three possibilities.
-
             tleTokenToComplete = tleValue.nameToken;
 
             if (namespace) {
-                //   1) "namespace.func<CURSOR>tion"
-
-                // Complete only UDF functions
+                // 1) "namespace.func<CURSOR>tion"
+                //   Complete only UDF functions
                 completeUserFunctions = true;
                 completeNamespaces = false;
                 completeBuiltinFunctions = false;
             } else {
-                //   2) "name<CURSOR>space"
-                //   3) "func<CURSOR>tion"
-
-                // Complete built-ins and namespaces
+                // 2) "name<CURSOR>space"
+                // 3) "func<CURSOR>tion"
+                //   Complete built-ins and namespaces
                 completeNamespaces = true;
                 completeBuiltinFunctions = true;
                 completeUserFunctions = false;
             }
-
-            //return this.getFunctionOrNamespaceCompletions(namespace, tleValue.nameToken, scope, tleCharacterIndex, includeNamespaceCompletions);
-
         } else if (namespaceName && tleValue.periodToken && tleValue.periodToken.span.afterEndIndex === tleCharacterIndex) {
-            // The caret is right after the period between a namespace and a function name, so we will be looking for UDF function completions
-            //
-            //   "namespace.<CURSOR>function"
+            // "namespace.<CURSOR>function"
+            //   The caret is right after the period between a namespace and a function name, so we will be looking for UDF function completions
 
             if (!namespace) {
                 // The given namespace is not defined, so no completions
@@ -502,28 +495,22 @@ export class PositionContext {
             completeNamespaces = false;
             completeBuiltinFunctions = false;
             completeUserFunctions = true;
-
-            //return await this.getFunctionOrNamespaceCompletions(namespace, tleValue.nameToken, scope, tleCharacterIndex, false);
         } else if (tleValue.namespaceToken && tleValue.periodToken && tleValue.namespaceToken.span.contains(tleCharacterIndex, true)) {
-            // The caret is inside the UDF's namespace (e.g., the namespace and at least a period already exist in the call).
-            //
-            //   "name<CURSOR>space.function"
+            // "name<CURSOR>space.function"
+            //   The caret is inside the UDF's namespace (e.g., the namespace and at least a period already exist in the call).
             //
             // So we want built-in functions or namespaces only
 
-            // namespace = null; asdf
-
-            //return await this.getFunctionOrNamespaceCompletions(null, tleValue.namespaceToken, scope, tleCharacterIndex, true);
             tleTokenToComplete = tleValue.namespaceToken;
             completeNamespaces = true;
             completeBuiltinFunctions = true;
             completeUserFunctions = false;
 
         } else if (tleValue.isCallToBuiltinWithName("parameters") && tleValue.argumentExpressions.length === 0) {
-            // "parameters<CURSOR>" or  "parameters(<CURSOR>)" and similar
+            // "parameters<CURSOR>" or "parameters(<CURSOR>)" or similar
             return this.getMatchingParameterCompletions("", tleValue, tleCharacterIndex, scope); //testpoint
         } else if (tleValue.isCallToBuiltinWithName("variables") && tleValue.argumentExpressions.length === 0) {
-            // "variables<CURSOR>" or  "variables(<CURSOR>)" and similar
+            // "variables<CURSOR>" or "variables(<CURSOR>)" or similar
             return this.getMatchingVariableCompletions("", tleValue, tleCharacterIndex, scope); //testpoint
         } else {
 
