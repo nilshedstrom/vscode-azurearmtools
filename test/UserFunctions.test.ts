@@ -10,7 +10,7 @@ import { DeploymentTemplate, Hover, IReferenceSite, Language, Reference } from "
 import { IDeploymentTemplate } from "./support/diagnostics";
 import { parseTemplate, parseTemplateWithMarkers } from "./support/parseTemplate";
 import { stringify } from "./support/stringify";
-import { allTestDataCompletions } from "./TestData";
+import { allTestDataExpectedCompletions } from "./TestData";
 
 suite("User functions", () => {
 
@@ -1674,7 +1674,7 @@ suite("User functions", () => {
                 createCompletionsTest('<output1>', 'udf.udf1!', []);
             });
 
-            suite("Completing udf.xxx gives udf's functions starting with xxx", () => {
+            suite("Completing inside xxx in udf.xxx gives only udf's functions starting with xxx", () => {
                 // $0 indicates where the cursor should be placed after replacement
                 createCompletionsTest('<output1>', 'udf.p!', [["udf.parameters", "parameters($0)"]]);
                 createCompletionsTest('<output1>', 'udf.u!', [["udf.udf", "udf($0)"], ["udf.udf2", "udf2()$0"], ["udf.udf3", "udf3()$0"], ["udf.udf34", "udf34()$0"]]);
@@ -1760,7 +1760,7 @@ suite("User functions", () => {
             });
 
             suite("Matches namespaces and built-in functions", () => {
-                createCompletionsTest('<output1>', 'u!', [["udf", "udf.$0"], ["union", "union($0)"], ["uniqueString", "uniqueString($0)"], ["uri", "uri($0)"], ["uriComponent", "uriComponent($0)"], ["uriComponentToString", "uriComponentToString($0)"]]);
+                createCompletionsTest('<output1>', 'u!', [["udf", "udf.$0"], ["uniqueString", "uniqueString($0)"], ["uri", "uri($0)"]]);
             });
 
             test("Parameter names in outer scope");
@@ -1780,9 +1780,9 @@ suite("User functions", () => {
             });
 
             suite("Matches namespaces and built-in functions", () => {
-                const allBuiltins = allTestDataCompletions(0, 0).map(c => <[string, string]>[c.name, c.insertText]);
+                const allBuiltins = allTestDataExpectedCompletions(0, 0).map(c => <[string, string]>[c.name, c.insertText]);
                 createCompletionsTest('<output1>', '!udf.string', [["mixedCaseNamespace", "mixedCaseNamespace.$0"], ["udf", "udf.$0"], ...allBuiltins]);
-                createCompletionsTest('<output1>', 'u!df.string', [["udf", "udf.$0"], ["union", "union($0)"], ["uniqueString", "uniqueString($0)"], ["uri", "uri($0)"], ["uriComponent", "uriComponent($0)"], ["uriComponentToString", "uriComponentToString($0)"]]);
+                createCompletionsTest('<output1>', 'u!df.string', [["udf", "udf.$0"], ["uniqueString", "uniqueString($0)"], ["uri", "uri($0)"]]);
                 createCompletionsTest('<output1>', 'ud!f.abc', [["udf", "udf.$0"]]);
                 createCompletionsTest('<output1>', 'udf!.abc', [["udf", "udf.$0"]]);
                 createCompletionsTest('<output1>', 'mixed!Ca.abc', [["mixedCaseNamespace", "mixedCaseNamespace.$0"]]);

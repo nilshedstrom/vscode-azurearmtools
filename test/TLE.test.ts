@@ -628,7 +628,7 @@ suite("TLE", () => {
                 let pr = parseExpressionWithScope("\"[concat.\"");
                 assert(pr);
                 assert.deepStrictEqual(TLE.Token.createLeftSquareBracket(1), pr.leftSquareBracketToken);
-                assert.deepStrictEqual(new TLE.FunctionCallValue(null, null, TLE.Token.createLiteral(2, "concat"), null, [], [], null), pr.expression);
+                assert.deepStrictEqual(new TLE.FunctionCallValue(TLE.Token.createLiteral(2, "concat"), TLE.Token.createPeriod(2 + "concat".length), null, null, [], [], null), pr.expression);
                 assert.equal(null, pr.rightSquareBracketToken);
                 assert.deepStrictEqual(
                     [

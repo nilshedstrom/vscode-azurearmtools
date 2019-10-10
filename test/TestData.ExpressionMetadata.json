@@ -60,6 +60,13 @@
             "$testData": true
         },
         {
+            "name": "equals",
+            "expectedUsage": "equals(arg1, arg2)",
+            "description": "Checks whether two values equal each other.",
+            "minimumArguments": 2,
+            "maximumArguments": 2
+        },
+        {
             "name": "int",
             "expectedUsage": "int(valueToConvert)",
             "description": "Converts the specified value to Integer.",

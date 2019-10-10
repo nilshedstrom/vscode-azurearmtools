@@ -12,7 +12,7 @@ import { assertNotNull } from "./support/assertNotNull";
 import { IDeploymentTemplate } from "./support/diagnostics";
 import { parseTemplateWithMarkers } from "./support/parseTemplate";
 import { stringify } from "./support/stringify";
-import { allTestDataCompletionNames, allTestDataCompletions, concatCompletion, copyIndexCompletion, padLeftCompletion, parameterCompletion, parametersCompletion, propertyCompletion, providersCompletion, referenceCompletion, replaceCompletion, resourceGroupCompletion, resourceIdCompletion, skipCompletion, splitCompletion, stringCompletion, subCompletion, subscriptionCompletion, substringCompletion, variableCompletion, variablesCompletion } from "./TestData";
+import { allTestDataCompletionNames, allTestDataExpectedCompletions, expectedConcatCompletion, expectedCopyIndexCompletion, expectedPadLeftCompletion, expectedParametersCompletion, expectedProvidersCompletion, expectedReferenceCompletion, expectedReplaceCompletion, expectedResourceGroupCompletion, expectedResourceIdCompletion, expectedSkipCompletion, expectedSplitCompletion, expectedStringCompletion, expectedSubCompletion, expectedSubscriptionCompletion, expectedSubstringCompletion, expectedVariablesCompletion, parameterCompletion, propertyCompletion, variableCompletion } from "./TestData";
 
 suite("PositionContext", () => {
     suite("fromDocumentLineAndColumnIndexes(DeploymentTemplate,number,number)", () => {
@@ -507,15 +507,15 @@ suite("PositionContext", () => {
 
         for (let i = 0; i <= 24; ++i) {
             completionItemsTest(`{ 'a': "[concat('B')]" }`, i,
-                (i === 9) ? allTestDataCompletions(9, 0) :
+                (i === 9) ? allTestDataExpectedCompletions(9, 0) :
                     (10 <= i && i <= 11) ? [
-                        concatCompletion(9, 6),
-                        copyIndexCompletion(9, 6)
+                        expectedConcatCompletion(9, 6),
+                        expectedCopyIndexCompletion(9, 6)
                     ] :
                         (12 <= i && i <= 15) ? [
-                            concatCompletion(9, 6)
+                            expectedConcatCompletion(9, 6)
                         ] :
-                            (i === 20) ? allTestDataCompletions(20, 0) :
+                            (i === 20) ? allTestDataExpectedCompletions(20, 0) :
                                 []);
         }
 
@@ -528,79 +528,79 @@ suite("PositionContext", () => {
 
             for (let i = 0; i <= 25; ++i) {
                 completionItemsTest(`{ 'a': 'A', 'b': "[concat`, i,
-                    (i === 19) ? allTestDataCompletions(19, 0) :
+                    (i === 19) ? allTestDataExpectedCompletions(19, 0) :
                         (20 <= i && i <= 21) ? [
-                            concatCompletion(19, 6),
-                            copyIndexCompletion(19, 6)
+                            expectedConcatCompletion(19, 6),
+                            expectedCopyIndexCompletion(19, 6)
                         ] :
                             (22 <= i && i <= 25) ? [
-                                concatCompletion(19, 6)
+                                expectedConcatCompletion(19, 6)
                             ] :
                                 []);
             }
 
             for (let i = 0; i <= 23; ++i) {
                 completionItemsTest(`{ 'a': 'A', 'b': "[spif`, i,
-                    (i === 19) ? allTestDataCompletions(19, 0) :
+                    (i === 19) ? allTestDataExpectedCompletions(19, 0) :
                         (i === 20) ? [
-                            skipCompletion(19, 4),
-                            splitCompletion(19, 4),
-                            stringCompletion(19, 4),
-                            subCompletion(19, 4),
-                            subscriptionCompletion(19, 4),
-                            substringCompletion(19, 4)
+                            expectedSkipCompletion(19, 4),
+                            expectedSplitCompletion(19, 4),
+                            expectedStringCompletion(19, 4),
+                            expectedSubCompletion(19, 4),
+                            expectedSubscriptionCompletion(19, 4),
+                            expectedSubstringCompletion(19, 4)
                         ] :
                             (i === 21) ? [
-                                splitCompletion(19, 4)
+                                expectedSplitCompletion(19, 4)
                             ] :
                                 []);
             }
 
             for (let i = 0; i <= 33; ++i) {
                 completionItemsTest(`{ 'a': 'A', 'b': "[concat  ()]" }`, i,
-                    (i === 19) ? allTestDataCompletions(19, 0) :
+                    (i === 19) ? allTestDataExpectedCompletions(19, 0) :
                         (20 <= i && i <= 21) ? [
-                            concatCompletion(19, 6),
-                            copyIndexCompletion(19, 6)
+                            expectedConcatCompletion(19, 6),
+                            expectedCopyIndexCompletion(19, 6)
                         ] :
                             (22 <= i && i <= 25) ? [
-                                concatCompletion(19, 6)
+                                expectedConcatCompletion(19, 6)
                             ] :
-                                (26 <= i && i <= 29) ? allTestDataCompletions(i, 0) :
+                                (26 <= i && i <= 29) ? allTestDataExpectedCompletions(i, 0) :
                                     []);
             }
 
             for (let i = 0; i <= 80; ++i) {
                 completionItemsTest(`{ 'parameters': { 'pName': { 'type': 'integer' } }, 'a': 'A', 'b': "[concat(')]"`, i,
-                    (i === 69) ? allTestDataCompletions(69, 0) :
+                    (i === 69) ? allTestDataExpectedCompletions(69, 0) :
                         (70 <= i && i <= 71) ? [
-                            concatCompletion(69, 6),
-                            copyIndexCompletion(69, 6)
+                            expectedConcatCompletion(69, 6),
+                            expectedCopyIndexCompletion(69, 6)
                         ] :
                             (72 <= i && i <= 75) ? [
-                                concatCompletion(69, 6)
+                                expectedConcatCompletion(69, 6)
                             ] :
-                                (i === 80) ? allTestDataCompletions(80, 0) :
+                                (i === 80) ? allTestDataExpectedCompletions(80, 0) :
                                     []);
             }
 
             for (let i = 0; i <= 24; ++i) {
                 completionItemsTest(`{ 'a': "[variables()]" }`, i,
-                    (i === 9) ? allTestDataCompletions(9, 0) :
+                    (i === 9) ? allTestDataExpectedCompletions(9, 0) :
                         (10 <= i && i <= 18) ? [
-                            variablesCompletion(9, 9)
+                            expectedVariablesCompletion(9, 9)
                         ] :
-                            (i === 20) ? allTestDataCompletions(20, 0) :
+                            (i === 20) ? allTestDataExpectedCompletions(20, 0) :
                                 []);
             }
 
             for (let i = 0; i <= 56; ++i) {
                 completionItemsTest(`{ 'variables': { 'v1': 'value1' }, 'a': "[variables(]" }`, i,
                     // after the "[": all
-                    (i === 42) ? allTestDataCompletions(42, 0) :
+                    (i === 42) ? allTestDataExpectedCompletions(42, 0) :
                         // inside "[variables"
                         (43 <= i && i <= 51) ? [
-                            variablesCompletion(42, 9)
+                            expectedVariablesCompletion(42, 9)
                         ] :
                             // after "[variables(": "v1" is only completion
                             (i === 52) ? [
@@ -611,9 +611,9 @@ suite("PositionContext", () => {
 
             for (let i = 0; i <= 57; ++i) {
                 completionItemsTest(`{ 'variables': { 'v1': 'value1' }, 'a': "[variables()]" }`, i,
-                    (i === 42 || i === 53) ? allTestDataCompletions(i, 0) :
+                    (i === 42 || i === 53) ? allTestDataExpectedCompletions(i, 0) :
                         (43 <= i && i <= 51) ? [
-                            variablesCompletion(42, 9)
+                            expectedVariablesCompletion(42, 9)
                         ] :
                             (i === 52) ? [
                                 variableCompletion("v1", 52, 1)
@@ -623,55 +623,55 @@ suite("PositionContext", () => {
 
             for (let i = 0; i <= 52; ++i) {
                 completionItemsTest(`{ 'variables': { 'vName': 20 }, 'a': "[variables(')]`, i,
-                    (i === 39) ? allTestDataCompletions(39, 0) :
-                        (40 <= i && i <= 48) ? [variablesCompletion(39, 9)] :
+                    (i === 39) ? allTestDataExpectedCompletions(39, 0) :
+                        (40 <= i && i <= 48) ? [expectedVariablesCompletion(39, 9)] :
                             (i === 50) ? [variableCompletion("vName", 49, 2)] :
                                 []);
             }
 
             for (let i = 0; i <= 53; ++i) {
                 completionItemsTest(`{ 'variables': { 'vName': 20 }, 'a': "[variables('v)]`, i,
-                    (i === 39) ? allTestDataCompletions(39, 0) :
-                        (40 <= i && i <= 48) ? [variablesCompletion(39, 9)] :
+                    (i === 39) ? allTestDataExpectedCompletions(39, 0) :
+                        (40 <= i && i <= 48) ? [expectedVariablesCompletion(39, 9)] :
                             (50 <= i && i <= 51) ? [variableCompletion("vName", 49, 3)] :
                                 []);
             }
 
             for (let i = 0; i <= 56; ++i) {
                 completionItemsTest(`{ 'variables': { 'vName': 20 }, 'a': "[variables('')]" }`, i,
-                    (i === 39 || i === 52) ? allTestDataCompletions(i, 0) :
-                        (40 <= i && i <= 48) ? [variablesCompletion(39, 9)] :
+                    (i === 39 || i === 52) ? allTestDataExpectedCompletions(i, 0) :
+                        (40 <= i && i <= 48) ? [expectedVariablesCompletion(39, 9)] :
                             (i === 50) ? [variableCompletion("vName", 49, 3)] :
                                 []);
             }
 
             for (let i = 0; i <= 140; ++i) {
                 completionItemsTest(`{ "parameters": { "adminUsername": {} }, "a": "[resourceId(parameters(''Microsoft.Networks/virtualNetworks', parameters('adminUsername'))]" }`, i,
-                    (i === 48 || i === 59 || (73 <= i && i <= 138)) ? allTestDataCompletions(i, 0) :
+                    (i === 48 || i === 59 || (73 <= i && i <= 138)) ? allTestDataExpectedCompletions(i, 0) :
                         (49 <= i && i <= 50) ? [
-                            referenceCompletion(48, 10),
-                            replaceCompletion(48, 10),
-                            resourceGroupCompletion(48, 10),
-                            resourceIdCompletion(48, 10)
+                            expectedReferenceCompletion(48, 10),
+                            expectedReplaceCompletion(48, 10),
+                            expectedResourceGroupCompletion(48, 10),
+                            expectedResourceIdCompletion(48, 10)
                         ] :
                             (51 <= i && i <= 56) ? [
-                                resourceGroupCompletion(48, 10),
-                                resourceIdCompletion(48, 10)
+                                expectedResourceGroupCompletion(48, 10),
+                                expectedResourceIdCompletion(48, 10)
                             ] :
                                 (57 <= i && i <= 58) ? [
-                                    resourceIdCompletion(48, 10)
+                                    expectedResourceIdCompletion(48, 10)
                                 ] :
                                     (i === 60) ? [
-                                        padLeftCompletion(59, 10),
-                                        parametersCompletion(59, 10),
-                                        providersCompletion(59, 10)
+                                        expectedPadLeftCompletion(59, 10),
+                                        expectedParametersCompletion(59, 10),
+                                        expectedProvidersCompletion(59, 10)
                                     ] :
                                         (i === 61) ? [
-                                            padLeftCompletion(59, 10),
-                                            parametersCompletion(59, 10)
+                                            expectedPadLeftCompletion(59, 10),
+                                            expectedParametersCompletion(59, 10)
                                         ] :
                                             (62 <= i && i <= 69) ? [
-                                                parametersCompletion(59, 10)
+                                                expectedParametersCompletion(59, 10)
                                             ] :
                                                 (i === 71) ? [parameterCompletion("adminUsername", 70, 2)] :
                                                     []);
@@ -679,67 +679,67 @@ suite("PositionContext", () => {
 
             for (let i = 0; i <= 140; ++i) {
                 completionItemsTest(`{ "parameters": { "adminUsername": {} }, "a": "[resourceId(parameters('Microsoft.Networks/virtualNetworks', parameters('adminUsername'))]" }`, i,
-                    (i === 48 || i === 59 || (107 <= i && i <= 108) || (135 <= i && i <= 136)) ? allTestDataCompletions(i, 0) :
+                    (i === 48 || i === 59 || (107 <= i && i <= 108) || (135 <= i && i <= 136)) ? allTestDataExpectedCompletions(i, 0) :
                         (49 <= i && i <= 50) ? [
-                            referenceCompletion(48, 10),
-                            replaceCompletion(48, 10),
-                            resourceGroupCompletion(48, 10),
-                            resourceIdCompletion(48, 10)
+                            expectedReferenceCompletion(48, 10),
+                            expectedReplaceCompletion(48, 10),
+                            expectedResourceGroupCompletion(48, 10),
+                            expectedResourceIdCompletion(48, 10)
                         ] :
                             (51 <= i && i <= 56) ? [
-                                resourceGroupCompletion(48, 10),
-                                resourceIdCompletion(48, 10)
+                                expectedResourceGroupCompletion(48, 10),
+                                expectedResourceIdCompletion(48, 10)
                             ] :
                                 (57 <= i && i <= 58) ? [
-                                    resourceIdCompletion(48, 10)
+                                    expectedResourceIdCompletion(48, 10)
                                 ] :
                                     (i === 60) ? [
-                                        padLeftCompletion(59, 10),
-                                        parametersCompletion(59, 10),
-                                        providersCompletion(59, 10)
+                                        expectedPadLeftCompletion(59, 10),
+                                        expectedParametersCompletion(59, 10),
+                                        expectedProvidersCompletion(59, 10)
                                     ] :
                                         (i === 61) ? [
-                                            padLeftCompletion(59, 10),
-                                            parametersCompletion(59, 10)
+                                            expectedPadLeftCompletion(59, 10),
+                                            expectedParametersCompletion(59, 10)
                                         ] :
-                                            (62 <= i && i <= 69) ? [parametersCompletion(59, 10)] :
+                                            (62 <= i && i <= 69) ? [expectedParametersCompletion(59, 10)] :
                                                 (i === 71) ? [parameterCompletion("adminUsername", 70, 36, false)] :
                                                     (i === 109) ? [
-                                                        padLeftCompletion(108, 10),
-                                                        parametersCompletion(108, 10),
-                                                        providersCompletion(108, 10)
+                                                        expectedPadLeftCompletion(108, 10),
+                                                        expectedParametersCompletion(108, 10),
+                                                        expectedProvidersCompletion(108, 10)
                                                     ] :
                                                         (i === 110) ? [
-                                                            padLeftCompletion(108, 10),
-                                                            parametersCompletion(108, 10)
+                                                            expectedPadLeftCompletion(108, 10),
+                                                            expectedParametersCompletion(108, 10)
                                                         ] :
-                                                            (111 <= i && i <= 118) ? [parametersCompletion(108, 10)] :
+                                                            (111 <= i && i <= 118) ? [expectedParametersCompletion(108, 10)] :
                                                                 (120 <= i && i <= 133) ? [parameterCompletion("adminUsername", 119, 16)] :
                                                                     []);
             }
 
             for (let i = 0; i <= 137; ++i) {
                 completionItemsTest(`{ "variables": { "adminUsername": "" }, "a": "[resourceId(variables('Microsoft.Networks/virtualNetworks', variables('adminUsername'))]" }`, i,
-                    (i === 47 || i === 58 || (105 <= i && i <= 106) || (132 <= i && i <= 133)) ? allTestDataCompletions(i, 0) :
+                    (i === 47 || i === 58 || (105 <= i && i <= 106) || (132 <= i && i <= 133)) ? allTestDataExpectedCompletions(i, 0) :
                         (48 <= i && i <= 49) ? [
-                            referenceCompletion(47, 10),
-                            replaceCompletion(47, 10),
-                            resourceGroupCompletion(47, 10),
-                            resourceIdCompletion(47, 10)
+                            expectedReferenceCompletion(47, 10),
+                            expectedReplaceCompletion(47, 10),
+                            expectedResourceGroupCompletion(47, 10),
+                            expectedResourceIdCompletion(47, 10)
                         ] :
                             (50 <= i && i <= 55) ? [
-                                resourceGroupCompletion(47, 10),
-                                resourceIdCompletion(47, 10)
+                                expectedResourceGroupCompletion(47, 10),
+                                expectedResourceIdCompletion(47, 10)
                             ] :
                                 (56 <= i && i <= 57) ? [
-                                    resourceIdCompletion(47, 10)
+                                    expectedResourceIdCompletion(47, 10)
                                 ] :
                                     (59 <= i && i <= 67) ? [
-                                        variablesCompletion(58, 9),
+                                        expectedVariablesCompletion(58, 9),
                                     ] :
                                         (i === 69) ? [variableCompletion("adminUsername", 68, 36, false)] :
                                             (107 <= i && i <= 115) ? [
-                                                variablesCompletion(106, 9)
+                                                expectedVariablesCompletion(106, 9)
                                             ] :
                                                 (117 <= i && i <= 130) ? [variableCompletion("adminUsername", 116, 16)] :
                                                     []);
@@ -747,146 +747,146 @@ suite("PositionContext", () => {
 
             for (let i = 0; i <= 25; ++i) {
                 completionItemsTest(`{ 'a': "[parameters()]" }`, i,
-                    (i === 9) ? allTestDataCompletions(9, 0) :
+                    (i === 9) ? allTestDataExpectedCompletions(9, 0) :
                         (i === 10) ? [
-                            padLeftCompletion(9, 10),
-                            parametersCompletion(9, 10),
-                            providersCompletion(9, 10)
+                            expectedPadLeftCompletion(9, 10),
+                            expectedParametersCompletion(9, 10),
+                            expectedProvidersCompletion(9, 10)
                         ] :
                             (i === 11) ? [
-                                padLeftCompletion(9, 10),
-                                parametersCompletion(9, 10)
+                                expectedPadLeftCompletion(9, 10),
+                                expectedParametersCompletion(9, 10)
                             ] :
                                 (12 <= i && i <= 19) ? [
-                                    parametersCompletion(9, 10)
+                                    expectedParametersCompletion(9, 10)
                                 ] :
-                                    (i === 21) ? allTestDataCompletions(21, 0) :
+                                    (i === 21) ? allTestDataExpectedCompletions(21, 0) :
                                         []);
             }
 
             for (let i = 0; i <= 52; ++i) {
                 completionItemsTest(`{ 'parameters': { 'p1': {} }, 'a': "[parameters(]" }`, i,
-                    (i === 37) ? allTestDataCompletions(37, 0) :
+                    (i === 37) ? allTestDataExpectedCompletions(37, 0) :
                         (i === 38) ? [
-                            padLeftCompletion(37, 10),
-                            parametersCompletion(37, 10),
-                            providersCompletion(37, 10)
+                            expectedPadLeftCompletion(37, 10),
+                            expectedParametersCompletion(37, 10),
+                            expectedProvidersCompletion(37, 10)
                         ] :
                             (i === 39) ? [
-                                padLeftCompletion(37, 10),
-                                parametersCompletion(37, 10)
+                                expectedPadLeftCompletion(37, 10),
+                                expectedParametersCompletion(37, 10)
                             ] :
-                                (40 <= i && i <= 47) ? [parametersCompletion(37, 10)] :
+                                (40 <= i && i <= 47) ? [expectedParametersCompletion(37, 10)] :
                                     (i === 48) ? [parameterCompletion("p1", 48, 0)] :
                                         []);
             }
 
             for (let i = 0; i <= 81; ++i) {
                 completionItemsTest(`{ 'parameters': { 'pName': { 'type': 'integer' } }, 'a': 'A', 'b': "[parameters('`, i,
-                    (i === 69) ? allTestDataCompletions(69, 0) :
+                    (i === 69) ? allTestDataExpectedCompletions(69, 0) :
                         (i === 70) ? [
-                            padLeftCompletion(69, 10),
-                            parametersCompletion(69, 10),
-                            providersCompletion(69, 10)
+                            expectedPadLeftCompletion(69, 10),
+                            expectedParametersCompletion(69, 10),
+                            expectedProvidersCompletion(69, 10)
                         ] :
                             (i === 71) ? [
-                                padLeftCompletion(69, 10),
-                                parametersCompletion(69, 10)
+                                expectedPadLeftCompletion(69, 10),
+                                expectedParametersCompletion(69, 10)
                             ] :
-                                (72 <= i && i <= 79) ? [parametersCompletion(69, 10)] :
+                                (72 <= i && i <= 79) ? [expectedParametersCompletion(69, 10)] :
                                     (i === 81) ? [parameterCompletion("pName", 80, 1)] :
                                         []);
             }
 
             for (let i = 0; i <= 76; ++i) {
                 completionItemsTest(`{ 'parameters': { 'pName': { 'type': 'integer' } }, 'a': "[parameters(')]" }`, i,
-                    (i === 59) ? allTestDataCompletions(59, 0) :
+                    (i === 59) ? allTestDataExpectedCompletions(59, 0) :
                         (i === 60) ? [
-                            padLeftCompletion(59, 10),
-                            parametersCompletion(59, 10),
-                            providersCompletion(59, 10)
+                            expectedPadLeftCompletion(59, 10),
+                            expectedParametersCompletion(59, 10),
+                            expectedProvidersCompletion(59, 10)
                         ] :
                             (i === 61) ? [
-                                padLeftCompletion(59, 10),
-                                parametersCompletion(59, 10)
+                                expectedPadLeftCompletion(59, 10),
+                                expectedParametersCompletion(59, 10)
                             ] :
-                                (62 <= i && i <= 69) ? [parametersCompletion(59, 10)] :
+                                (62 <= i && i <= 69) ? [expectedParametersCompletion(59, 10)] :
                                     (i === 71) ? [parameterCompletion("pName", 70, 2)] :
                                         []);
             }
 
             for (let i = 0; i <= 75; ++i) {
                 completionItemsTest(`{ 'parameters': { 'pName': { 'type': 'integer' } }, 'a': "[parameters(']" }`, i,
-                    (i === 59) ? allTestDataCompletions(59, 0) :
+                    (i === 59) ? allTestDataExpectedCompletions(59, 0) :
                         (i === 60) ? [
-                            padLeftCompletion(59, 10),
-                            parametersCompletion(59, 10),
-                            providersCompletion(59, 10)
+                            expectedPadLeftCompletion(59, 10),
+                            expectedParametersCompletion(59, 10),
+                            expectedProvidersCompletion(59, 10)
                         ] :
                             (i === 61) ? [
-                                padLeftCompletion(59, 10),
-                                parametersCompletion(59, 10)
+                                expectedPadLeftCompletion(59, 10),
+                                expectedParametersCompletion(59, 10)
                             ] :
-                                (62 <= i && i <= 69) ? [parametersCompletion(59, 10)] :
+                                (62 <= i && i <= 69) ? [expectedParametersCompletion(59, 10)] :
                                     (i === 71) ? [parameterCompletion("pName", 70, 1)] :
                                         []);
             }
 
             for (let i = 0; i <= 53; ++i) {
                 completionItemsTest(`{ 'variables': { 'vName': 20 }, 'a': "[variables('p)]`, i,
-                    (i === 39) ? allTestDataCompletions(39, 0) :
-                        (40 <= i && i <= 48) ? [variablesCompletion(39, 9)] :
+                    (i === 39) ? allTestDataExpectedCompletions(39, 0) :
+                        (40 <= i && i <= 48) ? [expectedVariablesCompletion(39, 9)] :
                             (i === 50) ? [variableCompletion("vName", 49, 3)] :
                                 []);
             }
 
             for (let i = 0; i <= 65; ++i) {
                 completionItemsTest(`{ 'variables': { 'vName': 20 }, 'a': 'A', 'b': "[concat  spam  ('`, i,
-                    (i === 49 || (56 <= i && i <= 63)) ? allTestDataCompletions(i, 0) :
+                    (i === 49 || (56 <= i && i <= 63)) ? allTestDataExpectedCompletions(i, 0) :
                         (50 <= i && i <= 51) ? [
-                            concatCompletion(49, 6),
-                            copyIndexCompletion(49, 6)
+                            expectedConcatCompletion(49, 6),
+                            expectedCopyIndexCompletion(49, 6)
                         ] :
                             (52 <= i && i <= 55) ? [
-                                concatCompletion(49, 6)
+                                expectedConcatCompletion(49, 6)
                             ] :
                                 []);
             }
 
             for (let i = 0; i <= 28; ++i) {
                 completionItemsTest(`{ "a": "[resourceGroup()]" }`, i,
-                    (i === 9 || (23 <= i && i <= 24)) ? allTestDataCompletions(i, 0) :
+                    (i === 9 || (23 <= i && i <= 24)) ? allTestDataExpectedCompletions(i, 0) :
                         (10 <= i && i <= 11) ? [
-                            referenceCompletion(9, 13),
-                            replaceCompletion(9, 13),
-                            resourceGroupCompletion(9, 13),
-                            resourceIdCompletion(9, 13)
+                            expectedReferenceCompletion(9, 13),
+                            expectedReplaceCompletion(9, 13),
+                            expectedResourceGroupCompletion(9, 13),
+                            expectedResourceIdCompletion(9, 13)
                         ] :
                             (12 <= i && i <= 17) ? [
-                                resourceGroupCompletion(9, 13),
-                                resourceIdCompletion(9, 13)
+                                expectedResourceGroupCompletion(9, 13),
+                                expectedResourceIdCompletion(9, 13)
                             ] :
                                 (18 <= i && i <= 22) ? [
-                                    resourceGroupCompletion(9, 13)
+                                    expectedResourceGroupCompletion(9, 13)
                                 ] :
                                     []);
             }
 
             for (let i = 0; i <= 29; ++i) {
                 completionItemsTest(`{ "a": "[resourceGroup().]" }`, i,
-                    (i === 9 || i === 23) ? allTestDataCompletions(i, 0) :
+                    (i === 9 || i === 23) ? allTestDataExpectedCompletions(i, 0) :
                         (10 <= i && i <= 11) ? [
-                            referenceCompletion(9, 13),
-                            replaceCompletion(9, 13),
-                            resourceGroupCompletion(9, 13),
-                            resourceIdCompletion(9, 13)
+                            expectedReferenceCompletion(9, 13),
+                            expectedReplaceCompletion(9, 13),
+                            expectedResourceGroupCompletion(9, 13),
+                            expectedResourceIdCompletion(9, 13)
                         ] :
                             (12 <= i && i <= 17) ? [
-                                resourceGroupCompletion(9, 13),
-                                resourceIdCompletion(9, 13)
+                                expectedResourceGroupCompletion(9, 13),
+                                expectedResourceIdCompletion(9, 13)
                             ] :
                                 (18 <= i && i <= 22) ? [
-                                    resourceGroupCompletion(9, 13)
+                                    expectedResourceGroupCompletion(9, 13)
                                 ] :
                                     (24 <= i && i <= 25) ? [
                                         propertyCompletion("id", i, 0),
@@ -900,19 +900,19 @@ suite("PositionContext", () => {
 
             for (let i = 0; i <= 31; ++i) {
                 completionItemsTest(`{ "a": "[resourceGroup().lo]" }`, i,
-                    (i === 9 || i === 23) ? allTestDataCompletions(i, 0) :
+                    (i === 9 || i === 23) ? allTestDataExpectedCompletions(i, 0) :
                         (10 <= i && i <= 11) ? [
-                            referenceCompletion(9, 13),
-                            replaceCompletion(9, 13),
-                            resourceGroupCompletion(9, 13),
-                            resourceIdCompletion(9, 13)
+                            expectedReferenceCompletion(9, 13),
+                            expectedReplaceCompletion(9, 13),
+                            expectedResourceGroupCompletion(9, 13),
+                            expectedResourceIdCompletion(9, 13)
                         ] :
                             (12 <= i && i <= 17) ? [
-                                resourceGroupCompletion(9, 13),
-                                resourceIdCompletion(9, 13)
+                                expectedResourceGroupCompletion(9, 13),
+                                expectedResourceIdCompletion(9, 13)
                             ] :
                                 (18 <= i && i <= 22) ? [
-                                    resourceGroupCompletion(9, 13)
+                                    expectedResourceGroupCompletion(9, 13)
                                 ] :
                                     (24 <= i && i <= 25) ? [
                                         propertyCompletion("id", 25, 2),
@@ -930,63 +930,63 @@ suite("PositionContext", () => {
             suite("Variable value deep completion for objects", () => {
                 for (let i = 0; i <= 28; ++i) {
                     completionItemsTest(`{ "b": "[variables('a').]" }`, i,
-                        (i === 9) ? allTestDataCompletions(9, 0) :
-                            (10 <= i && i <= 18) ? [variablesCompletion(9, 9)] :
+                        (i === 9) ? allTestDataExpectedCompletions(9, 0) :
+                            (10 <= i && i <= 18) ? [expectedVariablesCompletion(9, 9)] :
                                 []);
                 }
 
                 for (let i = 0; i <= 55; ++i) {
                     completionItemsTest(`{ "variables": { "a": "A" }, "b": "[variables('a').]" }`, i,
-                        (i === 36) ? allTestDataCompletions(36, 0) :
-                            (37 <= i && i <= 45) ? [variablesCompletion(36, 9)] :
+                        (i === 36) ? allTestDataExpectedCompletions(36, 0) :
+                            (37 <= i && i <= 45) ? [expectedVariablesCompletion(36, 9)] :
                                 (47 <= i && i <= 48) ? [variableCompletion("a", 46, 4)] :
                                     []);
                 }
 
                 for (let i = 0; i <= 55; ++i) {
                     completionItemsTest(`{ "variables": { "a": 123 }, "b": "[variables('a').]" }`, i,
-                        (i === 36) ? allTestDataCompletions(36, 0) :
-                            (37 <= i && i <= 45) ? [variablesCompletion(36, 9)] :
+                        (i === 36) ? allTestDataExpectedCompletions(36, 0) :
+                            (37 <= i && i <= 45) ? [expectedVariablesCompletion(36, 9)] :
                                 (47 <= i && i <= 48) ? [variableCompletion("a", 46, 4)] :
                                     []);
                 }
 
                 for (let i = 0; i <= 56; ++i) {
                     completionItemsTest(`{ "variables": { "a": true }, "b": "[variables('a').]" }`, i,
-                        (i === 37) ? allTestDataCompletions(37, 0) :
-                            (38 <= i && i <= 46) ? [variablesCompletion(37, 9)] :
+                        (i === 37) ? allTestDataExpectedCompletions(37, 0) :
+                            (38 <= i && i <= 46) ? [expectedVariablesCompletion(37, 9)] :
                                 (48 <= i && i <= 49) ? [variableCompletion("a", 47, 4)] :
                                     []);
                 }
 
                 for (let i = 0; i <= 56; ++i) {
                     completionItemsTest(`{ "variables": { "a": null }, "b": "[variables('a').]" }`, i,
-                        (i === 37) ? allTestDataCompletions(37, 0) :
-                            (38 <= i && i <= 46) ? [variablesCompletion(37, 9)] :
+                        (i === 37) ? allTestDataExpectedCompletions(37, 0) :
+                            (38 <= i && i <= 46) ? [expectedVariablesCompletion(37, 9)] :
                                 (48 <= i && i <= 49) ? [variableCompletion("a", 47, 4)] :
                                     []);
                 }
 
                 for (let i = 0; i <= 54; ++i) {
                     completionItemsTest(`{ "variables": { "a": [] }, "b": "[variables('a').]" }`, i,
-                        (i === 35) ? allTestDataCompletions(35, 0) :
-                            (36 <= i && i <= 44) ? [variablesCompletion(35, 9)] :
+                        (i === 35) ? allTestDataExpectedCompletions(35, 0) :
+                            (36 <= i && i <= 44) ? [expectedVariablesCompletion(35, 9)] :
                                 (46 <= i && i <= 47) ? [variableCompletion("a", 45, 4)] :
                                     []);
                 }
 
                 for (let i = 0; i <= 54; ++i) {
                     completionItemsTest(`{ "variables": { "a": {} }, "b": "[variables('a').]" }`, i,
-                        (i === 35) ? allTestDataCompletions(35, 0) :
-                            (36 <= i && i <= 44) ? [variablesCompletion(35, 9)] :
+                        (i === 35) ? allTestDataExpectedCompletions(35, 0) :
+                            (36 <= i && i <= 44) ? [expectedVariablesCompletion(35, 9)] :
                                 (46 <= i && i <= 47) ? [variableCompletion("a", 45, 4)] :
                                     []);
                 }
 
                 for (let i = 0; i <= 67; ++i) {
                     completionItemsTest(`{ "variables": { "a": { "name": "A" } }, "b": "[variables('a').]" }`, i,
-                        (i === 48) ? allTestDataCompletions(48, 0) :
-                            (49 <= i && i <= 57) ? [variablesCompletion(48, 9)] :
+                        (i === 48) ? allTestDataExpectedCompletions(48, 0) :
+                            (49 <= i && i <= 57) ? [expectedVariablesCompletion(48, 9)] :
                                 (59 <= i && i <= 60) ? [variableCompletion("a", 58, 4)] :
                                     (62 <= i && i <= 63) ? [propertyCompletion("name", i, 0)] :
                                         []);
@@ -994,8 +994,8 @@ suite("PositionContext", () => {
 
                 for (let i = 0; i <= 69; ++i) {
                     completionItemsTest(`{ "variables": { "a": { "name": "A" } }, "b": "[variables('a').na]" }`, i,
-                        (i === 48) ? allTestDataCompletions(48, 0) :
-                            (49 <= i && i <= 57) ? [variablesCompletion(48, 9)] :
+                        (i === 48) ? allTestDataExpectedCompletions(48, 0) :
+                            (49 <= i && i <= 57) ? [expectedVariablesCompletion(48, 9)] :
                                 (59 <= i && i <= 60) ? [variableCompletion("a", 58, 4)] :
                                     (62 <= i && i <= 65) ? [propertyCompletion("name", 63, 2)] :
                                         []);
@@ -1003,8 +1003,8 @@ suite("PositionContext", () => {
 
                 for (let i = 0; i <= 69; ++i) {
                     completionItemsTest(`{ "variables": { "a": { "name": "A" } }, "b": "[variables('a').ab]" }`, i,
-                        (i === 48) ? allTestDataCompletions(48, 0) :
-                            (49 <= i && i <= 57) ? [variablesCompletion(48, 9)] :
+                        (i === 48) ? allTestDataExpectedCompletions(48, 0) :
+                            (49 <= i && i <= 57) ? [expectedVariablesCompletion(48, 9)] :
                                 (59 <= i && i <= 60) ? [variableCompletion("a", 58, 4)] :
                                     (62 <= i && i <= 63) ? [propertyCompletion("name", 63, 2)] :
                                         []);
@@ -1012,8 +1012,8 @@ suite("PositionContext", () => {
 
                 for (let i = 0; i <= 78; ++i) {
                     completionItemsTest(`{ "variables": { "a": { "bb": { "cc": 200 } } }, "b": "[variables('a').bb.]" }`, i,
-                        (i === 56) ? allTestDataCompletions(56, 0) :
-                            (57 <= i && i <= 65) ? [variablesCompletion(56, 9)] :
+                        (i === 56) ? allTestDataExpectedCompletions(56, 0) :
+                            (57 <= i && i <= 65) ? [expectedVariablesCompletion(56, 9)] :
                                 (67 <= i && i <= 68) ? [variableCompletion("a", 66, 4)] :
                                     (70 <= i && i <= 73) ? [propertyCompletion("bb", 71, 2)] :
                                         (i === 74) ? [propertyCompletion("cc", 74, 0)] :
