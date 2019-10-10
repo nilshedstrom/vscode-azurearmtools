@@ -10,6 +10,7 @@ import { DeploymentTemplate, Hover, IReferenceSite, Language, Reference } from "
 import { IDeploymentTemplate } from "./support/diagnostics";
 import { parseTemplate, parseTemplateWithMarkers } from "./support/parseTemplate";
 import { stringify } from "./support/stringify";
+import { allTestDataCompletions } from "./TestData";
 
 suite("User functions", () => {
 
@@ -1778,14 +1779,13 @@ suite("User functions", () => {
                 createCompletionsTest('<output1>', 'udf2!.', []);
             });
 
-            suite("Only matches namespace", () => {
+            suite("Matches namespaces and built-in functions", () => {
+                const allBuiltins = allTestDataCompletions(0, 0).map(c => <[string, string]>[c.name, c.insertText]);
+                createCompletionsTest('<output1>', '!udf.string', [["mixedCaseNamespace", "mixedCaseNamespace.$0"], ["udf", "udf.$0"], ...allBuiltins]);
+                createCompletionsTest('<output1>', 'u!df.string', [["udf", "udf.$0"], ["union", "union($0)"], ["uniqueString", "uniqueString($0)"], ["uri", "uri($0)"], ["uriComponent", "uriComponent($0)"], ["uriComponentToString", "uriComponentToString($0)"]]);
                 createCompletionsTest('<output1>', 'ud!f.abc', [["udf", "udf.$0"]]);
                 createCompletionsTest('<output1>', 'udf!.abc', [["udf", "udf.$0"]]);
                 createCompletionsTest('<output1>', 'mixed!Ca.abc', [["mixedCaseNamespace", "mixedCaseNamespace.$0"]]);
-            });
-
-            suite("Matches namespaces and built-in functions", () => {
-                createCompletionsTest('<output1>', 'u!df.string', [["udf", "udf.$0"], ["union", "union($0)"], ["uniqueString", "uniqueString($0)"], ["uri", "uri($0)"], ["uriComponent", "uriComponent($0)"], ["uriComponentToString", "uriComponentToString($0)"]]);
             });
 
             test("Parameter names in outer scope");
@@ -1800,6 +1800,8 @@ suite("User functions", () => {
 
         //createCompletionsTest("<output1>", "!", []); //asdf
         //createCompletionsTest("<output1>", ".!", []); //asdf
+
+        test("UDF completions in larger expression context");
 
     }); // suite UDF Completions
 
