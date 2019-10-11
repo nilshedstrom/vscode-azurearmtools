@@ -64,7 +64,7 @@ export class Item {
             `${propertyName}$0`,
             replaceSpan,
             "(property)", // detail //asdf?
-            "", // description  TODO: pick this up
+            "", // description  CONSIDER: pick this up
             CompletionKind.Property
         );
     }

@@ -504,23 +504,7 @@ export class AzureRMTools {
 
                 const references: Reference.List | null = await positionContext.getReferences();
                 if (references && references.length > 0) {
-                    let referenceType: string;
-                    switch (references.kind) {
-                        case Reference.ReferenceKind.Parameter:
-                            referenceType = "parameter";
-                            break;
-
-                        case Reference.ReferenceKind.Variable:
-                            referenceType = "variable";
-                            break;
-
-                        default:
-                            assert.fail(`Unrecognized Reference.Kind: ${references.kind}`);
-                            referenceType = "no reference type";
-                            break;
-                    }
-
-                    actionContext.telemetry.properties.referenceType = referenceType;
+                    actionContext.telemetry.properties.referenceType = references.kind;
 
                     for (const span of references.spans) {
                         const referenceRange: vscode.Range = this.getVSCodeRangeFromSpan(deploymentTemplate, span);

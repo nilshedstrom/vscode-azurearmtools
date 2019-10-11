@@ -595,7 +595,7 @@ export class PositionContext {
     // Returns null if references are not supported at this location.
     // Returns empty list if supported but none found
     public async getReferences(): Promise<Reference.List | null> {
-        let referenceName: string | null = null;
+        let referenceName: string | { namespace: string; name: string } | null = null;
         let referenceType: Reference.ReferenceKind | null = null;
 
         const tleInfo = this.tleInfo;
@@ -616,9 +616,20 @@ export class PositionContext {
                         referenceName = refInfo.variable.name.unquotedValue;
                         break;
                     case "builtinFunction":
+                        referenceType = Reference.ReferenceKind.BuiltinFunction;
+                        referenceName = refInfo.functionMetadata.lowerCaseName;
+                        break;
                     case "userNamespace":
+                        referenceType = Reference.ReferenceKind.Namespace;
+                        referenceName = refInfo.userNamespace.namespaceName.unquotedValue;
+                        break;
                     case "userFunction":
-                        return null; // Not currently supported
+                        referenceType = Reference.ReferenceKind.UserFunction;
+                        referenceName = {
+                            namespace: refInfo.userFunction.namespace.namespaceName.unquotedValue,
+                            name: refInfo.userFunction.name.unquotedValue
+                        };
+                        break;
                     default:
                         return assertNever(refInfo);
                 }

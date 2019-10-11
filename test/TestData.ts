@@ -5,8 +5,7 @@
 import * as fs from 'fs';
 import { ITest, ITestCallbackContext } from 'mocha';
 import * as path from 'path';
-import { Completion, Language } from "../extension.bundle";
-import { AzureRMAssets } from "../src/AzureRMAssets";
+import { AzureRMAssets, Completion, Language } from "../extension.bundle";
 
 // By default we use the test metadata for tests
 export function useTestFunctionMetadata(): void {

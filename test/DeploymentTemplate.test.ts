@@ -1059,6 +1059,7 @@ suite("DeploymentTemplate", () => {
             assert.deepStrictEqual(list.kind, Reference.ReferenceKind.Variable);
             assert.deepStrictEqual(list.spans, [new Language.Span(18, 5)]);
         });
+
     }); // findReferences
 
     suite("ReferenceInVariableDefinitionJSONVisitor", () => {

@@ -16,7 +16,9 @@ import * as Reference from "./Reference";
 import { isArmSchema } from "./supported";
 import { ScopeContext, TemplateScope } from "./TemplateScope";
 import * as TLE from "./TLE";
+import { UserFunctionDefinition } from "./UserFunctionDefinition";
 import { UserFunctionNamespaceDefinition } from "./UserFunctionNamespaceDefinition";
+import { assertNever } from "./util/assertNever";
 import * as FindReferencesVisitor from "./visitors/FindReferencesVisitor";
 import * as FunctionCountVisitor from "./visitors/FunctionCountVisitor";
 import { GenericStringVisitor } from "./visitors/GenericStringVisitor";
@@ -235,6 +237,8 @@ export class DeploymentTemplate {
         });
     }
 
+    // CONSIDER: findUnused{Variables,Parameters,findUnusedNamespacesAndUserFunctions} are inefficient}
+
     private findUnusedVariables(): language.Issue[] {
         const warnings: language.Issue[] = [];
 
@@ -279,6 +283,24 @@ export class DeploymentTemplate {
 
         return warnings;
     }
+
+    // private findUnusedNamespacesAndUserFunctions(): language.Issue[] {
+    //     const warnings: language.Issue[] = [];
+
+    //     for (const ns of this.topLevelScope.namespaceDefinitions) {
+    //         for (const member of ns.members) {
+    //                 const functionReferences: Reference.List =
+    //                     this.findReferences(Reference.ReferenceKind.Parameter, parameterDefinition.name.toString(), member.scope);
+    //                 if (parameterReferences.length === 1) {
+    //                     warnings.push(
+    //                         new language.Issue(parameterDefinition.name.span, `The parameter '${parameterDefinition.name.toString()}' of function '${member.fullName}' is never used.`));
+    //                 }
+    //             }
+    //         }
+    //     }
+
+    //     return warnings;
+    // }
 
     /**
      * Gets a history of function usage, useful for telemetry
@@ -442,11 +464,14 @@ export class DeploymentTemplate {
         return tleParseResult;
     }
 
-    public findReferences(referenceType: Reference.ReferenceKind, referenceName: string, scope: TemplateScope): Reference.List {
+    public findReferences(referenceType: Reference.ReferenceKind, reference: string | { namespace: string; name: string }, scope: TemplateScope): Reference.List {
         const result: Reference.List = new Reference.List(referenceType);
+        let referenceName = typeof reference === "string" ? reference : reference.name;
+        let referenceNamespace = typeof reference === "string" ? null : reference.namespace;
+        let referenceFullName = referenceNamespace ? `${referenceNamespace}.${referenceName}` : referenceName;
 
         if (referenceName) {
-            // Add the parameter/variable definition to the list
+            // Also add the reference's definition to the list of references
             switch (referenceType) {
                 case Reference.ReferenceKind.Parameter:
                     const parameterDefinition: IParameterDefinition | null = scope.getParameterDefinition(referenceName);
@@ -462,16 +487,37 @@ export class DeploymentTemplate {
                     }
                     break;
 
-                default:
-                    assert.fail(`Unrecognized Reference.Kind: ${referenceType}`);
+                case Reference.ReferenceKind.Namespace:
+                    const namespaceDefinition: UserFunctionNamespaceDefinition | undefined = scope.getFunctionNamespaceDefinition(referenceName);
+                    if (namespaceDefinition) {
+                        result.add(namespaceDefinition.namespaceName.span);
+                    }
                     break;
+
+                case Reference.ReferenceKind.UserFunction:
+                    assert(referenceNamespace, "For UserFunction references, need a namespace");
+
+                    if (referenceNamespace) {
+                        const userFunctionDefinition: UserFunctionDefinition | null = scope.getFunctionDefinition(referenceNamespace, referenceName);
+                        if (userFunctionDefinition) {
+                            result.add(userFunctionDefinition.name.span);
+                        }
+                    }
+                    break;
+
+                case Reference.ReferenceKind.BuiltinFunction:
+                    // Built-in functions don't have definitions
+                    break;
+
+                default:
+                    assertNever(referenceType);
             }
 
-            // Add references to the list that match the scope we're looking for
+            // Add references to the list that match the scope we're looking for asdf
             this.visitAllReachableStringValues(jsonStringValue => {
                 const tleParseResult: TLE.ParseResult | null = this.getTLEParseResultFromJsonStringValue(jsonStringValue);
                 if (tleParseResult.expression && tleParseResult.scope === scope) {
-                    const visitor = FindReferencesVisitor.FindReferencesVisitor.visit(tleParseResult.expression, referenceType, referenceName);
+                    const visitor = FindReferencesVisitor.FindReferencesVisitor.visit(tleParseResult.expression, referenceType, referenceFullName);
                     result.addAll(visitor.references.translate(jsonStringValue.span.startIndex));
                 }
             });

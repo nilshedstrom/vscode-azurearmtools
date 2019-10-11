@@ -3,9 +3,9 @@
 // ----------------------------------------------------------------------------
 
 import { Utilities } from "../../extension.bundle";
-import { assert } from "../fixed_assert";
 import * as Reference from "../Reference";
-import { StringValue, Value, Visitor } from "../TLE";
+import { FunctionCallValue, StringValue, Value, Visitor } from "../TLE";
+import { assertNever } from "../util/assertNever";
 
 /**
  * A TLE visitor that searches a TLE value tree looking for references to the provided parameter or
@@ -13,20 +13,54 @@ import { StringValue, Value, Visitor } from "../TLE";
  */
 export class FindReferencesVisitor extends Visitor {
     private _references: Reference.List;
-    private _lowerCasedName: string;
+    private _lowerCasedFullName: string;
 
-    constructor(private _kind: Reference.ReferenceKind, _name: string) {
+    constructor(private _kind: Reference.ReferenceKind, referenceFullName: string) {
         super();
         this._references = new Reference.List(_kind);
-        this._lowerCasedName = Utilities.unquote(_name).toLowerCase();
+        this._lowerCasedFullName = Utilities.unquote(referenceFullName).toLowerCase();
     }
 
     public get references(): Reference.List {
         return this._references;
     }
 
-    public visitString(tleString: StringValue | null): void {
-        if (tleString && Utilities.unquote(tleString.toString()).toLowerCase() === this._lowerCasedName) {
+    public visitFunctionCall(tleFunction: FunctionCallValue | null): void {
+        if (tleFunction) {
+            switch (this._kind) {
+                case Reference.ReferenceKind.UserFunction:
+                    if (tleFunction.namespaceToken && tleFunction.nameToken && tleFunction.fullName.toLowerCase() === this._lowerCasedFullName) {
+                        this._references.add(tleFunction.nameToken.span);
+                    }
+                    break;
+
+                case Reference.ReferenceKind.Namespace:
+                    if (tleFunction.namespaceToken && tleFunction.namespaceToken.stringValue.toLowerCase() === this._lowerCasedFullName) {
+                        this._references.add(tleFunction.namespaceToken.span);
+                    }
+                    break;
+
+                case Reference.ReferenceKind.BuiltinFunction:
+                    if (tleFunction.nameToken && tleFunction.fullName.toLowerCase() === this._lowerCasedFullName) {
+                        this._references.add(tleFunction.nameToken.span);
+                    }
+                    break;
+
+                case Reference.ReferenceKind.Parameter:
+                case Reference.ReferenceKind.Variable:
+                    break;
+
+                default:
+                    assertNever(this._kind);
+                    break;
+            }
+        }
+
+        super.visitFunctionCall(tleFunction);
+    }
+
+    public visitString(tleString: StringValue): void {
+        if (Utilities.unquote(tleString.toString()).toLowerCase() === this._lowerCasedFullName) {
             switch (this._kind) {
                 case Reference.ReferenceKind.Parameter:
                     if (tleString.isParametersArgument()) {
@@ -38,14 +72,22 @@ export class FindReferencesVisitor extends Visitor {
                         this._references.add(tleString.unquotedSpan);
                     }
                     break;
+
+                case Reference.ReferenceKind.Namespace:
+                case Reference.ReferenceKind.UserFunction:
+                case Reference.ReferenceKind.BuiltinFunction:
+                    break;
+
                 default:
-                    assert.fail(`Unrecognized ReferenceKind: ${this._kind}`);
+                    assertNever(this._kind);
                     break;
             }
         }
+
+        super.visitString(tleString);
     }
-    public static visit(tleValue: Value | null, referenceType: Reference.ReferenceKind, referenceName: string): FindReferencesVisitor {
-        const visitor = new FindReferencesVisitor(referenceType, referenceName);
+    public static visit(tleValue: Value | null, referenceType: Reference.ReferenceKind, referenceFullName: string): FindReferencesVisitor {
+        const visitor = new FindReferencesVisitor(referenceType, referenceFullName);
         if (tleValue) {
             tleValue.accept(visitor);
         }

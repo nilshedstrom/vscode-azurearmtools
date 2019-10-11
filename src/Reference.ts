@@ -57,6 +57,9 @@ export class List {
 }
 
 export enum ReferenceKind {
-    Parameter = 1,
-    Variable
+    Parameter = "Parameter",
+    Variable = "Variable",
+    Namespace = "Namespace",
+    UserFunction = "UserFunction",
+    BuiltinFunction = "BuiltinFunction",
 }

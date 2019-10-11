@@ -28,6 +28,7 @@ import * as basic from "./src/Tokenizer";
 import * as Utilities from "./src/Utilities";
 
 export * from './src/AzureRMAssets';
+export { AzureRMAssets } from "./src/AzureRMAssets";
 export { activateInternal, deactivateInternal } from './src/AzureRMTools'; // Export activate/deactivate for main.js
 export { CachedPromise } from "./src/CachedPromise";
 export { CachedValue } from "./src/CachedValue";

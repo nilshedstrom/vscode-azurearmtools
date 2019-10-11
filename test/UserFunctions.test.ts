@@ -1194,7 +1194,17 @@ suite("User functions", () => {
         });
 
         suite("UDF Find variable references", () => {
-            test("At reference variable", async () => {
+            test("At reference to variable", async () => {
+                const { dt, markers: { var1Def, var1Ref1, var1Ref2 } } = await parseTemplateWithMarkers(userFuncsTemplate1, [], { ignoreWarnings: true });
+
+                // Cursor at reference to "var1" inside var2
+                await testReferences(dt, var1Ref1.index, [var1Def.index, var1Ref1.index, var1Ref2.index]);
+
+                // Cursor at reference to "var1" inside outputs2
+                await testReferences(dt, var1Ref2.index, [var1Def.index, var1Ref1.index, var1Ref2.index]);
+            });
+
+            test("Deeply nested", async () => { //asdf
                 const { dt, markers: { var1Def, var1Ref1, var1Ref2 } } = await parseTemplateWithMarkers(userFuncsTemplate1, [], { ignoreWarnings: true });
 
                 // Cursor at reference to "var1" inside var2
@@ -1212,30 +1222,28 @@ suite("User functions", () => {
             });
         });
 
-        suite("UDF Find user function references", () => {
+        suite("UDF Find user function references", () => {//asdf
             // tslint:disable-next-line: no-suspicious-comment
-            if (false) { // TODO: feature not yet implemented  asdf
-                test("At reference to user-defined function, cursor inside the namespace portion", async () => {
-                    const { dt, markers: { udfDef, udfRefAtNs } } = await parseTemplateWithMarkers(userFuncsTemplate1, [], { ignoreWarnings: true });
+            test("At reference to user-defined function, cursor inside the namespace portion", async () => {
+                const { dt, markers: { udfDef, udfRefAtNs } } = await parseTemplateWithMarkers(userFuncsTemplate1, [], { ignoreWarnings: true });
 
-                    // Cursor at reference to "udf.string" inside the namespace
-                    await testReferences(dt, udfRefAtNs.index, [udfDef.index, udfRefAtNs.index]);
-                });
+                // Cursor at reference to "udf.string" inside the namespace
+                await testReferences(dt, udfRefAtNs.index, [udfDef.index, udfRefAtNs.index]);
+            });
 
-                test("At reference to user-defined function, cursor inside the name portion", async () => {
-                    const { dt, markers: { udfStringDef, udfRefAtName } } = await parseTemplateWithMarkers(userFuncsTemplate1, [], { ignoreWarnings: true });
+            test("At reference to user-defined function, cursor inside the name portion", async () => {
+                const { dt, markers: { udfStringDef, udfRefAtName } } = await parseTemplateWithMarkers(userFuncsTemplate1, [], { ignoreWarnings: true });
 
-                    // Cursor at reference to "udf.string" inside the name
-                    await testReferences(dt, udfRefAtName.index, [udfStringDef.index, udfRefAtName.index]);
-                });
+                // Cursor at reference to "udf.string" inside the name
+                await testReferences(dt, udfRefAtName.index, [udfStringDef.index, udfRefAtName.index]);
+            });
 
-                test("At definition of user-defined function", async () => {
-                    const { dt, markers: { udfStringDef, udfRefAtName } } = await parseTemplateWithMarkers(userFuncsTemplate1, [], { ignoreWarnings: true });
+            test("At definition of user-defined function", async () => {
+                const { dt, markers: { udfStringDef, udfRefAtName } } = await parseTemplateWithMarkers(userFuncsTemplate1, [], { ignoreWarnings: true });
 
-                    // Cursor at definition of "udf.string"
-                    await testReferences(dt, udfStringDef.index, [udfRefAtName.index]);
-                });
-            }
+                // Cursor at definition of "udf.string"
+                await testReferences(dt, udfStringDef.index, [udfRefAtName.index]);
+            });
 
             test("Reference to built-in function with same name as UDF function doesn't find UDF", async () => {
                 const { dt, markers: { stringRef } } = await parseTemplateWithMarkers(userFuncsTemplate1);
@@ -1243,6 +1251,15 @@ suite("User functions", () => {
                 const references: Reference.List | null = (await pc.getReferences());
                 assert(!references, "Expected no references");
             });
+
+            //asdf
+            test("Reference to built-in function in outer scope finds it in all scopes");
+            test("Reference to built-in function in function scope finds it in all scopes");
+            test("Reference to built-in function in outer scope finds it in all scopes");
+            test("Reference to built-in function in function scope finds it in all scopes");
+            test("Reference to UDF in outer scope");
+            test("At definition of UDF");
+            test("At definition of namespace");
         });
 
     }); // suite References
@@ -1509,6 +1526,76 @@ suite("User functions", () => {
                 await parseTemplate(template, [
                     "Warning: The parameter 'param1' is never used.",
                     "Warning: The parameter 'param1' of function 'udf.odd' is never used."
+                ]);
+            });
+        });
+
+        suite("Unused UDFs", () => {
+            test("Unused function", async () => {
+                const template = {
+                    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "functions": [{
+                        "namespace": "myNamespace",
+                        "members": {
+                            "used": {
+                            },
+                            "unused": {
+                            }
+                        }
+                    }],
+                    "variables": {
+                        "v1": "[myNamespace.used()]"
+                    },
+                    "outputs": {
+                        "o1": {
+                            "type": "string",
+                            "value": "[variables('v1')]"
+                        }
+                    }
+
+                };
+
+                await parseTemplate(template, [
+                    "Warning: The user-defined function 'myNamespace.unused' is never used."
+                ]);
+            });
+
+            test("Unused namespace", async () => {
+                const template = {
+                    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "functions": [{
+                        "namespace": "myNamespace",
+                        "members": {
+                            "used": {
+                            }
+                        }
+                    },
+                    {
+                        "namespace": "unusedNamespace1",
+                        "members": {
+                            "unused": {
+                            }
+                        }
+                    },
+                    {
+                        "namespace": "unusedNamespace2"
+                    }],
+                    "variables": {
+                        "v1": "[myNamespace.used()]"
+                    },
+                    "outputs": {
+                        "o1": {
+                            "type": "string",
+                            "value": "[variables('v1')]"
+                        }
+                    }
+                };
+
+                await parseTemplate(template, [
+                    "Warning: The user-defined namespace 'unusedNamespace1' is never used.",
+                    "Warning: The user-defined namespace 'unusedNamespace2' is never used."
                 ]);
             });
         });
