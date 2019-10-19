@@ -77,7 +77,12 @@ export interface IDeploymentTemplate {
         [key: string]: IDeploymentParameterDefinition;
     };
     variables?: {
-        [key: string]: number | unknown[] | string | {};
+        copy?: {
+            name: string;
+            count: number;
+            input: string | {};
+        }[];
+        [key: string]: number | unknown[] | string | {} | undefined;
     };
     resources: IDeploymentTemplateResource[];
     outputs?: {

@@ -6,7 +6,7 @@
 // tslint:disable:no-non-null-assertion object-literal-key-quotes
 
 import * as assert from "assert";
-import { Completion, DeploymentTemplate, FunctionSignatureHelp, Hover, IParameterDefinition, IReferenceSite, Json, Language, PositionContext, TLE, UserFunctionMetadata, Utilities, VariableDefinition } from "../extension.bundle";
+import { Completion, DeploymentTemplate, FunctionSignatureHelp, Hover, IParameterDefinition, IReferenceSite, isVariableDefinition, IVariableDefinition, Json, Language, PositionContext, TLE, UserFunctionMetadata, Utilities } from "../extension.bundle";
 import * as jsonTest from "./JSON.test";
 import { assertNotNull } from "./support/assertNotNull";
 import { IDeploymentTemplate } from "./support/diagnostics";
@@ -1448,10 +1448,10 @@ suite("PositionContext", () => {
     });
 
     suite("variableDefinition", () => {
-        function getVariableDefinitionIfAtReference(pc: PositionContext): VariableDefinition | null {
+        function getVariableDefinitionIfAtReference(pc: PositionContext): IVariableDefinition | null {
             const refInfo: IReferenceSite | null = pc.getReferenceSiteInfo();
-            if (refInfo && refInfo.definition.definitionKind === "Variable") {
-                return <VariableDefinition>refInfo.definition;
+            if (refInfo && isVariableDefinition(refInfo.definition)) {
+                return refInfo.definition;
             }
 
             return null;
@@ -1472,7 +1472,7 @@ suite("PositionContext", () => {
         test("with matching variable definition", () => {
             const dt = new DeploymentTemplate("{ 'variables': { 'vName': {} }, 'a': '[variables(\"vName\")]' }", "id");
             const context: PositionContext = dt.getContextFromDocumentCharacterIndex("{ 'variables': { 'vName': {} }, 'a': '[variables(\"vNa".length);
-            const vDef: VariableDefinition = assertNotNull(getVariableDefinitionIfAtReference(context));
+            const vDef: IVariableDefinition = assertNotNull(getVariableDefinitionIfAtReference(context));
             assert.deepStrictEqual(vDef.nameValue.toString(), "vName");
             assert.deepStrictEqual(vDef.span, new Language.Span(17, 11));
         });
@@ -1480,7 +1480,7 @@ suite("PositionContext", () => {
         test("with cursor before variable name start quote with matching variable definition", () => {
             const dt = new DeploymentTemplate("{ 'variables': { 'vName': {} }, 'a': '[variables(\"vName\")]' }", "id");
             const context: PositionContext = dt.getContextFromDocumentCharacterIndex("{ 'variables': { 'vName': {} }, 'a': '[variables(".length);
-            const vDef: VariableDefinition = assertNotNull(getVariableDefinitionIfAtReference(context));
+            const vDef: IVariableDefinition = assertNotNull(getVariableDefinitionIfAtReference(context));
             assert.deepStrictEqual(vDef.nameValue.toString(), "vName");
             assert.deepStrictEqual(vDef.span, new Language.Span(17, 11));
         });
@@ -1488,7 +1488,7 @@ suite("PositionContext", () => {
         test("with cursor after parameter name end quote with matching parameter definition", () => {
             const dt = new DeploymentTemplate("{ 'variables': { 'vName': {} }, 'a': '[variables(\"vName\")]' }", "id");
             const context: PositionContext = dt.getContextFromDocumentCharacterIndex("{ 'variables': { 'vName': {} }, 'a': '[variables(\"vName\"".length);
-            const vDef: VariableDefinition = assertNotNull(getVariableDefinitionIfAtReference(context));
+            const vDef: IVariableDefinition = assertNotNull(getVariableDefinitionIfAtReference(context));
             assert.deepStrictEqual(vDef.nameValue.toString(), "vName");
             assert.deepStrictEqual(vDef.span, new Language.Span(17, 11));
         });

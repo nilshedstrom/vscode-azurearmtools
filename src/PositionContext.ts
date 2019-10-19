@@ -5,7 +5,7 @@
 // tslint:disable:max-line-length
 
 import { Language } from "../extension.bundle";
-import { AzureRMAssets, BuiltinFunctionMetadata } from "./AzureRMAssets";
+import { AzureRMAssets, BuiltinFunctionMetadata, isBuiltinFunctionDefinition } from "./AzureRMAssets";
 import { CachedValue } from "./CachedValue";
 import * as Completion from "./Completion";
 import { templateKeys } from "./constants";
@@ -14,20 +14,18 @@ import { DeploymentTemplate } from "./DeploymentTemplate";
 import { assert } from './fixed_assert';
 import * as Hover from "./Hover";
 import { IFunctionMetadata, IFunctionParameterMetadata } from "./IFunctionMetadata";
-import { DefinitionKind, INamedDefinition } from "./INamedDefinition";
+import { INamedDefinition } from "./INamedDefinition";
 import { IParameterDefinition } from "./IParameterDefinition";
 import * as Json from "./JSON";
 import * as language from "./Language";
-import { ParameterDefinition } from "./ParameterDefinition";
+import { isParameterDefinition } from "./ParameterDefinition";
 import * as Reference from "./ReferenceList";
 import { TemplateScope } from "./TemplateScope";
 import * as TLE from "./TLE";
-import { UserFunctionDefinition } from "./UserFunctionDefinition";
+import { isUserFunctionDefinition, UserFunctionDefinition } from "./UserFunctionDefinition";
 import { UserFunctionMetadata } from "./UserFunctionMetadata";
-import { UserFunctionNamespaceDefinition } from "./UserFunctionNamespaceDefinition";
-import { UserFunctionParameterDefinition } from "./UserFunctionParameterDefinition";
-import { assertNever } from "./util/assertNever";
-import { VariableDefinition } from "./VariableDefinition";
+import { isUserNamespaceDefinition, UserFunctionNamespaceDefinition } from "./UserFunctionNamespaceDefinition";
+import { isVariableDefinition, IVariableDefinition } from "./VariableDefinition";
 
 /**
  * Information about the TLE expression (if position is at an expression string)
@@ -243,7 +241,7 @@ export class PositionContext {
                         return { definition: parameterDefinition, referenceSpan };
                     }
                 } else if (tleStringValue.isVariablesArgument()) {
-                    const variableDefinition: VariableDefinition | null = scope.getVariableDefinition(tleStringValue.toString());
+                    const variableDefinition: IVariableDefinition | null = scope.getVariableDefinition(tleStringValue.toString());
                     if (variableDefinition) {
                         // Inside the 'xxx' of a variables('xxx') reference
                         const referenceSpan: language.Span = tleStringValue.getSpan().translate(this.jsonTokenStartIndex);
@@ -262,39 +260,20 @@ export class PositionContext {
             const span = reference.referenceSpan;
             const definition = reference.definition;
 
-            // tslint:disable-next-line:switch-default
-            switch (definition.definitionKind) {
-                case DefinitionKind.Namespace:
-                    if (definition instanceof UserFunctionNamespaceDefinition) {
-                        return new Hover.UserNamespaceInfo(definition, span);
-                    }
-                    break;
-                case DefinitionKind.UserFunction:
-                    if (definition instanceof UserFunctionDefinition) {
-                        return new Hover.UserFunctionInfo(definition, span);
-                    }
-                    break;
-                case DefinitionKind.BuiltinFunction:
-                    if (definition instanceof BuiltinFunctionMetadata) {
-                        const functionMetadata = definition;
-                        return new Hover.FunctionInfo(functionMetadata.fullName, functionMetadata.usage, functionMetadata.description, span);
-                    }
-                    break;
-                case DefinitionKind.Parameter:
-                    if (definition instanceof ParameterDefinition || definition instanceof UserFunctionParameterDefinition) {
-                        return Hover.ParameterReferenceInfo.fromDefinition(definition, span);
-                    }
-                    break;
-                case DefinitionKind.Variable:
-                    if (definition instanceof VariableDefinition) {
-                        return Hover.VariableReferenceInfo.fromDefinition(definition, span);
-                    }
-                    break;
-                default:
-                    return assertNever(definition.definitionKind); // Gives compile-time error if a case is missed
+            if (isUserNamespaceDefinition(definition)) {
+                return new Hover.UserNamespaceInfo(definition, span);
+            } else if (isUserFunctionDefinition(definition)) {
+                return new Hover.UserFunctionInfo(definition, span);
+            } else if (isBuiltinFunctionDefinition(definition)) {
+                const functionMetadata = definition;
+                return new Hover.FunctionInfo(functionMetadata.fullName, functionMetadata.usage, functionMetadata.description, span);
+            } else if (isParameterDefinition(definition)) {
+                return Hover.ParameterReferenceInfo.fromDefinition(definition, span);
+            } else if (isVariableDefinition(definition)) {
+                return Hover.VariableReferenceInfo.fromDefinition(definition, span);
+            } else {
+                assert(false, `Unexpected definition type for definition kind ${definition.definitionKind}`);
             }
-
-            assert(false, `Unexpected definition type for definition kind ${definition.definitionKind}`);
         }
 
         return null;
@@ -388,7 +367,7 @@ export class PositionContext {
                 propertyPrefix = propertyNameToken.stringValue.substring(0, tleCharacterIndex - propertyNameToken.span.startIndex).toLowerCase();
             }
 
-            const variableProperty: VariableDefinition | null = scope.getVariableDefinitionFromFunctionCall(functionSource);
+            const variableProperty: IVariableDefinition | null = scope.getVariableDefinitionFromFunctionCall(functionSource);
             const parameterProperty: IParameterDefinition | null = scope.getParameterDefinitionFromFunctionCall(functionSource);
             const sourcesNameStack: string[] = tleValue.sourcesNameStack;
             if (variableProperty) {
@@ -617,7 +596,7 @@ export class PositionContext {
                 }
 
                 // Is it a variable definition?
-                const variableDefinition: VariableDefinition | null = scope.getVariableDefinition(unquotedString);
+                const variableDefinition: IVariableDefinition | null = scope.getVariableDefinition(unquotedString);
                 if (variableDefinition && variableDefinition.nameValue === jsonStringValue) {
                     return this._deploymentTemplate.findReferences(variableDefinition);
                 }
@@ -731,7 +710,7 @@ export class PositionContext {
         const replaceSpanInfo: ReplaceSpanInfo = this.getReplaceSpanInfo(tleValue, tleCharacterIndex);
 
         const variableCompletions: Completion.Item[] = [];
-        const variableDefinitionMatches: VariableDefinition[] = scope.findVariableDefinitionsWithPrefix(prefix);
+        const variableDefinitionMatches: IVariableDefinition[] = scope.findVariableDefinitionsWithPrefix(prefix);
         for (const variableDefinition of variableDefinitionMatches) {
             variableCompletions.push(Completion.Item.fromVariableDefinition(variableDefinition, replaceSpanInfo.replaceSpan, replaceSpanInfo.includeRightParenthesisInCompletion));
         }

@@ -18,7 +18,7 @@ import { isArmSchema } from "./supported";
 import { ScopeContext, TemplateScope } from "./TemplateScope";
 import * as TLE from "./TLE";
 import { UserFunctionNamespaceDefinition } from "./UserFunctionNamespaceDefinition";
-import { VariableDefinition } from "./VariableDefinition";
+import { IVariableDefinition, TopLevelCopyBlockVariableDefinition, TopLevelVariableDefinition } from "./VariableDefinition";
 import { FindReferencesVisitor } from "./visitors/FindReferencesVisitor";
 import { FunctionCountVisitor } from "./visitors/FunctionCountVisitor";
 import { GenericStringVisitor } from "./visitors/GenericStringVisitor";
@@ -46,7 +46,7 @@ export class DeploymentTemplate {
     private _warnings: CachedValue<language.Issue[]> = new CachedValue<language.Issue[]>();
 
     private _topLevelNamespaceDefinitions: CachedValue<UserFunctionNamespaceDefinition[]> = new CachedValue<UserFunctionNamespaceDefinition[]>();
-    private _topLevelVariableDefinitions: CachedValue<VariableDefinition[]> = new CachedValue<VariableDefinition[]>();
+    private _topLevelVariableDefinitions: CachedValue<IVariableDefinition[]> = new CachedValue<IVariableDefinition[]>();
     private _topLevelParameterDefinitions: CachedValue<ParameterDefinition[]> = new CachedValue<ParameterDefinition[]>();
 
     private _schemaUri: CachedValue<string | null> = new CachedValue<string | null>();
@@ -367,12 +367,29 @@ export class DeploymentTemplate {
         });
     }
 
-    private getTopLevelVariableDefinitions(): VariableDefinition[] {
+    private getTopLevelVariableDefinitions(): IVariableDefinition[] {
         return this._topLevelVariableDefinitions.getOrCacheValue(() => {
             if (this._topLevelValue) {
                 const variables: Json.ObjectValue | null = Json.asObjectValue(this._topLevelValue.getPropertyValue(templateKeys.variables));
                 if (variables) {
-                    return variables.properties.map(prop => new VariableDefinition(prop));
+                    const varDefs: IVariableDefinition[] = [];
+                    for (let prop of variables.properties) {
+                        if (prop.nameValue.unquotedValue.toLowerCase() === templateKeys.copy) {
+                            //asdf what happens if "copy" but not an object etc?
+                            const varsArray: Json.ArrayValue | null = Json.asArrayValue(prop.value);
+                            // tslint:disable-next-line: strict-boolean-expressions
+                            for (let varElement of varsArray && varsArray.elements || []) {
+                                const def = TopLevelCopyBlockVariableDefinition.createIfValid(varElement);
+                                if (def) {
+                                    varDefs.push(def);
+                                }
+                            }
+                        } else {
+                            varDefs.push(new TopLevelVariableDefinition(prop));
+                        }
+                    }
+
+                    return varDefs;
                 }
             }
 

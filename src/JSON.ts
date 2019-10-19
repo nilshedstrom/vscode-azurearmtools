@@ -605,7 +605,7 @@ export class ObjectValue extends Value {
 
             if (this._properties.length > 0) {
                 for (const property of this._properties) {
-                    caseInsensitivePropertyMap.set(property.name.toString(), property.value);
+                    caseInsensitivePropertyMap.set(property.nameValue.toString(), property.value);
                 }
             }
 
@@ -626,7 +626,7 @@ export class ObjectValue extends Value {
 
     /**
      * Get the property value for the provided property name. If no property exists with the
-     * provided name, then undefined will be returned.
+     * provided name (case-insensitive), then undefined will be returned.
      */
     public getPropertyValue(propertyName: string): Value | null {
         const result = this.caseInsensitivePropertyMap.get(propertyName);
@@ -672,7 +672,7 @@ export class ObjectValue extends Value {
     public get __debugDisplay(): string {
         // tslint:disable-next-line: prefer-template
         return "{" +
-            this.properties.map(pv => pv.name.toString() + ':' + (pv.value instanceof Value ? pv.value.__debugDisplay : String(pv.value))).join(",")
+            this.properties.map(pv => pv.nameValue.toString() + ':' + (pv.value instanceof Value ? pv.value.__debugDisplay : String(pv.value))).join(",")
             + "}";
     }
 }
@@ -692,7 +692,7 @@ export class Property extends Value {
     /**
      * The name of the property.
      */
-    public get name(): StringValue {
+    public get nameValue(): StringValue {
         return this._name;
     }
 
@@ -1047,8 +1047,8 @@ export class ParseResult {
                 const currentValue: Value = current;
 
                 if (currentValue instanceof Property) {
-                    if (currentValue.name.span.contains(characterIndex, true)) {
-                        current = currentValue.name;
+                    if (currentValue.nameValue.span.contains(characterIndex, true)) {
+                        current = currentValue.nameValue;
                     } else if (currentValue.value && currentValue.value.span.contains(characterIndex, true)) {
                         current = currentValue.value;
                     }
@@ -1262,8 +1262,8 @@ function next(tokenizer: Tokenizer, tokens: Token[]): void {
 export abstract class Visitor {
     public visitProperty(property: Property | null): void {
         if (property) {
-            assert(property.name);
-            property.name.accept(this);
+            assert(property.nameValue);
+            property.nameValue.accept(this);
 
             if (property.value) {
                 property.value.accept(this);

@@ -6,7 +6,7 @@
 'use strict';
 
 /**
- * Stringifies the object with newlines and indenting (JSON.stringfy(x) gives the minimum string representation)
+ * Stringifies the object with newlines and indenting (JSON.stringfy(x) by default gives the minimum string representation)
  */
 export function stringify(v: {}): string {
     return JSON.stringify(v, undefined, 2);
