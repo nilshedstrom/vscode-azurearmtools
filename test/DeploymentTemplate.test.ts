@@ -3,13 +3,14 @@
 // ----------------------------------------------------------------------------
 
 // tslint:disable:no-unused-expression max-func-body-length promise-function-async max-line-length insecure-random
-// tslint:disable:object-literal-key-quotes no-function-expression no-non-null-assertion
+// tslint:disable:object-literal-key-quotes no-function-expression no-non-null-assertion align
 
 import * as assert from "assert";
 import { randomBytes } from "crypto";
 import { ISuiteCallbackContext, ITestCallbackContext } from "mocha";
-import { DefinitionKind, DeploymentTemplate, Histogram, INamedDefinition, IncorrectArgumentsCountIssue, IParameterDefinition, Json, Language, ReferenceInVariableDefinitionsVisitor, ReferenceList, TemplateScope, UnrecognizedUserFunctionIssue, UnrecognizedUserNamespaceIssue, VariableDefinition } from "../extension.bundle";
-import { sources, testDiagnostics } from "./support/diagnostics";
+import { DefinitionKind, DeploymentTemplate, Histogram, INamedDefinition, IncorrectArgumentsCountIssue, IParameterDefinition, IVariableDefinition, Json, Language, ReferenceInVariableDefinitionsVisitor, ReferenceList, TemplateScope, UnrecognizedUserFunctionIssue, UnrecognizedUserNamespaceIssue } from "../extension.bundle";
+import { StringValue } from "../src/JSON";
+import { IDeploymentTemplate, sources, testDiagnostics } from "./support/diagnostics";
 import { parseTemplate } from "./support/parseTemplate";
 import { stringify } from "./support/stringify";
 import { testWithLanguageServer } from "./support/testWithLanguageServer";
@@ -884,7 +885,7 @@ suite("DeploymentTemplate", () => {
         test("with unquoted match", () => {
             const dt = new DeploymentTemplate("{ 'variables': { 'apples': 'yum', 'bananas': 'good' } }", "id");
 
-            const apples: VariableDefinition | null = dt.topLevelScope.getVariableDefinition("apples");
+            const apples: IVariableDefinition | null = dt.topLevelScope.getVariableDefinition("apples");
             if (!apples) { throw new Error("failed"); }
             assert.deepStrictEqual(apples.nameValue.toString(), "apples");
 
@@ -897,7 +898,7 @@ suite("DeploymentTemplate", () => {
         test("with one-sided-quote match", () => {
             const dt = new DeploymentTemplate("{ 'variables': { 'apples': 'yum', 'bananas': 'good' } }", "id");
 
-            const apples: VariableDefinition | null = dt.topLevelScope.getVariableDefinition("'apples");
+            const apples: IVariableDefinition | null = dt.topLevelScope.getVariableDefinition("'apples");
             if (!apples) { throw new Error("failed"); }
             assert.deepStrictEqual(apples.nameValue.toString(), "apples");
 
@@ -910,7 +911,7 @@ suite("DeploymentTemplate", () => {
         test("with quoted match", () => {
             const dt = new DeploymentTemplate("{ 'variables': { 'apples': 'yum', 'bananas': 'good' } }", "id");
 
-            const apples: VariableDefinition | null = dt.topLevelScope.getVariableDefinition("'apples'");
+            const apples: IVariableDefinition | null = dt.topLevelScope.getVariableDefinition("'apples'");
             if (!apples) { throw new Error("failed"); }
             assert.deepStrictEqual(apples.nameValue.toString(), "apples");
 
@@ -923,7 +924,7 @@ suite("DeploymentTemplate", () => {
         test("with case insensitive match", () => {
             const dt = new DeploymentTemplate("{ 'variables': { 'apples': 'yum', 'bananas': 'good' } }", "id");
 
-            const apples: VariableDefinition | null = dt.topLevelScope.getVariableDefinition("'APPLES");
+            const apples: IVariableDefinition | null = dt.topLevelScope.getVariableDefinition("'APPLES");
             if (!apples) { throw new Error("failed"); }
             assert.deepStrictEqual(apples.nameValue.toString(), "apples");
 
@@ -937,7 +938,7 @@ suite("DeploymentTemplate", () => {
             const dt = new DeploymentTemplate("{ 'variables': { 'apples': 'yum', 'APPLES': 'good' } }", "id");
 
             // Should always find the last definition, because that's what Azure does
-            const APPLES: VariableDefinition | null = dt.topLevelScope.getVariableDefinition("'APPLES'");
+            const APPLES: IVariableDefinition | null = dt.topLevelScope.getVariableDefinition("'APPLES'");
             if (!APPLES) { throw new Error("failed"); }
             assert.deepStrictEqual(APPLES.nameValue.toString(), "APPLES");
 
@@ -945,13 +946,88 @@ suite("DeploymentTemplate", () => {
             if (!applesValue) { throw new Error("failed"); }
             assert.deepStrictEqual(applesValue.toString(), "good");
 
-            const apples: VariableDefinition | null = dt.topLevelScope.getVariableDefinition("'APPles'");
+            const apples: IVariableDefinition | null = dt.topLevelScope.getVariableDefinition("'APPles'");
             if (!apples) { throw new Error("failed"); }
             assert.deepStrictEqual(apples.nameValue.toString(), "APPLES");
 
             const value: Json.StringValue | null = Json.asStringValue(apples.value);
             if (!value) { throw new Error("failed"); }
             assert.deepStrictEqual(value.toString(), "good");
+        });
+
+        suite("getVariableDefinition - top-level copy block", () => {
+            //asdf
+
+            const dt = new DeploymentTemplate(stringify(<Partial<IDeploymentTemplate>>{
+                variables: {
+                    copy: [{
+                        name: "diskNames",
+                        count: 3,
+                        input: "[concat('myDataDisk', copyIndex('diskNames', 1))]"
+                    }, {
+                        name: "disks",
+                        count: 3,
+                        input: {
+                            "name": "[concat('myDataDisk', copyIndex('disks', 1))]",
+                            "diskSizeGB": "1",
+                            "diskIndex": "[copyIndex('disks')]"
+                        }
+                    }]
+                }
+            }), "id");
+
+            test("'copy' not found as a variable", () => {
+                assert(!dt.topLevelScope.getVariableDefinition('copy'));
+            });
+
+            test("copy block names are added as variables", () => {
+                assert(dt.topLevelScope.variableDefinitions.length === 2);
+                assert(dt.topLevelScope.variableDefinitions[0].nameValue.unquotedValue === "diskNames");
+                assert(!!dt.topLevelScope.getVariableDefinition('diskNames'));
+                assert(!!dt.topLevelScope.getVariableDefinition('disks'));
+            });
+
+            test("copy block inputs are used as values for variables", () => {
+                const value = dt.topLevelScope.getVariableDefinition('diskNames')!.value!;
+                assert(value);
+                assert(value instanceof StringValue);
+                assert.equal((<StringValue>value).unquotedValue, "[concat('myDataDisk', copyIndex('diskNames', 1))]");
+            });
+
+            //asdf hover
+            //asdf refs etc.
+
+            test("case insensitive block", () => {
+                const dt2 = new DeploymentTemplate(stringify(<Partial<IDeploymentTemplate>>{
+                    variables: {
+                        COPY: [{
+                            name: "diskNames",
+                            count: 3,
+                            input: "[concat('myDataDisk', copyIndex('diskNames', 1))]"
+                        }]
+                    }
+                }), "id");
+                assert(!!dt2.topLevelScope.getVariableDefinition('diskNames'));
+            });
+
+            test("case insensitive lookup", () => {
+                assert(!!dt.topLevelScope.getVariableDefinition('DISKnAMES'));
+            });
+
+            test("Standard and copy block vars", () => {
+                const dt2 = new DeploymentTemplate(stringify(<Partial<IDeploymentTemplate>><unknown>{
+                    variables: {
+                        "var1": "hello",
+                        copy: [{ name: "diskNames" }, { name: "disks" }],
+                        "var2": "hello 2",
+                    }
+                }), "id");
+
+                assert.deepStrictEqual(
+                    dt2.topLevelScope.variableDefinitions.map(v => v.nameValue.unquotedValue),
+                    ["var1", "diskNames", "disks", "var2"]
+                );
+            });
         });
     });
 
@@ -971,17 +1047,17 @@ suite("DeploymentTemplate", () => {
         test("with empty", () => {
             const dt = new DeploymentTemplate("{ 'variables': { 'apples': 'APPLES', 'bananas': 88 } }", "id");
 
-            const definitions: VariableDefinition[] = dt.topLevelScope.findVariableDefinitionsWithPrefix("");
+            const definitions: IVariableDefinition[] = dt.topLevelScope.findVariableDefinitionsWithPrefix("");
             assert.deepStrictEqual(definitions.length, 2);
 
-            const apples: VariableDefinition = definitions[0];
+            const apples: IVariableDefinition = definitions[0];
             assert.deepStrictEqual(apples.nameValue.toString(), "apples");
             const applesValue: Json.StringValue | null = Json.asStringValue(apples.value);
             if (!applesValue) { throw new Error("failed"); }
             assert.deepStrictEqual(applesValue.span, new Language.Span(27, 8));
             assert.deepStrictEqual(applesValue.toString(), "APPLES");
 
-            const bananas: VariableDefinition = definitions[1];
+            const bananas: IVariableDefinition = definitions[1];
             assert.deepStrictEqual(bananas.nameValue.toString(), "bananas");
             const bananasValue: Json.NumberValue | null = Json.asNumberValue(bananas.value);
             assert.deepStrictEqual(bananasValue!.span, new Language.Span(48, 2));
@@ -990,10 +1066,10 @@ suite("DeploymentTemplate", () => {
         test("with prefix of one of the variables", () => {
             const dt = new DeploymentTemplate("{ 'variables': { 'apples': 'APPLES', 'bananas': 88 } }", "id");
 
-            const definitions: VariableDefinition[] = dt.topLevelScope.findVariableDefinitionsWithPrefix("ap");
+            const definitions: IVariableDefinition[] = dt.topLevelScope.findVariableDefinitionsWithPrefix("ap");
             assert.deepStrictEqual(definitions.length, 1);
 
-            const apples: VariableDefinition = definitions[0];
+            const apples: IVariableDefinition = definitions[0];
             assert.deepStrictEqual(apples.nameValue.toString(), "apples");
             const applesValue: Json.StringValue | null = Json.asStringValue(apples.value);
             if (!applesValue) { throw new Error("failed"); }
@@ -1122,7 +1198,7 @@ suite("DeploymentTemplate", () => {
             test("with non-TLE string", () => {
                 const dt = new DeploymentTemplate(`{ "variables": { "a": "[reference('test')]" } }`, "id");
                 const visitor = new ReferenceInVariableDefinitionsVisitor(dt);
-                const variables: Json.StringValue = Json.asObjectValue(dt.jsonParseResult.value)!.properties[0].name;
+                const variables: Json.StringValue = Json.asObjectValue(dt.jsonParseResult.value)!.properties[0].nameValue;
                 visitor.visitStringValue(variables);
                 assert.deepStrictEqual(visitor.referenceSpans, []);
             });

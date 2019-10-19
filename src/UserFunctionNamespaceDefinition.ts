@@ -9,6 +9,10 @@ import * as Json from "./JSON";
 import * as language from "./Language";
 import { UserFunctionDefinition } from "./UserFunctionDefinition";
 
+export function isUserNamespaceDefinition(definition: INamedDefinition): definition is UserFunctionNamespaceDefinition {
+    return definition.definitionKind === DefinitionKind.Namespace;
+}
+
 /**
  * This class represents the definition of a user-defined namespace in a deployment template.
  */
@@ -74,7 +78,7 @@ export class UserFunctionNamespaceDefinition implements INamedDefinition {
             const members: Json.ObjectValue | null = Json.asObjectValue(this._value.getPropertyValue("members"));
             if (members) {
                 for (let member of members.properties) {
-                    let name: Json.StringValue = member.name;
+                    let name: Json.StringValue = member.nameValue;
                     let value = Json.asObjectValue(member.value);
                     if (value) {
                         let func = new UserFunctionDefinition(this, name, value);

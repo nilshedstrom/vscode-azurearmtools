@@ -9,7 +9,7 @@ import * as language from "./Language";
 import { getUserFunctionUsage } from "./signatureFormatting";
 import { UserFunctionDefinition } from "./UserFunctionDefinition";
 import { UserFunctionNamespaceDefinition } from "./UserFunctionNamespaceDefinition";
-import { VariableDefinition } from "./VariableDefinition";
+import { IVariableDefinition } from "./VariableDefinition";
 
 /**
  * The information that will be displayed when the cursor hovers over parts of a document.
@@ -109,7 +109,7 @@ export class VariableReferenceInfo extends Info {
         super(_variableNameSpan);
     }
 
-    public static fromDefinition(definition: VariableDefinition, variableNameSpan: language.Span): VariableReferenceInfo {
+    public static fromDefinition(definition: IVariableDefinition, variableNameSpan: language.Span): VariableReferenceInfo {
         return new VariableReferenceInfo(definition.nameValue.unquotedValue, variableNameSpan);
     }
 

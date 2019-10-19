@@ -35,4 +35,5 @@ export const expressionsDiagnosticsCompletionMessage = diagnosticsCompletePrefix
 export namespace templateKeys {
     export const parameters = 'parameters';
     export const variables = 'variables';
+    export const copy = "copy";
 }
