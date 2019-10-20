@@ -4,6 +4,7 @@
 
 import { ExpressionType, toValidExpressionType } from './ExpressionType';
 import { assert } from './fixed_assert';
+import { IUsageInfo } from './Hover';
 import { DefinitionKind, INamedDefinition } from './INamedDefinition';
 import { IParameterDefinition } from './IParameterDefinition';
 import * as Json from "./JSON";
@@ -68,6 +69,14 @@ export class ParameterDefinition implements IParameterDefinition {
         }
 
         return null;
+    }
+
+    public get usageInfo(): IUsageInfo {
+        return {
+            usage: this.nameValue.unquotedValue,
+            friendlyType: "parameter",
+            description: this.description
+        };
     }
 
     /**

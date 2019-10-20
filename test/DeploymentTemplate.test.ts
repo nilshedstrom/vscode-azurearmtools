@@ -9,7 +9,6 @@ import * as assert from "assert";
 import { randomBytes } from "crypto";
 import { ISuiteCallbackContext, ITestCallbackContext } from "mocha";
 import { DefinitionKind, DeploymentTemplate, Histogram, INamedDefinition, IncorrectArgumentsCountIssue, IParameterDefinition, IVariableDefinition, Json, Language, ReferenceInVariableDefinitionsVisitor, ReferenceList, TemplateScope, UnrecognizedUserFunctionIssue, UnrecognizedUserNamespaceIssue } from "../extension.bundle";
-import { StringValue } from "../src/JSON";
 import { IDeploymentTemplate, sources, testDiagnostics } from "./support/diagnostics";
 import { parseTemplate } from "./support/parseTemplate";
 import { stringify } from "./support/stringify";
@@ -990,8 +989,8 @@ suite("DeploymentTemplate", () => {
             test("copy block inputs are used as values for variables", () => {
                 const value = dt.topLevelScope.getVariableDefinition('diskNames')!.value!;
                 assert(value);
-                assert(value instanceof StringValue);
-                assert.equal((<StringValue>value).unquotedValue, "[concat('myDataDisk', copyIndex('diskNames', 1))]");
+                assert(value instanceof Json.StringValue);
+                assert.equal((<Json.StringValue>value).unquotedValue, "[concat('myDataDisk', copyIndex('diskNames', 1))]");
             });
 
             //asdf hover
