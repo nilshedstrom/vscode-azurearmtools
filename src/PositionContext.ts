@@ -5,27 +5,26 @@
 // tslint:disable:max-line-length
 
 import { Language } from "../extension.bundle";
-import { AzureRMAssets, BuiltinFunctionMetadata, isBuiltinFunctionDefinition } from "./AzureRMAssets";
+import { AzureRMAssets, BuiltinFunctionMetadata } from "./AzureRMAssets";
 import { CachedValue } from "./CachedValue";
 import * as Completion from "./Completion";
 import { templateKeys } from "./constants";
 import { __debugMarkPositionInString } from "./debugMarkStrings";
 import { DeploymentTemplate } from "./DeploymentTemplate";
 import { assert } from './fixed_assert';
-import * as Hover from "./Hover";
+import { HoverInfo } from "./Hover";
 import { IFunctionMetadata, IFunctionParameterMetadata } from "./IFunctionMetadata";
 import { INamedDefinition } from "./INamedDefinition";
 import { IParameterDefinition } from "./IParameterDefinition";
 import * as Json from "./JSON";
 import * as language from "./Language";
-import { isParameterDefinition } from "./ParameterDefinition";
 import * as Reference from "./ReferenceList";
 import { TemplateScope } from "./TemplateScope";
 import * as TLE from "./TLE";
-import { isUserFunctionDefinition, UserFunctionDefinition } from "./UserFunctionDefinition";
+import { UserFunctionDefinition } from "./UserFunctionDefinition";
 import { UserFunctionMetadata } from "./UserFunctionMetadata";
-import { isUserNamespaceDefinition, UserFunctionNamespaceDefinition } from "./UserFunctionNamespaceDefinition";
-import { isVariableDefinition, IVariableDefinition } from "./VariableDefinition";
+import { UserFunctionNamespaceDefinition } from "./UserFunctionNamespaceDefinition";
+import { IVariableDefinition } from "./VariableDefinition";
 
 /**
  * Information about the TLE expression (if position is at an expression string)
@@ -254,26 +253,12 @@ export class PositionContext {
         return null;
     }
 
-    public getHoverInfo(): Hover.Info | null {
+    public getHoverInfo(): HoverInfo | null {
         const reference: IReferenceSite | null = this.getReferenceSiteInfo();
         if (reference) {
             const span = reference.referenceSpan;
             const definition = reference.definition;
-
-            if (isUserNamespaceDefinition(definition)) {
-                return new Hover.UserNamespaceInfo(definition, span);
-            } else if (isUserFunctionDefinition(definition)) {
-                return new Hover.UserFunctionInfo(definition, span);
-            } else if (isBuiltinFunctionDefinition(definition)) {
-                const functionMetadata = definition;
-                return new Hover.FunctionInfo(functionMetadata.fullName, functionMetadata.usage, functionMetadata.description, span);
-            } else if (isParameterDefinition(definition)) {
-                return Hover.ParameterReferenceInfo.fromDefinition(definition, span);
-            } else if (isVariableDefinition(definition)) {
-                return Hover.VariableReferenceInfo.fromDefinition(definition, span);
-            } else {
-                assert(false, `Unexpected definition type for definition kind ${definition.definitionKind}`);
-            }
+            return new HoverInfo(definition.usageInfo, span);
         }
 
         return null;

@@ -4,6 +4,7 @@
 
 import { Language } from '../extension.bundle';
 import { assert } from './fixed_assert';
+import { IUsageInfo } from './Hover';
 import { DefinitionKind, INamedDefinition } from './INamedDefinition';
 import * as Json from "./JSON";
 
@@ -21,6 +22,7 @@ export function isVariableDefinition(definition: INamedDefinition): definition i
 }
 
 abstract class VariableDefinition implements INamedDefinition {
+    public usageInfo: IUsageInfo;
     public readonly definitionKind: DefinitionKind = DefinitionKind.Variable;
 }
 
@@ -41,6 +43,14 @@ export class TopLevelVariableDefinition extends VariableDefinition {
 
     public get span(): Language.Span {
         return this._property.span;
+    }
+
+    public get usageInfo(): IUsageInfo {
+        return {
+            usage: this.nameValue.unquotedValue,
+            friendlyType: "variable",
+            description: undefined
+        };
     }
 
     /**
@@ -89,6 +99,14 @@ export class TopLevelCopyBlockVariableDefinition extends VariableDefinition {
 
     public get span(): Language.Span {
         return this._copyVariableObject.span;
+    }
+
+    public get usageInfo(): IUsageInfo {
+        return {
+            usage: this.nameValue.unquotedValue,
+            friendlyType: "iteration variable",
+            description: undefined
+        };
     }
 
     /**
