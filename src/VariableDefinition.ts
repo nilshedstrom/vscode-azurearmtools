@@ -65,12 +65,29 @@ export class TopLevelVariableDefinition extends VariableDefinition {
  * This class represents the definition of a top-level parameter in a deployment template.
  */
 export class TopLevelCopyBlockVariableDefinition extends VariableDefinition {
+    public readonly value: Json.Value | null;
+
     public constructor(
+        /**
+         * The "copy" block array element corresponding to this variable (see below)
+         */
         private readonly _copyVariableObject: Json.ObjectValue,
+
+        /**
+         * StringValue representing the "name" property of the copy block
+         */
         public readonly nameValue: Json.StringValue,
-        public readonly value: Json.Value | null
+
+        /**
+         * The "input" property from the copy block, represents the value of each instance of the
+         * resulting variable array
+         */
+        input: Json.Value | null
     ) {
         super();
+
+        // The value will be an array of the value of the "input" property
+        this.value = input ? new Json.ArrayValue(input.span, [input]) : null; // asdf test input null
     }
 
     public static createIfValid(copyVariableObject: Json.Value): IVariableDefinition | undefined {

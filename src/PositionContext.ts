@@ -529,17 +529,17 @@ export class PositionContext {
     private getDeepPropertyAccessCompletions(propertyPrefix: string, variableOrParameterDefinition: Json.ObjectValue, sourcesNameStack: string[], replaceSpan: language.Span): Completion.Item[] {
         const result: Completion.Item[] = [];
 
-        const sourcePropertyDefinition: Json.ObjectValue | null = Json.asObjectValue(variableOrParameterDefinition.getPropertyValueFromStack(sourcesNameStack));
-        if (sourcePropertyDefinition) {
+        const sourcePropertyDefinitionObject: Json.ObjectValue | null = Json.asObjectValue(variableOrParameterDefinition.getPropertyValueFromStack(sourcesNameStack));
+        if (sourcePropertyDefinitionObject) {
             let matchingPropertyNames: string[];
             if (!propertyPrefix) {
-                matchingPropertyNames = sourcePropertyDefinition.propertyNames;
+                matchingPropertyNames = sourcePropertyDefinitionObject.propertyNames;
             } else {
                 // We need to ignore casing when creating completions
                 const propertyPrefixLC = propertyPrefix.toLowerCase();
 
                 matchingPropertyNames = [];
-                for (const propertyName of sourcePropertyDefinition.propertyNames) {
+                for (const propertyName of sourcePropertyDefinitionObject.propertyNames) {
                     if (propertyName.toLowerCase().startsWith(propertyPrefixLC)) {
                         matchingPropertyNames.push(propertyName);
                     }

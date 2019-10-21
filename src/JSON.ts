@@ -643,6 +643,8 @@ export class ObjectValue extends Value {
 
         while (result && propertyNameStack.length > 0) {
             const objectValue: ObjectValue | null = asObjectValue(result);
+
+            // We only handle evaluating properties in objects (e.g. not arrays)
             if (objectValue) {
                 const propertyName = propertyNameStack.pop();
                 result = propertyName ? objectValue.getPropertyValue(propertyName) : null;
