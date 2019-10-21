@@ -8,9 +8,9 @@
 import * as assert from "assert";
 import * as os from 'os';
 import { DefinitionKind, DeploymentTemplate, HoverInfo, IReferenceSite, Language, ReferenceList } from "../extension.bundle";
+import { createCompletionsTest } from "./support/createCompletionsTest";
 import { IDeploymentTemplate } from "./support/diagnostics";
 import { parseTemplate, parseTemplateWithMarkers } from "./support/parseTemplate";
-import { stringify } from "./support/stringify";
 import { allTestDataExpectedCompletions } from "./TestData";
 
 suite("User functions", () => {
@@ -1792,28 +1792,6 @@ suite("User functions", () => {
             ["udf.udf3", "udf3()$0"],
             ["udf.udf34", "udf34()$0"]];
         const allMixedCaseNsFunctionsCompletions: [string, string][] = [["mixedCaseNamespace.howdy", "howdy()$0"]];
-
-        function createCompletionsTest(template: string | Partial<IDeploymentTemplate>, find: string, replacementWithBang: string, expectedNamesAndInsertTexts: ([string, string][]) | (string[])): void {
-            test(`Test UDF Completions: ${replacementWithBang}`, async () => {
-                template = stringify(template).replace(find, replacementWithBang);
-
-                const { dt, markers: { bang } } = await parseTemplateWithMarkers(template);
-                assert(bang, "Didn't find ! marker in text");
-                const pc = dt.getContextFromDocumentCharacterIndex(bang.index);
-                const completions = pc.getCompletionItems();
-
-                const completionNames = completions.map(c => c.name).sort();
-                const completionInserts = completions.map(c => c.insertText).sort();
-
-                const expectedNames = (<unknown[]>expectedNamesAndInsertTexts).map(e => Array.isArray(e) ? <string>e[0] : <string>e).sort();
-                const expectedInsertTexts = expectedNamesAndInsertTexts.every(e => Array.isArray(e)) ? (<[string, string][]>expectedNamesAndInsertTexts).map(e => e[1]).sort() : undefined;
-
-                assert.deepStrictEqual(completionNames, expectedNames, "Completion names didn't match");
-                if (expectedInsertTexts !== undefined) {
-                    assert.deepStrictEqual(completionInserts, expectedInsertTexts, "Completion insert texts didn't match");
-                }
-            });
-        }
 
         suite("Completing UDF function names", () => {
             suite("Completing udf.xxx gives udf's functions starting with xxx - not found", () => {

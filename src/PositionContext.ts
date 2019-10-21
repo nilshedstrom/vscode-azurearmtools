@@ -529,14 +529,14 @@ export class PositionContext {
     private getDeepPropertyAccessCompletions(propertyPrefix: string, variableOrParameterDefinition: Json.ObjectValue, sourcesNameStack: string[], replaceSpan: language.Span): Completion.Item[] {
         const result: Completion.Item[] = [];
 
-        const sourcePropertyDefinition: Json.ObjectValue | null = Json.asObjectValue(variableOrParameterDefinition.getPropertyValueFromStack(sourcesNameStack));
-        if (sourcePropertyDefinition) {
+        const sourcePropertyDefinitionObject: Json.ObjectValue | null = Json.asObjectValue(variableOrParameterDefinition.getPropertyValueFromStack(sourcesNameStack));
+        if (sourcePropertyDefinitionObject) {
             let matchingPropertyNames: string[];
             if (!propertyPrefix) {
-                matchingPropertyNames = sourcePropertyDefinition.propertyNames;
+                matchingPropertyNames = sourcePropertyDefinitionObject.propertyNames;
             } else {
                 matchingPropertyNames = [];
-                for (const propertyName of sourcePropertyDefinition.propertyNames) {
+                for (const propertyName of sourcePropertyDefinitionObject.propertyNames) {
                     if (propertyName.startsWith(propertyPrefix)) {
                         matchingPropertyNames.push(propertyName);
                     }
