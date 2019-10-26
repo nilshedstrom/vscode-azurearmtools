@@ -71,7 +71,16 @@ export interface IDeploymentNamespaceDefinition {
 }
 
 export interface IDeploymentTemplate {
-    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#" | "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#";
+    "$schema":
+    "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#"
+    | "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#"
+    | "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#"
+    | "https://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json#"
+    | "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#"
+    | "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#"
+    | "https://schema.management.azure.com/schemas/2019-08-01/managementGroupDeploymentTemplate.json#"
+    | "https://schema.management.azure.com/schemas/2019-08-01/tenantDeploymentTemplate.json#"
+    | string;
     contentVersion: string;
     parameters?: {
         [key: string]: IDeploymentParameterDefinition;
