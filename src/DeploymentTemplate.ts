@@ -375,10 +375,25 @@ export class DeploymentTemplate {
                     const varDefs: IVariableDefinition[] = [];
                     for (let prop of variables.properties) {
                         if (prop.nameValue.unquotedValue.toLowerCase() === templateKeys.copy) {
-                            //asdf what happens if "copy" but not an object etc?
+                            // We have a top-level copy block, e.g.:
+                            //
+                            // "copy": [
+                            //   {
+                            //     "name": "top-level-object-array",
+                            //     "count": 5,
+                            //     "input": {
+                            //       "name": "[concat('myDataDisk', copyIndex('top-level-object-array', 1))]",
+                            //       "diskSizeGB": "1",
+                            //       "diskIndex": "[copyIndex('top-level-object-array')]"
+                            //     }
+                            //   },
+                            // ]
+                            //
+                            // Each element of the array is a TopLevelCopyBlockVariableDefinition
+                            //asdf test not an array
                             const varsArray: Json.ArrayValue | null = Json.asArrayValue(prop.value);
                             // tslint:disable-next-line: strict-boolean-expressions
-                            for (let varElement of varsArray && varsArray.elements || []) {
+                            for (let varElement of (varsArray && varsArray.elements) || []) {
                                 const def = TopLevelCopyBlockVariableDefinition.createIfValid(varElement);
                                 if (def) {
                                     varDefs.push(def);

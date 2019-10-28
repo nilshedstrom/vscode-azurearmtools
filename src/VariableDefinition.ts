@@ -86,7 +86,12 @@ export class TopLevelCopyBlockVariableDefinition extends VariableDefinition {
     ) {
         super();
 
-        // The value will be an array of the value of the "input" property
+        // The value will be an array (of the given count) of the value of the "input" property resolved
+        // with 'copyIndex' resolved with the current index
+        // test: can count be expression?
+        // We don't actually support expression evaluation in a meaningful way right now, so we don't
+        // need to be accurate with the representation, we just need to ensure we have an array of
+        // some value.  We'll create an array with a single element using the 'input' expression.
         this.value = input ? new Json.ArrayValue(input.span, [input]) : null; // asdf test input null
     }
 

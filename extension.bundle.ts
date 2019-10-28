@@ -57,6 +57,7 @@ export { UnrecognizedBuiltinFunctionIssue, UnrecognizedUserFunctionIssue, Unreco
 export { UserFunctionMetadata } from "./src/UserFunctionMetadata";
 export { UserFunctionNamespaceDefinition } from "./src/UserFunctionNamespaceDefinition";
 export { UserFunctionParameterDefinition } from "./src/UserFunctionParameterDefinition";
+export { getVSCodePositionFromPosition } from "./src/util/vscodePosition";
 export { isVariableDefinition, IVariableDefinition } from "./src/VariableDefinition";
 export { FindReferencesVisitor } from "./src/visitors/FindReferencesVisitor";
 export { FunctionCountVisitor } from "./src/visitors/FunctionCountVisitor";
@@ -71,4 +72,3 @@ export { Language };
 export { basic };
 export { Utilities };
 export { TLE };
-

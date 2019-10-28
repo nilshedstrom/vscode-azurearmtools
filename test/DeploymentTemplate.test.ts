@@ -9,7 +9,7 @@ import * as assert from "assert";
 import { randomBytes } from "crypto";
 import { ISuiteCallbackContext, ITestCallbackContext } from "mocha";
 import { DefinitionKind, DeploymentTemplate, Histogram, INamedDefinition, IncorrectArgumentsCountIssue, IParameterDefinition, IVariableDefinition, Json, Language, ReferenceInVariableDefinitionsVisitor, ReferenceList, TemplateScope, UnrecognizedUserFunctionIssue, UnrecognizedUserNamespaceIssue } from "../extension.bundle";
-import { IDeploymentTemplate, sources, testDiagnostics } from "./support/diagnostics";
+import { sources, testDiagnostics } from "./support/diagnostics";
 import { parseTemplate } from "./support/parseTemplate";
 import { stringify } from "./support/stringify";
 import { testWithLanguageServer } from "./support/testWithLanguageServer";
@@ -933,7 +933,7 @@ suite("DeploymentTemplate", () => {
             assert.deepStrictEqual(value.toString(), "yum");
         });
 
-        test("with mulitple case insensitive matches", () => {
+        test("with multiple case insensitive matches", () => {
             const dt = new DeploymentTemplate("{ 'variables': { 'apples': 'yum', 'APPLES': 'good' } }", "id");
 
             // Should always find the last definition, because that's what Azure does
@@ -953,82 +953,7 @@ suite("DeploymentTemplate", () => {
             if (!value) { throw new Error("failed"); }
             assert.deepStrictEqual(value.toString(), "good");
         });
-
-        suite("getVariableDefinition - top-level copy block", () => {
-            //asdf
-
-            const dt = new DeploymentTemplate(stringify(<Partial<IDeploymentTemplate>>{
-                variables: {
-                    copy: [{
-                        name: "diskNames",
-                        count: 3,
-                        input: "[concat('myDataDisk', copyIndex('diskNames', 1))]"
-                    }, {
-                        name: "disks",
-                        count: 3,
-                        input: {
-                            "name": "[concat('myDataDisk', copyIndex('disks', 1))]",
-                            "diskSizeGB": "1",
-                            "diskIndex": "[copyIndex('disks')]"
-                        }
-                    }]
-                }
-            }), "id");
-
-            test("'copy' not found as a variable", () => {
-                assert(!dt.topLevelScope.getVariableDefinition('copy'));
-            });
-
-            test("copy block names are added as variables", () => {
-                assert(dt.topLevelScope.variableDefinitions.length === 2);
-                assert(dt.topLevelScope.variableDefinitions[0].nameValue.unquotedValue === "diskNames");
-                assert(!!dt.topLevelScope.getVariableDefinition('diskNames'));
-                assert(!!dt.topLevelScope.getVariableDefinition('disks'));
-            });
-
-            test("copy block inputs are used as values for variables", () => {
-                const value = dt.topLevelScope.getVariableDefinition('diskNames')!.value!;
-                assert(value);
-                assert(value instanceof Json.StringValue);
-                assert.equal((<Json.StringValue>value).unquotedValue, "[concat('myDataDisk', copyIndex('diskNames', 1))]");
-            });
-
-            //asdf hover
-            //asdf refs etc.
-
-            test("case insensitive block", () => {
-                const dt2 = new DeploymentTemplate(stringify(<Partial<IDeploymentTemplate>>{
-                    variables: {
-                        COPY: [{
-                            name: "diskNames",
-                            count: 3,
-                            input: "[concat('myDataDisk', copyIndex('diskNames', 1))]"
-                        }]
-                    }
-                }), "id");
-                assert(!!dt2.topLevelScope.getVariableDefinition('diskNames'));
-            });
-
-            test("case insensitive lookup", () => {
-                assert(!!dt.topLevelScope.getVariableDefinition('DISKnAMES'));
-            });
-
-            test("Standard and copy block vars", () => {
-                const dt2 = new DeploymentTemplate(stringify(<Partial<IDeploymentTemplate>><unknown>{
-                    variables: {
-                        "var1": "hello",
-                        copy: [{ name: "diskNames" }, { name: "disks" }],
-                        "var2": "hello 2",
-                    }
-                }), "id");
-
-                assert.deepStrictEqual(
-                    dt2.topLevelScope.variableDefinitions.map(v => v.nameValue.unquotedValue),
-                    ["var1", "diskNames", "disks", "var2"]
-                );
-            });
-        });
-    });
+    }); // end suite getVariableDefinition
 
     suite("findVariableDefinitionsWithPrefix(string)", () => {
         test("with null", () => {
