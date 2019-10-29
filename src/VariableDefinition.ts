@@ -83,6 +83,9 @@ export class TopLevelVariableDefinition extends VariableDefinition {
                                 // asdf count could be zero
                                 const array = new Json.ArrayValue(input.span, [input]);
 
+                                // NOTE: Nested copy arrays are not supported by ARM, so we don't have to check
+                                //   the 'input' property value for a COPY block
+
                                 // Wrap the array in a property
                                 const loopValueProperty = new Json.Property(input.span, name, array);
                                 modifiedMembers.push(loopValueProperty);

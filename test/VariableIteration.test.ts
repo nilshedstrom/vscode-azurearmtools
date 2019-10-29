@@ -249,7 +249,7 @@ suite("Variable iteration (copy blocks)", () => {
         });
 
         test("multiple copy members", async () => {
-            const dt: DeploymentTemplate = await parseTemplate({
+            const dt2: DeploymentTemplate = await parseTemplate({
                 "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
                 "contentVersion": "1.0.0.0",
                 "variables": {
@@ -258,12 +258,12 @@ suite("Variable iteration (copy blocks)", () => {
                             {
                                 "name": "array1",
                                 "count": 5,
-                                "input": true
+                                "input": true // Note: ARM backend actually only allows string and object
                             },
                             {
                                 "name": "array2",
                                 "count": 5,
-                                "input": false
+                                "input": false // Note: ARM backend actually only allows string and object
                             }
                         ],
                         "member2": "abc"
@@ -271,14 +271,12 @@ suite("Variable iteration (copy blocks)", () => {
                 }
             });
 
-            const vDef = dt.topLevelScope.getVariableDefinition('object')!;
+            const vDef = dt2.topLevelScope.getVariableDefinition('object')!;
             assert(vDef);
             const valueObject = Json.asObjectValue(vDef.value)!;
             assert(valueObject);
             assert.deepStrictEqual(valueObject.propertyNames, ["member2", "array1", "array2"]);
         });
-
-        //asdf deeply embedded
 
         //asdf refs etc.
 
