@@ -223,14 +223,13 @@ suite("Variable iteration (copy blocks)", () => {
             assert(value);
             assert.equal(value.propertyNames.length, 2);
 
-            assert(v.value instanceof Json.ObjectValue);
-
-            assert(dt.topLevelScope.variableDefinitions[0].nameValue.unquotedValue === "diskNames");
-            assert(!!dt.topLevelScope.getVariableDefinition('diskNames'));
-            assert(!!dt.topLevelScope.getVariableDefinition('disks'));
+            const diskNames = value.getPropertyValue("diskNames")!;
+            assert(diskNames);
+            const member2 = value.getPropertyValue("member2")!;
+            assert(member2);
         });
 
-        test("copy block value is an array of the input property", async () => {
+        test("copy block value is an array of the input property asdf", async () => {
             const value = dt.topLevelScope.getVariableDefinition('diskNames')!.value!;
             assert(value);
             assert(value instanceof Json.ArrayValue);
@@ -239,7 +238,7 @@ suite("Variable iteration (copy blocks)", () => {
             assert.equal((<Json.StringValue>(<Json.ArrayValue>value).elements[0]).unquotedValue, "[concat('myDataDisk', copyIndex('diskNames', 1))]");
         });
 
-        test("copy block usage info", async () => {
+        test("copy block usage info asdf", async () => {
             const diskNames = dt.topLevelScope.getVariableDefinition('diskNames')!;
             assert.deepStrictEqual(diskNames.usageInfo, {
                 description: undefined,
@@ -250,71 +249,57 @@ suite("Variable iteration (copy blocks)", () => {
 
         //asdf refs etc.
 
-        test("case insensitive keys", () => {
-            const dt2 = new DeploymentTemplate(
-                stringify(<Partial<IDeploymentTemplate>>{
-                    variables: {
-                        "COPY": [{
-                            NAME: "diskNames",
-                            COUNT: 3,
-                            INPUT: "[concat('myDataDisk', copyIndex('diskNames', 1))]"
-                        }]
-                    }
-                }),
-                "id");
-            assert(!!dt2.topLevelScope.getVariableDefinition('diskNames'));
+        test("copy block usage info asdf", async () => {
+            test("case insensitive keys ", () => {
+                const dt2 = new DeploymentTemplate(
+                    stringify(<Partial<IDeploymentTemplate>>{
+                        variables: {
+                            "COPY": [{
+                                NAME: "diskNames",
+                                COUNT: 3,
+                                INPUT: "[concat('myDataDisk', copyIndex('diskNames', 1))]"
+                            }]
+                        }
+                    }),
+                    "id");
+                assert(!!dt2.topLevelScope.getVariableDefinition('diskNames'));
+            });
+
+            test("no input property asdf", () => {
+                const dt2 = new DeploymentTemplate(
+                    stringify(<Partial<IDeploymentTemplate>>{
+                        variables: {
+                            "COPY": [{
+                                name: "diskNames",
+                                count: 3
+                            }]
+                        }
+                    }),
+                    "id");
+                assert(!!dt2.topLevelScope.getVariableDefinition('diskNames'));
+            });
+
+            test("no name property asdf", () => {
+                const dt = new DeploymentTemplate(
+                    stringify(<Partial<IDeploymentTemplate>>{
+                        variables: {
+                            "COPY": [{
+                                count: 3,
+                                input: 123
+                            }]
+                        }
+                    }),
+                    "id");
+                assert(!!dt.topLevelScope.getVariableDefinition('diskNames'));
+            });
+
+            test("case insensitive lookup asdf", async () => {
+                const dt = await parseTemplate(embeddedVariableCopyBlocks);
+
+                assert(!!dt.topLevelScope.getVariableDefinition('DISKnAMES'));
+            });
         });
 
-        test("no input property asdf", () => {
-            const dt2 = new DeploymentTemplate(
-                stringify(<Partial<IDeploymentTemplate>>{
-                    variables: {
-                        "COPY": [{
-                            name: "diskNames",
-                            count: 3
-                        }]
-                    }
-                }),
-                "id");
-            assert(!!dt2.topLevelScope.getVariableDefinition('diskNames'));
-        });
-
-        test("no name property asdf", () => {
-            const dt = new DeploymentTemplate(
-                stringify(<Partial<IDeploymentTemplate>>{
-                    variables: {
-                        "COPY": [{
-                            count: 3,
-                            input: 123
-                        }]
-                    }
-                }),
-                "id");
-            assert(!!dt.topLevelScope.getVariableDefinition('diskNames'));
-        });
-
-        test("case insensitive lookup", async () => {
-            const dt = await parseTemplate(embeddedVariableCopyBlocks);
-
-            assert(!!dt.topLevelScope.getVariableDefinition('DISKnAMES'));
-        });
-
-        test("Regular and iteration vars together", () => {
-            const dt = new DeploymentTemplate(
-                stringify(<Partial<IDeploymentTemplate>><unknown>{
-                    variables: {
-                        "var1": "hello",
-                        copy: [{ name: "diskNames" }, { name: "disks" }],
-                        "var2": "hello 2",
-                    }
-                }),
-                "id");
-
-            assert.deepStrictEqual(
-                dt.topLevelScope.variableDefinitions.map(v => v.nameValue.unquotedValue),
-                ["var1", "diskNames", "disks", "var2"]
-            );
-        });
     }); // end suite embedded variable copy blocks
 
     //asdf
