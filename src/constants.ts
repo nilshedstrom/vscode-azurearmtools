@@ -36,4 +36,7 @@ export namespace templateKeys {
     export const parameters = 'parameters';
     export const variables = 'variables';
     export const copy = "copy";
+
+    export const loopVarName = 'name';
+    export const loopVarInput = 'input';
 }

@@ -3,6 +3,8 @@
 // ----------------------------------------------------------------------------
 
 import { Language } from '../extension.bundle';
+import { CachedValue } from './CachedValue';
+import { templateKeys } from './constants';
 import { assert } from './fixed_assert';
 import { IUsageInfo } from './Hover';
 import { DefinitionKind, INamedDefinition } from './INamedDefinition';
@@ -27,6 +29,8 @@ abstract class VariableDefinition implements INamedDefinition {
 }
 
 export class TopLevelVariableDefinition extends VariableDefinition {
+    private _nameValue: CachedValue<Json.Value | null> = new CachedValue<Json.Value | null>();
+
     constructor(private readonly _property: Json.Property) {
         super();
 
@@ -38,7 +42,62 @@ export class TopLevelVariableDefinition extends VariableDefinition {
     }
 
     public get value(): Json.Value | null {
-        return this._property.value;
+        return this._nameValue.getOrCacheValue(() => {
+            const value = this._property.value;
+            const valueObject = Json.asObjectValue(value);
+            if (valueObject) {
+                // asdf what if not array?
+                // asdf what if array but incorrect properties?
+                const copyPropertyArray = Json.asArrayValue(valueObject.getPropertyValue(templateKeys.copy));
+                if (copyPropertyArray) {
+                    const copyKeyLC = templateKeys.copy.toLowerCase();
+
+                    // Example:
+                    //  "variable": {
+                    //     "copy": [
+                    //         {
+                    //             "name": "disks",
+                    //             "count": 5,
+                    //             "input": {
+                    //                 "name": "[concat('myDataDisk', copyIndex('disks', 1))]",
+                    //                 "diskSizeGB": "1",
+                    //                 "diskIndex": "[copyIndex('disks')]"
+                    //             }
+                    //         }
+                    //     ],
+
+                    // Start out with a list of the current members without the 'copy' value
+                    const modifiedMembers: Json.Property[] = valueObject.properties
+                        .filter(prop => prop.nameValue.unquotedValue.toLowerCase() !== copyKeyLC);
+
+                    // Add a new array member for each element of the COPY block
+                    for (let loopVar of copyPropertyArray.elements) {
+                        const loopVarObject = Json.asObjectValue(loopVar);
+                        if (loopVarObject) {
+                            const name = Json.asStringValue(loopVarObject.getPropertyValue(templateKeys.loopVarName));
+                            const input = loopVarObject.getPropertyValue(templateKeys.loopVarInput);
+                            if (name && input) {
+                                // We don't actually support expression evaluation in a meaningful way right now, so we don't
+                                // need to be accurate with the representation, we just need to ensure we have an array of
+                                // some value.  We'll create an array with a single element using the 'input' expression.
+                                // asdf count could be zero
+                                const array = new Json.ArrayValue(input.span, [input]);
+
+                                // Wrap the array in a property
+                                const loopValueProperty = new Json.Property(input.span, name, array);
+                                modifiedMembers.push(loopValueProperty);
+                            }
+                        }
+                    }
+
+                    const modifiedObjectValue = new Json.ObjectValue(valueObject.span, modifiedMembers);
+                    return modifiedObjectValue;
+                }
+            }
+
+            // No valid COPY block found - just return the value as is
+            return value;
+        });
     }
 
     public get span(): Language.Span {
@@ -92,6 +151,7 @@ export class TopLevelCopyBlockVariableDefinition extends VariableDefinition {
         // We don't actually support expression evaluation in a meaningful way right now, so we don't
         // need to be accurate with the representation, we just need to ensure we have an array of
         // some value.  We'll create an array with a single element using the 'input' expression.
+        // asdf count could be zero
         this.value = input ? new Json.ArrayValue(input.span, [input]) : null; // asdf test input null
     }
 
@@ -107,11 +167,12 @@ export class TopLevelCopyBlockVariableDefinition extends VariableDefinition {
         //         ]
         //   }
 
+        // asdf can consolidate?
         const asObject = Json.asObjectValue(copyVariableObject);
         if (asObject) {
-            const nameValue = Json.asStringValue(asObject.getPropertyValue('name'));
+            const nameValue = Json.asStringValue(asObject.getPropertyValue(templateKeys.loopVarName));
             if (nameValue) {
-                const value = asObject.getPropertyValue('input');
+                const value = asObject.getPropertyValue(templateKeys.loopVarInput);
                 return new TopLevelCopyBlockVariableDefinition(asObject, nameValue, value); //asdf test bad input, bad name
             }
         }

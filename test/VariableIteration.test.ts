@@ -205,8 +205,6 @@ suite("Variable iteration (copy blocks)", () => {
         });
 
         test("'copy' not found as a variable", async () => {
-            //const dt = await parseTemplate(embeddedVariableCopyBlocks);
-
             assert(!dt.topLevelScope.getVariableDefinition('copy'));
         });
 
@@ -215,37 +213,72 @@ suite("Variable iteration (copy blocks)", () => {
         });
 
         test("copy block names are added as members of the variable", async () => {
-            //const dt = await parseTemplate(embeddedVariableCopyBlocks);
-
             assert(dt.topLevelScope.variableDefinitions.length === 1);
             const v = dt.topLevelScope.getVariableDefinition('Disk-array-in-object')!;
             const value = Json.asObjectValue(v.value)!;
             assert(value);
             assert.equal(value.propertyNames.length, 2);
 
-            const diskNames = value.getPropertyValue("diskNames")!;
-            assert(diskNames);
+            const disks = value.getPropertyValue("disks")!;
+            assert(disks);
             const member2 = value.getPropertyValue("member2")!;
             assert(member2);
         });
 
-        test("copy block value is an array of the input property asdf", async () => {
-            const value = dt.topLevelScope.getVariableDefinition('diskNames')!.value!;
-            assert(value);
-            assert(value instanceof Json.ArrayValue);
-            assert((<Json.ArrayValue>value).elements[0] instanceof Json.StringValue);
-            // Right now the value consists of just a single array element of the 'input' property value
-            assert.equal((<Json.StringValue>(<Json.ArrayValue>value).elements[0]).unquotedValue, "[concat('myDataDisk', copyIndex('diskNames', 1))]");
+        test("copy block value is an object with an array 'disks' of the input property's value", async () => {
+            const valueObject = Json.asObjectValue(dt.topLevelScope.getVariableDefinition('disk-array-in-object')!.value)!;
+            const disksValue = valueObject.getPropertyValue("disks")!;
+
+            // Disks member should be an array
+            const disksArrayValue = Json.asArrayValue(disksValue)!;
+            assert(disksArrayValue);
+
+            // Copy array should be same as 'input' property
+            const element1Object = Json.asObjectValue(disksArrayValue.elements[0])!;
+            assert(element1Object);
+            assert.deepStrictEqual(element1Object.propertyNames, ["name", "diskSizeGB", "diskIndex"]);
         });
 
-        test("copy block usage info asdf", async () => {
-            const diskNames = dt.topLevelScope.getVariableDefinition('diskNames')!;
+        test("embedded copy block usage info", async () => {
+            const diskNames = dt.topLevelScope.getVariableDefinition('disk-array-in-object')!;
             assert.deepStrictEqual(diskNames.usageInfo, {
                 description: undefined,
-                friendlyType: "iteration variable",
-                usage: "diskNames"
+                friendlyType: "variable",
+                usage: "disk-array-in-object"
             });
         });
+
+        test("multiple copy members", async () => {
+            const dt: DeploymentTemplate = await parseTemplate({
+                "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                "contentVersion": "1.0.0.0",
+                "variables": {
+                    "object": {
+                        "copy": [
+                            {
+                                "name": "array1",
+                                "count": 5,
+                                "input": true
+                            },
+                            {
+                                "name": "array2",
+                                "count": 5,
+                                "input": false
+                            }
+                        ],
+                        "member2": "abc"
+                    }
+                }
+            });
+
+            const vDef = dt.topLevelScope.getVariableDefinition('object')!;
+            assert(vDef);
+            const valueObject = Json.asObjectValue(vDef.value)!;
+            assert(valueObject);
+            assert.deepStrictEqual(valueObject.propertyNames, ["member2", "array1", "array2"]);
+        });
+
+        //asdf deeply embedded
 
         //asdf refs etc.
 
@@ -280,7 +313,7 @@ suite("Variable iteration (copy blocks)", () => {
             });
 
             test("no name property asdf", () => {
-                const dt = new DeploymentTemplate(
+                const dt2 = new DeploymentTemplate(
                     stringify(<Partial<IDeploymentTemplate>>{
                         variables: {
                             "COPY": [{
@@ -290,13 +323,13 @@ suite("Variable iteration (copy blocks)", () => {
                         }
                     }),
                     "id");
-                assert(!!dt.topLevelScope.getVariableDefinition('diskNames'));
+                assert(!!dt2.topLevelScope.getVariableDefinition('diskNames'));
             });
 
             test("case insensitive lookup asdf", async () => {
-                const dt = await parseTemplate(embeddedVariableCopyBlocks);
+                const dt2 = await parseTemplate(embeddedVariableCopyBlocks);
 
-                assert(!!dt.topLevelScope.getVariableDefinition('DISKnAMES'));
+                assert(!!dt2.topLevelScope.getVariableDefinition('DISKnAMES'));
             });
         });
 
