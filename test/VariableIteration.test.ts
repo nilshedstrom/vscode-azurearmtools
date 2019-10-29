@@ -5,8 +5,8 @@
 // tslint:disable:no-unused-expression max-func-body-length promise-function-async max-line-length no-unnecessary-class
 // tslint:disable:no-non-null-assertion object-literal-key-quotes variable-name no-constant-condition
 
-import { DeploymentTemplate, Json } from "../extension.bundle";
-import { assert } from "../src/fixed_assert";
+import * as assert from 'assert';
+import { DeploymentTemplate, IVariableDefinition, Json } from "../extension.bundle";
 import { createCompletionsTest } from "./support/createCompletionsTest";
 import { IDeploymentTemplate } from "./support/diagnostics";
 import { parseTemplate } from "./support/parseTemplate";
@@ -18,7 +18,7 @@ suite("Variable iteration (copy blocks)", () => {
         const topLevelVariableCopyBlocks = <Partial<IDeploymentTemplate>>{
             variables: {
                 copy: [{
-                    // This creates a loop variable 'diskNames' whose value is
+                    // This creates a top-level variable 'diskNames' whose value is
                     //   an array of strings with the values
                     //   [
                     //     'myDataDisk1',
@@ -147,6 +147,7 @@ suite("Variable iteration (copy blocks)", () => {
 
     suite("embedded variable copy blocks", async () => {
         let dt: DeploymentTemplate;
+        let variable: IVariableDefinition;
 
         const embeddedVariableCopyBlocks = {
             "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
@@ -194,6 +195,8 @@ suite("Variable iteration (copy blocks)", () => {
 
         suiteSetup(async () => {
             dt = await parseTemplate(embeddedVariableCopyBlocks);
+            variable = dt.topLevelScope.getVariableDefinition('Disk-array-in-object')!;
+            assert(variable);
         });
 
         test("No errors", async () => {
@@ -207,16 +210,21 @@ suite("Variable iteration (copy blocks)", () => {
             assert(!dt.topLevelScope.getVariableDefinition('copy'));
         });
 
-        test("'copy' not found as member of the variable", async () => {
-            //const dt = await parseTemplate(embeddedVariableCopyBlocks);
-
-            assert(!dt.topLevelScope.getVariableDefinition('copy'));
+        test("'copy' not found as member of the variable's value", async () => {
+            assert.equal(Json.asObjectValue(variable.value)!.getPropertyValue('copy'), null);
         });
 
-        test("copy block names are added as variables", async () => {
+        test("copy block names are added as members of the variable", async () => {
             //const dt = await parseTemplate(embeddedVariableCopyBlocks);
 
-            assert(dt.topLevelScope.variableDefinitions.length === 2);
+            assert(dt.topLevelScope.variableDefinitions.length === 1);
+            const v = dt.topLevelScope.getVariableDefinition('Disk-array-in-object')!;
+            const value = Json.asObjectValue(v.value)!;
+            assert(value);
+            assert.equal(value.propertyNames.length, 2);
+
+            assert(v.value instanceof Json.ObjectValue);
+
             assert(dt.topLevelScope.variableDefinitions[0].nameValue.unquotedValue === "diskNames");
             assert(!!dt.topLevelScope.getVariableDefinition('diskNames'));
             assert(!!dt.topLevelScope.getVariableDefinition('disks'));
@@ -316,6 +324,7 @@ suite("Variable iteration (copy blocks)", () => {
         "contentVersion": "1.0.0.0",
         "parameters": {},
         "variables": {
+            // The variable disk-array-in-object will be of type object and contain two members: disks and diskNames
             "disk-array-in-object": {
                 "copy": [
                     {
@@ -380,6 +389,8 @@ suite("Variable iteration (copy blocks)", () => {
             }
         }
     };
+    let asdf = variableCopySampleTemplate;
+    asdf = asdf;
 
     suite("Top-level copy block", async () => {
         // Top-level copy block of object
