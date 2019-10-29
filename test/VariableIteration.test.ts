@@ -7,10 +7,11 @@
 
 import * as assert from 'assert';
 import { DeploymentTemplate, IVariableDefinition, Json } from "../extension.bundle";
-import { createCompletionsTest } from "./support/createCompletionsTest";
+import { createCompletionsTest } from './support/createCompletionsTest';
 import { IDeploymentTemplate } from "./support/diagnostics";
-import { parseTemplate } from "./support/parseTemplate";
+import { parseTemplate, parseTemplateWithMarkers } from "./support/parseTemplate";
 import { stringify } from "./support/stringify";
+import { testFindReferences as testGetReferences } from './support/testGetReferences';
 
 suite("Variable iteration (copy blocks)", () => {
 
@@ -25,7 +26,7 @@ suite("Variable iteration (copy blocks)", () => {
                     //     'myDataDisk2',
                     //     'myDataDisk3
                     //   ]
-                    name: "diskNames",
+                    name: "<!diskNamesDefName!>diskNames",
                     count: 3,
                     input: "[concat('myDataDisk', copyIndex('diskNames', 1))]"
                 }, {
@@ -76,7 +77,24 @@ suite("Variable iteration (copy blocks)", () => {
             });
         });
 
-        //asdf refs etc.
+        test("Find references at variable reference points to the copy block element's name property", async () => {
+            const { dt, markers: { diskNamesDefName, diskNamesRef } } = await parseTemplateWithMarkers(
+                {
+                    ...topLevelVariableCopyBlocks,
+                    outputs: {
+                        o1: {
+                            type: "string",
+                            value: "[variables('<!diskNamesRef!>diskNames')]"
+                        }
+                    }
+
+                },
+                [],
+                { ignoreWarnings: true });
+
+            await testGetReferences(dt, diskNamesRef.index, [diskNamesRef.index, diskNamesDefName.index]);
+
+        });
 
         test("case insensitive keys", () => {
             const dt = new DeploymentTemplate(
@@ -143,6 +161,77 @@ suite("Variable iteration (copy blocks)", () => {
                 ["var1", "diskNames", "disks", "var2"]
             );
         });
+
+        suite("disks-top-level-array-of-object", async () => {
+            const disksTopLevelArrayTemplate: IDeploymentTemplate = {
+                "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                "contentVersion": "1.0.0.0",
+                "variables": {
+                    "copy": [
+                        {
+                            // Creates variable 'disks-top-level-array-of-object'
+                            //   of type arry of {name, diskIndex, data:{ diskSizeGB }}
+                            "name": "disks-top-level-array-of-object",
+                            "count": 5,
+                            "input": {
+                                "name": "[concat('myDataDisk', copyIndex('disks-top-level-array-of-object', 1))]",
+                                "diskIndex": "[copyIndex('disks-top-level-array-of-object')]",
+                                "data": {
+                                    "diskSizeGB": "1"
+                                }
+                            }
+                        }
+                    ]
+                },
+                "resources": [],
+                "outputs": {
+                    "o1ArrayOfObject": {
+                        "value": "[variables('disks-top-level-array-of-object')]",
+                        "type": "array"
+                    },
+                    "o2Elem": {
+                        "value": "[variables('disks-top-level-array-of-object')[1]]",
+                        "type": "object"
+                    },
+                    "o2ElemDotData": {
+                        "value": "[variables('disks-top-level-array-of-object')[1].data]",
+                        "type": "object"
+                    },
+                    "o2ElemDotDataDotDiskSizeGB": {
+                        "value": "[variables('disks-top-level-array-of-object')[1].data.diskSizeGB]",
+                        "type": "int"
+                    },
+                    "output1": {
+                        "value": "<output1>",
+                        "type": "int"
+                    }
+                }
+            };
+
+            const dt = await parseTemplate(disksTopLevelArrayTemplate, []);
+
+            test("No errors", async () => {
+                assert.equal((await dt.errorsPromise).length, 0);
+            });
+
+            test("No warnings", async () => {
+                assert.equal(dt.warnings.length, 0);
+            });
+
+            test("variable is array", async () => {
+                //asdf assert.equal(dt.topLevelScope.getVariableDefinition('disks-top-level-array-of-object')!);
+            });
+
+            suite("Completion", () => {
+                createCompletionsTest(disksTopLevelArrayTemplate, '<output1>', '[variables(!)]', ["'disks-top-level-array-of-object'"]);
+
+                // We don't currently support completions from an array, so these should return an empty list
+                createCompletionsTest(disksTopLevelArrayTemplate, '<output1>', "[variables('disks-top-level-array-of-object').!]", []);
+                createCompletionsTest(disksTopLevelArrayTemplate, '<output1>', "[variables('disks-top-level-array-of-object').data!]", []);
+            });
+
+        });
+
     }); // end suite top-level copy block
 
     suite("embedded variable copy blocks", async () => {
@@ -278,8 +367,6 @@ suite("Variable iteration (copy blocks)", () => {
             assert.deepStrictEqual(valueObject.propertyNames, ["member2", "array1", "array2"]);
         });
 
-        //asdf refs etc.
-
         test("copy block usage info asdf", async () => {
             test("case insensitive keys ", () => {
                 const dt2 = new DeploymentTemplate(
@@ -329,361 +416,124 @@ suite("Variable iteration (copy blocks)", () => {
 
                 assert(!!dt2.topLevelScope.getVariableDefinition('DISKnAMES'));
             });
+
+            suite("Completion", () => {
+                const template = {
+                    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "variables": {
+                        "disk-array-in-object": {
+                            "member1": "abc",
+                            "copy": [
+                                {
+                                    "name": "array1",
+                                    "count": 5,
+                                    "input": "[concat('myDataDisk', copyIndex('disks', 1))]"
+                                },
+                                {
+                                    "name": "array1",
+                                    "count": 5,
+                                    "input": "[concat('myDataDisk', copyIndex('disks', 1))]"
+                                }
+                            ],
+                            "member2": "abc"
+                        }
+                    },
+                    "resources": []
+                };
+                createCompletionsTest(
+                    {
+                        ...template
+                    },
+                    '<output1>',
+                    '[variables(!)]',
+                    ["'disks-top-level-array-of-object'"]);
+
+                // We don't currently support completions from an array, so these should return an empty list
+                createCompletionsTest(disksTopLevelArrayTemplate, '<output1>', "[variables('disks-top-level-array-of-object').!]", []);
+                createCompletionsTest(disksTopLevelArrayTemplate, '<output1>', "[variables('disks-top-level-array-of-object').data!]", []);
+            });
+
         });
 
     }); // end suite embedded variable copy blocks
 
-    //asdf
-    // Source: https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-create-multiple#variable-iteration
-    const variableCopySampleTemplate = {
-        "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-        "contentVersion": "1.0.0.0",
-        "parameters": {},
-        "variables": {
-            // The variable disk-array-in-object will be of type object and contain two members: disks and diskNames
-            "disk-array-in-object": {
-                "copy": [
-                    {
-                        "name": "disks",
-                        "count": 5,
-                        "input": {
-                            "name": "[concat('myDataDisk', copyIndex('disks', 1))]",
-                            "diskSizeGB": "1",
-                            "diskIndex": "[copyIndex('disks')]"
-                        }
-                    },
-                    {
-                        "name": "diskNames",
-                        "count": 5,
-                        "input": "[concat('myDataDisk', copyIndex('diskNames', 1))]"
-                    }
-                ]
-            },
-            "copy": [
-                {
-                    "name": "top-level-object-array",
-                    "count": 5,
-                    "input": {
-                        "name": "[concat('myDataDisk', copyIndex('top-level-object-array', 1))]",
-                        "diskSizeGB": "1",
-                        "diskIndex": "[copyIndex('top-level-object-array')]"
-                    }
-                },
-                {
-                    "name": "top-level-string-array",
-                    "count": 5,
-                    "input": "[concat('myDataDisk', copyIndex('top-level-string-array', 1))]"
-                },
-                {
-                    "name": "top-level-integer-array",
-                    "count": 5,
-                    "input": "[copyIndex('top-level-integer-array')]"
-                }
-            ]
-        },
-        "resources": [],
-        "outputs": {
-            "exampleObject": {
-                "value": "[variables('disk-array-in-object')]",
-                "type": "object"
-            },
-            "exampleArrayOnObject": {
-                "value": "[variables('disk-array-in-object').disks]",
-                "type": "array"
-            },
-            "exampleObjectArray": {
-                "value": "[variables('top-level-object-array')]",
-                "type": "array"
-            },
-            "exampleStringArray": {
-                "value": "[variables('top-level-string-array')]",
-                "type": "array"
-            },
-            "exampleIntegerArray": {
-                "value": "[variables('top-level-integer-array')]",
-                "type": "array"
-            }
-        }
-    };
-    let asdf = variableCopySampleTemplate;
-    asdf = asdf;
-
-    suite("Top-level copy block", async () => {
-        // Top-level copy block of object
-        const disksTopLevelArrayTemplate: IDeploymentTemplate = {
-            "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-            "contentVersion": "1.0.0.0",
-            "variables": {
-                "copy": [
-                    {
-                        // Creates variable 'disks-top-level-array-of-object'
-                        //   of type arry of {name, diskIndex, data:{ diskSizeGB }}
-                        "name": "disks-top-level-array-of-object",
-                        "count": 5,
-                        "input": {
-                            "name": "[concat('myDataDisk', copyIndex('disks-top-level-array-of-object', 1))]",
-                            "diskIndex": "[copyIndex('disks-top-level-array-of-object')]",
-                            "data": {
-                                "diskSizeGB": "1"
+    suite("Variable iteration sample", () => {
+        test("https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-create-multiple#variable-iteration", async () => {
+            const variableCopySampleTemplate = {
+                "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                "contentVersion": "1.0.0.0",
+                "parameters": {},
+                "variables": {
+                    // The variable disk-array-in-object will be of type object and contain two members: disks and diskNames
+                    "disk-array-in-object": {
+                        "copy": [
+                            {
+                                "name": "disks",
+                                "count": 5,
+                                "input": {
+                                    "name": "[concat('myDataDisk', copyIndex('disks', 1))]",
+                                    "diskSizeGB": "1",
+                                    "diskIndex": "[copyIndex('disks')]"
+                                }
+                            },
+                            {
+                                "name": "diskNames",
+                                "count": 5,
+                                "input": "[concat('myDataDisk', copyIndex('diskNames', 1))]"
                             }
+                        ]
+                    },
+                    "copy": [
+                        {
+                            "name": "top-level-object-array",
+                            "count": 5,
+                            "input": {
+                                "name": "[concat('myDataDisk', copyIndex('top-level-object-array', 1))]",
+                                "diskSizeGB": "1",
+                                "diskIndex": "[copyIndex('top-level-object-array')]"
+                            }
+                        },
+                        {
+                            "name": "top-level-string-array",
+                            "count": 5,
+                            "input": "[concat('myDataDisk', copyIndex('top-level-string-array', 1))]"
+                        },
+                        {
+                            "name": "top-level-integer-array",
+                            "count": 5,
+                            "input": "[copyIndex('top-level-integer-array')]"
                         }
+                    ]
+                },
+                "resources": [],
+                "outputs": {
+                    "exampleObject": {
+                        "value": "[variables('disk-array-in-object')]",
+                        "type": "object"
+                    },
+                    "exampleArrayOnObject": {
+                        "value": "[variables('disk-array-in-object').disks]",
+                        "type": "array"
+                    },
+                    "exampleObjectArray": {
+                        "value": "[variables('top-level-object-array')]",
+                        "type": "array"
+                    },
+                    "exampleStringArray": {
+                        "value": "[variables('top-level-string-array')]",
+                        "type": "array"
+                    },
+                    "exampleIntegerArray": {
+                        "value": "[variables('top-level-integer-array')]",
+                        "type": "array"
                     }
-                ]
-            },
-            "resources": [],
-            "outputs": {
-                "o1ArrayOfObject": {
-                    "value": "[variables('disks-top-level-array-of-object')]",
-                    "type": "array"
-                },
-                "o2Elem": {
-                    "value": "[variables('disks-top-level-array-of-object')[1]]",
-                    "type": "object"
-                },
-                "o2ElemDotData": {
-                    "value": "[variables('disks-top-level-array-of-object')[1].data]",
-                    "type": "object"
-                },
-                "o2ElemDotDataDotDiskSizeGB": {
-                    "value": "[variables('disks-top-level-array-of-object')[1].data.diskSizeGB]",
-                    "type": "int"
-                },
-                "output1": {
-                    "value": "<output1>",
-                    "type": "int"
                 }
-            }
-        };
+            };
 
-        const dt = await parseTemplate(disksTopLevelArrayTemplate, []);
-
-        test("No errors", async () => {
-            assert.equal((await dt.errorsPromise).length, 0);
+            // Make sure no errors
+            await parseTemplate(variableCopySampleTemplate, []);
         });
+    }); // end suite Variable iteration sample
 
-        test("No warnings", async () => {
-            assert.equal(dt.warnings.length, 0);
-        });
-
-        test("variable is array", async () => {
-            //asdf assert.equal(dt.topLevelScope.getVariableDefinition('disks-top-level-array-of-object')!);
-        });
-
-        suite("Completion", () => {
-            createCompletionsTest(disksTopLevelArrayTemplate, '<output1>', '[variables(!)]', ["'disks-top-level-array-of-object'"]);
-
-            // We don't currently support completions from an array, so these should return an empty list
-            createCompletionsTest(disksTopLevelArrayTemplate, '<output1>', "[variables('disks-top-level-array-of-object').!]", []);
-            createCompletionsTest(disksTopLevelArrayTemplate, '<output1>', "[variables('disks-top-level-array-of-object').data!]", []);
-        });
-
-    });
-
-    // Embedded copy block
-    // const template1b: IDeploymentTemplate = {
-    //     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-    //     "contentVersion": "1.0.0.0",
-    //     "parameters": {},
-    //     "variables": {
-    //         "disk-array-in-object": {
-    //             "copy": [
-    //                 {
-    //                     "name": "disks",
-    //                     "count": 5,
-    //                     "input": {
-    //                         "name": "[concat('myDataDisk', copyIndex('disks', 1))]",
-    //                         "diskSizeGB": "1",
-    //                         "diskIndex": "[copyIndex('disks')]"
-    //                     }
-    //                 }
-    //             ]
-    //         },
-    //         "copy": [
-    //             {
-    //                 "name": "disks-top-level-array-of-object",
-    //                 "count": 5,
-    //                 "input": {
-    //                     "name": "[concat('myDataDisk', copyIndex('disks-top-level-array-of-object', 1))]",
-    //                     "diskSizeGB": "1",
-    //                     "diskIndex": "[copyIndex('disks-top-level-array-of-object')]"
-    //                 }
-    //             }
-    //         ]
-    //     },
-    //     "resources": [],
-    //     "outputs": {
-    //         /*
-    //           "exampleObject": {
-    //             "type": "Object",
-    //             "value": {
-    //               "disks": [
-    //                 {
-    //                   "diskIndex": 0,
-    //                   "diskSizeGB": "1",
-    //                   "name": "myDataDisk1"
-    //                 },
-    //                 {
-    //                   "diskIndex": 1,
-    //                   "diskSizeGB": "1",
-    //                   "name": "myDataDisk2"
-    //                 },
-    //                 ...
-    //               ]
-    //             }
-    //           */
-    //         "exampleObject": {
-    //             "value": "[variables('disk-array-in-object')]",
-    //             "type": "object"
-    //         },
-    //         /*
-    //         "exampleArrayOnObject": {
-    //           "type": "Array",
-    //           "value": [
-    //             {
-    //               "diskIndex": 0,
-    //               "diskSizeGB": "1",
-    //               "name": "myDataDisk1"
-    //             },
-    //             {
-    //               "diskIndex": 1,
-    //               "diskSizeGB": "1",
-    //               "name": "myDataDisk2"
-    //             },
-    //             ...
-    //           ]
-    //         }
-    //       */
-    //         "exampleArrayOnObject": {
-    //             "value": "[variables('disk-array-in-object').disks]",
-    //             "type": "array"
-    //         },
-
-    //         /*
-    //         "exampleArray": {
-    //           "type": "Array",
-    //           "value": [
-    //             {
-    //               "diskIndex": 0,
-    //               "diskSizeGB": "1",
-    //               "name": "myDataDisk1"
-    //             },
-    //             {
-    //               "diskIndex": 1,
-    //               "diskSizeGB": "1",
-    //               "name": "myDataDisk2"
-    //             },
-    //             ...
-    //           ]
-    //         }
-    //         */
-    //         "exampleArray": {
-    //             "value": "[variables('disks-top-level-array-of-object')]",
-    //             "type": "array"
-    //         }
-    //     }
-    // };
-
-    // const template1c: IDeploymentTemplate = {
-    //     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-    //     "contentVersion": "1.0.0.0",
-    //     "parameters": {},
-    //     "variables": {
-    //         "disk-array-in-object": {
-    //             "copy": [
-    //                 {
-    //                     "name": "disks",
-    //                     "count": 5,
-    //                     "input": {
-    //                         "name": "[concat('myDataDisk', copyIndex('disks', 1))]",
-    //                         "diskSizeGB": "1",
-    //                         "diskIndex": "[copyIndex('disks')]"
-    //                     }
-    //                 }
-    //             ]
-    //         },
-    //         "copy": [
-    //             {
-    //                 "name": "disks-top-level-array-of-object",
-    //                 "count": 5,
-    //                 "input": {
-    //                     "name": "[concat('myDataDisk', copyIndex('disks-top-level-array-of-object', 1))]",
-    //                     "diskSizeGB": "1",
-    //                     "diskIndex": "[copyIndex('disks-top-level-array-of-object')]"
-    //                 }
-    //             }
-    //         ]
-    //     },
-    //     "resources": [],
-    //     "outputs": {
-    //         /*
-    //           "exampleObject": {
-    //             "type": "Object",
-    //             "value": {
-    //               "disks": [
-    //                 {
-    //                   "diskIndex": 0,
-    //                   "diskSizeGB": "1",
-    //                   "name": "myDataDisk1"
-    //                 },
-    //                 {
-    //                   "diskIndex": 1,
-    //                   "diskSizeGB": "1",
-    //                   "name": "myDataDisk2"
-    //                 },
-    //                 ...
-    //               ]
-    //             }
-    //           */
-    //         "exampleObject": {
-    //             "value": "[variables('disk-array-in-object')]",
-    //             "type": "object"
-    //         },
-    //         /*
-    //         "exampleArrayOnObject": {
-    //           "type": "Array",
-    //           "value": [
-    //             {
-    //               "diskIndex": 0,
-    //               "diskSizeGB": "1",
-    //               "name": "myDataDisk1"
-    //             },
-    //             {
-    //               "diskIndex": 1,
-    //               "diskSizeGB": "1",
-    //               "name": "myDataDisk2"
-    //             },
-    //             ...
-    //           ]
-    //         }
-    //       */
-    //         "exampleArrayOnObject": {
-    //             "value": "[variables('disk-array-in-object').disks]",
-    //             "type": "array"
-    //         },
-
-    //         /*
-    //         "exampleArray": {
-    //           "type": "Array",
-    //           "value": [
-    //             {
-    //               "diskIndex": 0,
-    //               "diskSizeGB": "1",
-    //               "name": "myDataDisk1"
-    //             },
-    //             {
-    //               "diskIndex": 1,
-    //               "diskSizeGB": "1",
-    //               "name": "myDataDisk2"
-    //             },
-    //             ...
-    //           ]
-    //         }
-    //         */
-    //         "exampleArray": {
-    //             "value": "[variables('disks-top-level-array-of-object')]",
-    //             "type": "array"
-    //         }
-    //     }
-    // };
-
-}); // Variable iteration (copy blocks)
+});
