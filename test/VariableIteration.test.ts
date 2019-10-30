@@ -460,6 +460,86 @@ suite("Variable iteration (copy blocks)", () => {
             assert(!!dt2.topLevelScope.getVariableDefinition('object'));
         });
 
+        test("deep COPY blocks", async () => {
+            const template = {
+                "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                "contentVersion": "1.0.0.0",
+                "parameters": {
+                },
+                "variables": {
+                    "top": {
+                        "copy": [
+                            {
+                                "name": "array1",
+                                "count": 2,
+                                "input": "[copyIndex('array1')]"
+                            }
+                        ],
+                        "mid": {
+                            "copy": [
+                                {
+                                    "name": "array2",
+                                    "count": 2,
+                                    "input": "[copyIndex('array2')]"
+                                }
+                            ],
+                            "bottom": {
+                                "copy": [
+                                    {
+                                        "name": "array3",
+                                        "count": 2,
+                                        "input": "[copyIndex('array3')]"
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                },
+                "resources": [
+                ],
+                "outputs": {
+                    "top": {
+                        "type": "object",
+                        "value": "[variables('top')]"
+                    }
+                }
+            };
+
+            // Expected resulting structure:
+            //
+            //     "top": {
+            //         "array1": [
+            //           0,
+            //           1
+            //         ],
+            //         "mid": {
+            //           "array2": [
+            //             0,
+            //             1
+            //           ],
+            //           "bottom": {
+            //             "array2": [
+            //               0,
+            //               1
+            //             ]
+            //           }
+            //       }
+
+            const dt2 = await parseTemplate(template);
+            const vTop: IVariableDefinition = dt2.topLevelScope.getVariableDefinition('top')!;
+            const vTopValue = Json.asObjectValue(vTop.value)!;
+            assert.deepStrictEqual(vTopValue.propertyNames.sort(), ["array1", "mid"]);
+
+            const vMidValue = Json.asObjectValue(vTopValue.getPropertyValue('mid'))!;
+            assert.deepStrictEqual(vMidValue.propertyNames.sort(), ["array2", "bottom"]);
+
+            const vBottomValue = Json.asObjectValue(vMidValue.getPropertyValue('mid'))!;
+            assert.deepStrictEqual(vBottomValue.propertyNames.sort(), ["array3"]);
+
+            const vArray3Value = Json.asObjectValue(vBottomValue.getPropertyValue('array2'))!;
+            assert(vArray3Value instanceof Json.ArrayValue);
+        });
+
         suite("Embedded variable iteration completion", () => {
             const template = <IDeploymentTemplate><any>{
                 "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
