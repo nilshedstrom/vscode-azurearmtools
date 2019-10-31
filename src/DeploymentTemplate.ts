@@ -375,7 +375,7 @@ export class DeploymentTemplate {
                 if (variables) {
                     const varDefs: IVariableDefinition[] = [];
                     for (let prop of variables.properties) {
-                        if (prop.nameValue.unquotedValue.toLowerCase() === templateKeys.copy) {
+                        if (prop.nameValue.unquotedValue.toLowerCase() === templateKeys.loopVarCopy) {
                             // We have a top-level copy block, e.g.:
                             //
                             // "copy": [

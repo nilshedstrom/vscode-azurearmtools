@@ -374,7 +374,7 @@ suite("Variable iteration (copy blocks)", () => {
             assert(vDef);
             const valueObject = Json.asObjectValue(vDef.value)!;
             assert(valueObject);
-            assert.deepStrictEqual(valueObject.propertyNames, ["member2", "array1", "array2"]);
+            assert.deepStrictEqual(valueObject.propertyNames.sort(), ["array1", "array2", "member2"]);
         });
 
         test("case insensitive keys", () => {
