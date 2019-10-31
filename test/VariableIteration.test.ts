@@ -533,10 +533,10 @@ suite("Variable iteration (copy blocks)", () => {
             const vMidValue = Json.asObjectValue(vTopValue.getPropertyValue('mid'))!;
             assert.deepStrictEqual(vMidValue.propertyNames.sort(), ["array2", "bottom"]);
 
-            const vBottomValue = Json.asObjectValue(vMidValue.getPropertyValue('mid'))!;
+            const vBottomValue = Json.asObjectValue(vMidValue.getPropertyValue('bottom'))!;
             assert.deepStrictEqual(vBottomValue.propertyNames.sort(), ["array3"]);
 
-            const vArray3Value = Json.asObjectValue(vBottomValue.getPropertyValue('array2'))!;
+            const vArray3Value = vBottomValue.getPropertyValue('array3')!;
             assert(vArray3Value instanceof Json.ArrayValue);
         });
 

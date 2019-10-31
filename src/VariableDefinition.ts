@@ -77,7 +77,7 @@ export class TopLevelVariableDefinition extends VariableDefinition {
         return `${this.nameValue.toString()} (var)`;
     }
 
-    private expandCopyBlocks(value: Json.Value): Json.Value {
+    private expandCopyBlocks(value: Json.Value | null): Json.Value | null {
         const valueAsObject = Json.asObjectValue(value);
         if (!valueAsObject) {
             return value;
@@ -146,7 +146,14 @@ export class TopLevelVariableDefinition extends VariableDefinition {
                 // Not a "copy" block, return the original property,
                 //   but we need to check further into the object for deeper
                 //   copy blocks
-                return this.expandCopyBlocks(prop);
+                const processedValue = this.expandCopyBlocks(prop.value);
+                if (processedValue !== prop.value) {
+                    // It's been changed - wrap it in a new property
+                    return new Json.Property(prop.span, prop.nameValue, processedValue);
+                }
+
+                // Value didn't change - return original property
+                return prop;
             }
         });
     }
