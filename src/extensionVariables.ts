@@ -5,6 +5,7 @@
 
 import * as vscode from "vscode";
 import { IAzureUserInput, ITelemetryReporter } from "vscode-azureextensionui";
+import { LanguageClient } from "vscode-languageclient";
 import { LanguageServerState } from "./languageclient/startArmLanguageServer";
 import { JsonOutlineProvider } from "./Treeview";
 
@@ -22,6 +23,7 @@ class ExtensionVariables {
     public outputChannel: vscode.OutputChannel;
     public ui: IAzureUserInput;
 
+    public languageServerClient: LanguageClient | undefined;
     public languageServerState: LanguageServerState = LanguageServerState.NotStarted;
 
     // Suite support - lets us know when diagnostics have been completely published for a file
