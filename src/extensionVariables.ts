@@ -6,6 +6,7 @@
 import * as vscode from "vscode";
 import { IAzExtOutputChannel, IAzureUserInput, ITelemetryReporter } from "vscode-azureextensionui";
 import { LanguageClient } from "vscode-languageclient";
+import { ARMTemplateSymbolProvider } from "./ARMTemplateSymbolProvider";
 import { isWebpack } from "./constants";
 import { assert } from "./fixed_assert";
 import { LanguageServerState } from "./languageclient/startArmLanguageServer";
@@ -39,6 +40,7 @@ class ExtensionVariables {
     public readonly extensionId: string = "msazurermtools.azurerm-vscode-tools";
     private _context: InitializeBeforeUse<vscode.ExtensionContext> = new InitializeBeforeUse<vscode.ExtensionContext>();
     private _jsonOutlineProvider: InitializeBeforeUse<JsonOutlineProvider> = new InitializeBeforeUse<JsonOutlineProvider>();
+    private _symbolProvider: InitializeBeforeUse<ARMTemplateSymbolProvider> = new InitializeBeforeUse<ARMTemplateSymbolProvider>();
     private _reporter: InitializeBeforeUse<ITelemetryReporter> = new InitializeBeforeUse<ITelemetryReporter>();
     private _outputChannel: InitializeBeforeUse<IAzExtOutputChannel> = new InitializeBeforeUse<IAzExtOutputChannel>();
     private _ui: InitializeBeforeUse<IAzureUserInput> = new InitializeBeforeUse<IAzureUserInput>();
@@ -55,6 +57,13 @@ class ExtensionVariables {
     }
     public get jsonOutlineProvider(): JsonOutlineProvider {
         return this._jsonOutlineProvider.getValue();
+    }
+
+    public set symbolProvider(context: ARMTemplateSymbolProvider) {
+        this._symbolProvider.setValue(context);
+    }
+    public get symbolProvider(): ARMTemplateSymbolProvider {
+        return this._symbolProvider.getValue();
     }
 
     public set reporter(reporter: ITelemetryReporter) {

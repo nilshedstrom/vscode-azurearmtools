@@ -10,6 +10,7 @@ import * as path from 'path';
 import * as vscode from "vscode";
 import { AzureUserInput, callWithTelemetryAndErrorHandling, callWithTelemetryAndErrorHandlingSync, createAzExtOutputChannel, createTelemetryReporter, IActionContext, registerCommand, registerUIExtensionVariables, TelemetryProperties } from "vscode-azureextensionui";
 import { uninstallDotnet } from "./acquisition/dotnetAcquisition";
+import { ARMTemplateSymbolProvider } from "./ARMTemplateSymbolProvider";
 import * as Completion from "./Completion";
 import { configKeys, configPrefix, expressionsDiagnosticsCompletionMessage, expressionsDiagnosticsSource, globalStateKeys, languageId, outputWindowName } from "./constants";
 import { DeploymentTemplate } from "./DeploymentTemplate";
@@ -82,7 +83,11 @@ export class AzureRMTools {
     constructor(context: vscode.ExtensionContext) {
         const jsonOutline: JsonOutlineProvider = new JsonOutlineProvider(context);
         ext.jsonOutlineProvider = jsonOutline;
+        const symbolProvider = new ARMTemplateSymbolProvider(context);
+        ext.symbolProvider = symbolProvider;
         context.subscriptions.push(vscode.window.registerTreeDataProvider("azurerm-vscode-tools.template-outline", jsonOutline));
+        // context.subscriptions.push(vscode.languages.registerDocumentSymbolProvider({ language: languageId }, symbolProvider));
+        vscode.languages.registerDocumentSymbolProvider(languageId, symbolProvider);
 
         registerCommand("azurerm-vscode-tools.treeview.goto", (_actionContext: IActionContext, range: vscode.Range) => jsonOutline.goToDefinition(range));
         registerCommand('azurerm-vscode-tools.uninstallDotnet', async () => {
