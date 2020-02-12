@@ -7,6 +7,9 @@ import * as Json from "./JSON";
 import * as language from "./Language";
 
 export class ARMTemplateSymbolProvider implements vscode.DocumentSymbolProvider {
+    constructor(context: vscode.ExtensionContext) {
+    }
+
     public async provideDocumentSymbols(document: vscode.TextDocument, token: vscode.CancellationToken): Promise<vscode.DocumentSymbol[]> {
 
         try {
