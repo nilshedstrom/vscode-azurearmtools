@@ -32,6 +32,7 @@ import { IReferenceSite, PositionContext } from "./PositionContext";
 import { ReferenceList } from "./ReferenceList";
 import { resetGlobalState } from "./resetGlobalState";
 import { getPreferredSchema } from "./schemas";
+import { getResourceType } from "./ShowDocumentation";
 import { getFunctionParamUsage } from "./signatureFormatting";
 import { getQuickPickItems, sortTemplate, SortType } from "./sortTemplate";
 import { Stopwatch } from "./Stopwatch";
@@ -122,6 +123,10 @@ export class AzureRMTools {
         });
         registerCommand("azurerm-vscode-tools.reloadSchemas", async () => {
             await reloadSchemas();
+        });
+        registerCommand("azurerm-vscode-tools.showDocumentation", async (_context: IActionContext, uri?: vscode.Uri, editor?: vscode.TextEditor) => {
+            const resourceType = await ext.ui.showQuickPick(getResourceType(), { placeHolder: 'What resource do you want to show documentation for?' });
+            vscode.env.openExternal(resourceType.value);
         });
         registerCommand("azurerm-vscode-tools.sortTemplate", async (_context: IActionContext, uri?: vscode.Uri, editor?: vscode.TextEditor) => {
             editor = editor || vscode.window.activeTextEditor;
