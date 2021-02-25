@@ -7,7 +7,7 @@
 
 import * as assert from 'assert';
 import { Uri } from 'vscode';
-import { DeploymentTemplate, IVariableDefinition, Json } from "../extension.bundle";
+import { DeploymentTemplateDoc, IVariableDefinition, Json } from "../extension.bundle";
 import { createExpressionCompletionsTestEx } from './support/createCompletionsTest';
 import { IDeploymentTemplate } from "./support/diagnostics";
 import { parseTemplate, parseTemplateWithMarkers } from "./support/parseTemplate";
@@ -100,7 +100,7 @@ suite("Variable iteration (copy blocks)", () => {
         });
 
         test("case insensitive keys", () => {
-            const dt = new DeploymentTemplate(
+            const dt = new DeploymentTemplateDoc(
                 stringify(<Partial<IDeploymentTemplate>>{
                     variables: {
                         "COPY": [{
@@ -115,7 +115,7 @@ suite("Variable iteration (copy blocks)", () => {
         });
 
         test("no input property", () => {
-            const dt = new DeploymentTemplate(
+            const dt = new DeploymentTemplateDoc(
                 stringify(<Partial<IDeploymentTemplate>>{
                     variables: {
                         "COPY": [{
@@ -135,7 +135,7 @@ suite("Variable iteration (copy blocks)", () => {
         });
 
         test("no name property", () => {
-            const dt = new DeploymentTemplate(
+            const dt = new DeploymentTemplateDoc(
                 stringify(<Partial<IDeploymentTemplate>>{
                     variables: {
                         "COPY": [{
@@ -152,7 +152,7 @@ suite("Variable iteration (copy blocks)", () => {
         });
 
         test("bad name property", () => {
-            const dt = new DeploymentTemplate(
+            const dt = new DeploymentTemplateDoc(
                 stringify(<Partial<IDeploymentTemplate>>{
                     variables: {
                         "COPY": [{
@@ -175,7 +175,7 @@ suite("Variable iteration (copy blocks)", () => {
         });
 
         test("Regular and iteration vars together", async () => {
-            const dt = new DeploymentTemplate(
+            const dt = new DeploymentTemplateDoc(
                 stringify(<Partial<IDeploymentTemplate>><unknown>{
                     variables: {
                         "var1": "hello",
@@ -237,18 +237,18 @@ suite("Variable iteration (copy blocks)", () => {
                 }
             };
 
-            createExpressionCompletionsTestEx(disksTopLevelArrayTemplate, '<output1>', '[variables(!)]', ["'disks-top-level-array-of-object'"]);
+            createExpressionCompletionsTestEx(disksTopLevelArrayTemplate, '<output1>', '[variables(<!cursor!>)]', ["'disks-top-level-array-of-object'"]);
 
             // We don't currently support completions from an array, so these should return an empty list
-            createExpressionCompletionsTestEx(disksTopLevelArrayTemplate, '<output1>', "[variables('disks-top-level-array-of-object').!]", []);
-            createExpressionCompletionsTestEx(disksTopLevelArrayTemplate, '<output1>', "[variables('disks-top-level-array-of-object').data!]", []);
+            createExpressionCompletionsTestEx(disksTopLevelArrayTemplate, '<output1>', "[variables('disks-top-level-array-of-object').<!cursor!>]", []);
+            createExpressionCompletionsTestEx(disksTopLevelArrayTemplate, '<output1>', "[variables('disks-top-level-array-of-object').data<!cursor!>]", []);
 
         });
 
     }); // end suite top-level copy block
 
     suite("embedded variable copy blocks", async () => {
-        let dt: DeploymentTemplate;
+        let dt: DeploymentTemplateDoc;
         let variable: IVariableDefinition;
 
         const embeddedVariableCopyBlocks = {
@@ -300,8 +300,8 @@ suite("Variable iteration (copy blocks)", () => {
             assert(variable);
         });
 
-        test("No errors", async () => {
-            const errors = await dt.getErrors(undefined);
+        test("No errors", () => {
+            const errors = dt.getErrors(undefined);
             assert.deepStrictEqual(errors, []);
         });
 
@@ -350,7 +350,7 @@ suite("Variable iteration (copy blocks)", () => {
         });
 
         test("multiple copy members", async () => {
-            const dt2: DeploymentTemplate = await parseTemplate({
+            const dt2: DeploymentTemplateDoc = await parseTemplate({
                 "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
                 "contentVersion": "1.0.0.0",
                 "variables": {
@@ -380,7 +380,7 @@ suite("Variable iteration (copy blocks)", () => {
         });
 
         test("case insensitive keys", () => {
-            const dt2 = new DeploymentTemplate(
+            const dt2 = new DeploymentTemplateDoc(
                 stringify(<Partial<IDeploymentTemplate>>{
                     "variables": {
                         "object": {
@@ -399,7 +399,7 @@ suite("Variable iteration (copy blocks)", () => {
         });
 
         test("no input property", () => {
-            const dt2 = new DeploymentTemplate(
+            const dt2 = new DeploymentTemplateDoc(
                 stringify(<Partial<IDeploymentTemplate>>{
                     "variables": {
                         "object": {
@@ -421,7 +421,7 @@ suite("Variable iteration (copy blocks)", () => {
         });
 
         test("no name property", () => {
-            const dt2 = new DeploymentTemplate(
+            const dt2 = new DeploymentTemplateDoc(
                 stringify(<Partial<IDeploymentTemplate>>{
                     "variables": {
                         "object": {
@@ -442,7 +442,7 @@ suite("Variable iteration (copy blocks)", () => {
         });
 
         test("bad name property", () => {
-            const dt2 = new DeploymentTemplate(
+            const dt2 = new DeploymentTemplateDoc(
                 stringify(<Partial<IDeploymentTemplate>>{
                     "variables": {
                         "object": {
@@ -572,8 +572,8 @@ suite("Variable iteration (copy blocks)", () => {
                 }
             };
 
-            createExpressionCompletionsTestEx(template, '<output1>', '[variables(!)]', ["'disk-array-in-object'"]);
-            createExpressionCompletionsTestEx(template, '<output1>', "[variables('disk-array-in-object').!]", ["member1", "member2", "array1", "array2"]);
+            createExpressionCompletionsTestEx(template, '<output1>', '[variables(<!cursor!>)]', ["'disk-array-in-object'"]);
+            createExpressionCompletionsTestEx(template, '<output1>', "[variables('disk-array-in-object').<!cursor!>]", ["member1", "member2", "array1", "array2"]);
         });
 
     }); // end suite embedded variable copy blocks

@@ -30,7 +30,14 @@
                 "ExpressionMetadata.json",
                 "TestData.ExpressionMetadata.json",
             ],
-            "url": "assets/ExpressionMetadata.schema.json"
+            "url": "assets/schemas/ExpressionMetadata.schema.json"
+        },
+        {
+            "fileMatch": [
+                "*snippets.json"
+            ],
+            "url": "assets/schemas/snippets.schema.json"
         }
-    ]
+    ],
+    "typescript.tsdk": "node_modules\\typescript\\lib"
 }

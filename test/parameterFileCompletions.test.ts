@@ -7,11 +7,10 @@
 
 import * as assert from 'assert';
 import { isNullOrUndefined } from 'util';
-import { DeploymentTemplate } from "../extension.bundle";
+import { DeploymentTemplateDoc } from "../extension.bundle";
+import { newParamValueCompletionLabel } from './support/constants';
 import { IDeploymentParametersFile, IDeploymentTemplate } from "./support/diagnostics";
 import { parseParametersWithMarkers, parseTemplate } from "./support/parseTemplate";
-
-const newParamCompletionLabel = `"<new parameter>"`;
 
 suite("Parameter file completions", () => {
 
@@ -34,19 +33,20 @@ suite("Parameter file completions", () => {
     ): void {
         const fullName = isNullOrUndefined(options.cursorIndex) ? testName : `${testName}, index=${options.cursorIndex}`;
         test(fullName, async () => {
-            let dt: DeploymentTemplate | undefined = template ? await parseTemplate(template) : undefined;
+            let dt: DeploymentTemplateDoc | undefined = template ? await parseTemplate(template) : undefined;
 
-            const { dp, markers: { bang } } = await parseParametersWithMarkers(params);
-            const cursorIndex = !isNullOrUndefined(options.cursorIndex) ? options.cursorIndex : bang.index;
+            const { dp, markers: { cursor } } = await parseParametersWithMarkers(params);
+            // tslint:disable-next-line: strict-boolean-expressions
+            const cursorIndex = !isNullOrUndefined(options.cursorIndex) ? options.cursorIndex : cursor?.index;
             if (isNullOrUndefined(cursorIndex)) {
-                assert.fail(`Expected either a cursor index in options or a "!" in the parameters file`);
+                assert.fail(`Expected either a cursor index in options or a <!cursor!> in the parameters file`);
             }
 
             const pc = dp.getContextFromDocumentCharacterIndex(cursorIndex, dt);
-            const completions = pc.getCompletionItems();
+            const completions = await pc.getCompletionItems("");
 
-            const completionNames = completions.map(c => c.label).sort();
-            const completionInserts = completions.map(c => c.insertText).sort();
+            const completionNames = completions.items.map(c => c.label).sort();
+            const completionInserts = completions.items.map(c => c.insertText).sort();
 
             const expectedNames = (<unknown[]>expectedNamesAndInsertTexts).map(e => Array.isArray(e) ? <string>e[0] : <string>e).sort();
             // tslint:disable-next-line: no-any
@@ -87,13 +87,13 @@ suite("Parameter file completions", () => {
                 $schema: "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
                 "contentVersion": "1.0.0.0",
                 "parameters": {
-                    !
+                    <!cursor!>
                 }
             }`,
             undefined,
             {},
             [
-                newParamCompletionLabel
+                newParamValueCompletionLabel
             ]);
 
         createParamsCompletionsTest(
@@ -102,13 +102,13 @@ suite("Parameter file completions", () => {
                 $schema: "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
                 "contentVersion": "1.0.0.0",
                 "parameters": {
-                    !
+                    <!cursor!>
                 }
             }`,
             emptyTemplate,
             {},
             [
-                newParamCompletionLabel
+                newParamValueCompletionLabel
             ]);
 
         suite("Offer completions for properties from template that aren't already defined in param file", () => {
@@ -118,7 +118,7 @@ suite("Parameter file completions", () => {
                     $schema: "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
                     "contentVersion": "1.0.0.0",
                     "parameters": {
-                        !
+                        <!cursor!>
                     }
                 }`,
                 {
@@ -134,9 +134,9 @@ suite("Parameter file completions", () => {
                 },
                 {},
                 [
-                    `"p2" (required)`,
-                    `"p10" (required)`,
-                    newParamCompletionLabel
+                    `"p2"`,
+                    `"p10"`,
+                    newParamValueCompletionLabel
                 ]);
 
             createParamsCompletionsTest(
@@ -148,7 +148,7 @@ suite("Parameter file completions", () => {
                             "p2": {
                                 "value": "string"
                             },
-                            !
+                            <!cursor!>
                         }
                     }`,
                 {
@@ -165,8 +165,8 @@ suite("Parameter file completions", () => {
                 {},
                 [
                     // p2 already exists in param file
-                    `"p10" (required)`,
-                    newParamCompletionLabel
+                    `"p10"`,
+                    newParamValueCompletionLabel
                 ]);
 
             createParamsCompletionsTest(
@@ -178,7 +178,7 @@ suite("Parameter file completions", () => {
                         "PARAmeter2": {
                             "value": "string"
                         },
-                        !
+                        <!cursor!>
                     }
                 }`,
                 {
@@ -195,8 +195,8 @@ suite("Parameter file completions", () => {
                 {},
                 [
                     // parameter2 already exists in param file
-                    `"Parameter10" (required)`, // Use casing in template file
-                    newParamCompletionLabel
+                    `"Parameter10"`, // Use casing in template file
+                    newParamValueCompletionLabel
                 ]);
 
             createParamsCompletionsTest(
@@ -208,7 +208,7 @@ suite("Parameter file completions", () => {
                             "Parameter2": {
                                 "value": "string"
                             },
-                            !
+                            <!cursor!>
                             "Parameter10": {
                                 "value": "string"
                             }
@@ -231,8 +231,8 @@ suite("Parameter file completions", () => {
                 {},
                 [
                     // parameter2 already exists in param file
-                    `"Parameter30" (required)`,
-                    newParamCompletionLabel
+                    `"Parameter30"`,
+                    newParamValueCompletionLabel
                 ]);
 
             createParamsCompletionsTest(
@@ -247,7 +247,7 @@ suite("Parameter file completions", () => {
                         "Parameter10": {
                             "value": "string"
                         },
-                        !
+                        <!cursor!>
                     }
                 }`,
                 {
@@ -263,7 +263,7 @@ suite("Parameter file completions", () => {
                 },
                 {},
                 [
-                    newParamCompletionLabel
+                    newParamValueCompletionLabel
                 ]);
 
             createParamsCompletionsTest(
@@ -272,7 +272,7 @@ suite("Parameter file completions", () => {
                     $schema: "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
                     "contentVersion": "1.0.0.0",
                     "parameters": {
-                        !
+                        <!cursor!>
                     }
                 }`,
                 {
@@ -289,9 +289,9 @@ suite("Parameter file completions", () => {
                 },
                 {},
                 [
-                    `"p1optional" (optional)`,
-                    `"p2required" (required)`,
-                    newParamCompletionLabel
+                    `"p1optional"`,
+                    `"p2required"`,
+                    newParamValueCompletionLabel
                 ]);
         });
     });

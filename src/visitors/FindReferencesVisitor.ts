@@ -2,135 +2,126 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 // ----------------------------------------------------------------------------
 
-import { Language } from "../../extension.bundle";
-import { BuiltinFunctionMetadata, FunctionsMetadata } from "../AzureRMAssets";
 import { templateKeys } from "../constants";
-import { DeploymentDocument } from "../DeploymentDocument";
-import { assert } from '../fixed_assert';
-import { DefinitionKind, INamedDefinition } from "../INamedDefinition";
-import * as Reference from "../ReferenceList";
-import { FunctionCallValue, StringValue, Value, Visitor } from "../TLE";
-import { UserFunctionDefinition } from "../UserFunctionDefinition";
-import { UserFunctionNamespaceDefinition } from "../UserFunctionNamespaceDefinition";
-import { assertNever } from "../util/assertNever";
+import { DeploymentDocument } from "../documents/DeploymentDocument";
+import { TemplateScope } from "../documents/templates/scopes/TemplateScope";
+import { UserFunctionDefinition } from "../documents/templates/UserFunctionDefinition";
+import { UserFunctionNamespaceDefinition } from "../documents/templates/UserFunctionNamespaceDefinition";
+import { BuiltinFunctionMetadata, FunctionsMetadata } from "../language/expressions/AzureRMAssets";
+import { FunctionCallValue, StringValue, TleVisitor, Value } from "../language/expressions/TLE";
+import { INamedDefinition } from "../language/INamedDefinition";
+import * as Reference from "../language/ReferenceList";
+import { Span } from "../language/Span";
 
 /**
- * A TLE visitor that searches a TLE value tree looking for references to the provided definition
+ * Finds all references to all definitions inside a JSON string
  */
-export class FindReferencesVisitor extends Visitor {
-    private _references: Reference.ReferenceList;
-    private _lowerCasedFullName: string;
-
+export class FindReferencesVisitor extends TleVisitor {
     constructor(
         private readonly _document: DeploymentDocument,
-        private readonly _definition: INamedDefinition,
-        private readonly _functionsMetadata: FunctionsMetadata
+        private readonly _scope: TemplateScope,
+        private readonly _jsonStringStartIndex: number,
+        private readonly _functionsMetadata: FunctionsMetadata, // Filled in with the results
+        private readonly _referenceListsMap: Map<INamedDefinition, Reference.ReferenceList>
     ) {
         super();
-        this._references = new Reference.ReferenceList(_definition.definitionKind);
 
-        if (_definition instanceof BuiltinFunctionMetadata) {
-            this._lowerCasedFullName = _definition.lowerCaseName;
-        } else {
-            assert(_definition.nameValue);
-            // tslint:disable-next-line: no-non-null-assertion // Asserted
-            this._lowerCasedFullName = _definition.nameValue!.unquotedValue.toLowerCase();
+        // tslint:disable-next-line: no-suspicious-comment
+        // TODO: Implement searching for DefinitionKind.ParameterValue
+    }
+
+    private addReference(definition: INamedDefinition | undefined, span: Span): void {
+        if (definition) {
+            let list = this._referenceListsMap.get(definition);
+            if (!list) {
+                list = new Reference.ReferenceList(definition.definitionKind);
+                this._referenceListsMap.set(definition, list);
+            }
+
+            list.add({
+                document: this._document,
+                span: span.translate(this._jsonStringStartIndex)
+            });
         }
-    }
-
-    public get references(): Reference.ReferenceList {
-        return this._references;
-    }
-
-    private addReference(span: Language.Span): void {
-        this._references.add({
-            document: this._document,
-            span: span
-        });
     }
 
     // tslint:disable-next-line:cyclomatic-complexity
-    public visitFunctionCall(tleFunction: FunctionCallValue): void {
-        switch (this._definition.definitionKind) {
-            case DefinitionKind.UserFunction:
-                if (tleFunction.nameToken && tleFunction.name && tleFunction.namespace) {
-                    const userFunctionDefinition: UserFunctionDefinition | undefined = tleFunction.scope.getUserFunctionDefinition(tleFunction.namespace, tleFunction.name);
-                    if (userFunctionDefinition === this._definition) {
-                        this.addReference(tleFunction.nameToken.span);
-                    }
-                }
-                break;
-
-            case DefinitionKind.Namespace:
-                if (tleFunction.namespaceToken && tleFunction.namespace) {
-                    const userNamespaceDefinition: UserFunctionNamespaceDefinition | undefined = tleFunction.scope.getFunctionNamespaceDefinition(tleFunction.namespace);
-                    if (userNamespaceDefinition === this._definition) {
-                        this.addReference(tleFunction.namespaceToken.span);
-                    }
-                }
-                break;
-
-            case DefinitionKind.BuiltinFunction:
-                if (tleFunction.name && tleFunction.nameToken && !tleFunction.namespaceToken) {
-                    const metadata: BuiltinFunctionMetadata | undefined = this._functionsMetadata.findbyName(tleFunction.name);
-                    if (this._definition instanceof BuiltinFunctionMetadata) {
-                        // Metadata is not guaranteed to be the same each call, so compare name instead of definition
-                        if (metadata && metadata.lowerCaseName === this._lowerCasedFullName) {
-                            this.addReference(tleFunction.nameToken.span);
-                        }
-                    } else {
-                        assert(false, "Expected reference definition to be BuiltinFunctionMetadata");
-                    }
-                }
-                break;
-
-            case DefinitionKind.Parameter:
-                if (tleFunction.isCallToBuiltinWithName(templateKeys.parameters)) {
-                    if (tleFunction.argumentExpressions.length === 1) {
-                        const arg = tleFunction.argumentExpressions[0];
-                        if (arg instanceof StringValue) {
-                            const argName = arg.toString();
-                            const paramDefinition = tleFunction.scope.getParameterDefinition(argName);
-                            if (paramDefinition === this._definition) {
-                                this.addReference(arg.unquotedSpan);
-                            }
-                        }
-                    }
-                }
-                break;
-
-            case DefinitionKind.Variable:
-                if (tleFunction.isCallToBuiltinWithName(templateKeys.variables)) {
-                    if (tleFunction.argumentExpressions.length === 1) {
-                        const arg = tleFunction.argumentExpressions[0];
-                        if (arg instanceof StringValue) {
-                            const argName = arg.toString();
-                            const varDefinition = tleFunction.scope.getVariableDefinition(argName);
-                            if (varDefinition === this._definition) {
-                                this.addReference(arg.unquotedSpan);
-                            }
-                        }
-                    }
-                }
-                break;
-
-            case DefinitionKind.ParameterValue:
-                // tslint:disable-next-line:no-suspicious-comment
-                // TODO: To implement
-                break;
-
-            default:
-                assertNever(this._definition.definitionKind);
+    public visitFunctionCall(tleFunctionCall: FunctionCallValue): void {
+        if (!tleFunctionCall.nameToken || !tleFunctionCall.name) {
+            return;
         }
 
-        super.visitFunctionCall(tleFunction);
+        const namespace = tleFunctionCall.namespace;
+
+        if (tleFunctionCall.namespaceToken) {
+            // Looking for a user namespace or user function (or any)
+            if (namespace) {
+                // It's a user-defined function call
+
+                // ... Add reference to the namespace
+                const userNamespaceDefinition: UserFunctionNamespaceDefinition | undefined = this._scope.getFunctionNamespaceDefinition(namespace);
+                if (userNamespaceDefinition) {
+                    this.addReference(userNamespaceDefinition, tleFunctionCall.namespaceToken.span);
+
+                    // ... Add reference to the user function
+                    const userFunctionDefinition: UserFunctionDefinition | undefined = this._scope.getUserFunctionDefinition(userNamespaceDefinition, tleFunctionCall.name);
+                    this.addReference(userFunctionDefinition, tleFunctionCall.nameToken.span);
+                }
+            }
+        }
+
+        // Searching for built-in function call (including parameter or variable reference)
+        if (!namespace) {
+            const metadata: BuiltinFunctionMetadata | undefined = this._functionsMetadata.findbyName(tleFunctionCall.name);
+            switch (metadata?.lowerCaseName) {
+                case templateKeys.parameters:
+                    // ... parameter reference
+                    if (tleFunctionCall.argumentExpressions.length === 1) {
+                        const arg = tleFunctionCall.argumentExpressions[0];
+                        if (arg instanceof StringValue) {
+                            const argName = arg.toString();
+                            const paramDefinition = this._scope.getParameterDefinition(argName);
+                            this.addReference(paramDefinition, arg.unquotedSpan);
+                        }
+                    }
+                    break;
+
+                case templateKeys.variables:
+                    // ... variable reference
+                    if (tleFunctionCall.argumentExpressions.length === 1) {
+                        const arg = tleFunctionCall.argumentExpressions[0];
+                        if (arg instanceof StringValue) {
+                            const argName = arg.toString();
+                            const varDefinition = this._scope.getVariableDefinition(argName);
+                            this.addReference(varDefinition, arg.unquotedSpan);
+                        }
+                    }
+                    break;
+
+                default:
+                    // Any other built-in function call
+                    this.addReference(metadata, tleFunctionCall.nameToken.span);
+                    break;
+            }
+        }
+
+        super.visitFunctionCall(tleFunctionCall);
     }
 
-    public static visit(document: DeploymentDocument, tleValue: Value | undefined, definition: INamedDefinition, metadata: FunctionsMetadata): FindReferencesVisitor {
-        const visitor = new FindReferencesVisitor(document, definition, metadata);
+    public static visit(
+        document: DeploymentDocument,
+        scope: TemplateScope,
+        jsonStringStartIndex: number,
+        tleValue: Value | undefined,
+        metadata: FunctionsMetadata,
+        referenceListsMap: Map<INamedDefinition, Reference.ReferenceList> // Filled in with the results
+    ): FindReferencesVisitor {
+        const visitor = new FindReferencesVisitor(document, scope, jsonStringStartIndex, metadata, referenceListsMap);
+
         if (tleValue) {
             tleValue.accept(visitor);
         }
+
         return visitor;
     }
 }

@@ -3,24 +3,29 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// tslint:disable:no-unsafe-any no-console prefer-template
+// tslint:disable:no-unsafe-any no-console prefer-template no-implicit-dependencies export-name
 
+import * as assert from 'assert';
 import * as cp from 'child_process';
+import { File } from 'decompress';
 import * as fse from 'fs-extra';
+import * as glob from 'glob';
 import * as gulp from 'gulp';
 import * as os from 'os';
 import * as path from 'path';
 import * as process from 'process';
-// tslint:disable-next-line:no-implicit-dependencies
 import * as recursiveReadDir from 'recursive-readdir';
 import * as shelljs from 'shelljs';
-import { gulp_installAzureAccount, gulp_webpack } from 'vscode-azureextensiondev';
-import { dotnetVersion, languageServerFolderName } from './src/constants';
-import { assert } from './src/fixed_assert';
+import { Stream } from 'stream';
+import { gulp_webpack } from 'vscode-azureextensiondev';
+import { langServerDotnetVersion, languageServerFolderName } from './src/constants';
 import { getTempFilePath } from './test/support/getTempFilePath';
 
-// tslint:disable-next-line:no-require-imports
+// tslint:disable:no-require-imports
+import decompress = require('gulp-decompress');
+import download = require('gulp-download');
 import rimraf = require('rimraf');
+// tslint:enable:no-require-imports
 
 const filesAndFoldersToPackage: string[] = [
     'dist',
@@ -29,7 +34,7 @@ const filesAndFoldersToPackage: string[] = [
     'AzureRMTools128x128.png',
     'CHANGELOG.md',
     'main.js',
-    'NOTICES AND INFORMATION.html', // License.{md,txt} is handled specially
+    'NOTICE.html', // License.{md,txt} is handled specially
     'node_modules', // Must be present for vsce package to work, but will be ignored during packaging
     'README.md',
     '.vscodeignore'
@@ -72,9 +77,10 @@ interface IExpressionMetadata {
 }
 
 function test(): cp.ChildProcess {
-    env.DEBUGTELEMETRY = '1';
+    env.DEBUGTELEMETRY = 'verbose';
     env.CODE_TESTS_PATH = path.join(__dirname, 'dist/test');
-    env.MOCHA_timeout = "4000";
+    env.MOCHA_timeout = "120000";
+    env.MOCHA_enableTimeouts = "1";
     return cp.spawn('node', ['./node_modules/vscode/bin/test'], { stdio: 'inherit', env });
 }
 
@@ -172,7 +178,7 @@ async function getLanguageServer(): Promise<void> {
             'install',
             languageServerNugetPackage,
             '-Version', languageServerVersion,
-            '-Framework', `netcoreapp${dotnetVersion}`,
+            '-Framework', `netcoreapp${langServerDotnetVersion}`,
             '-OutputDirectory', 'pkgs',
             //'-Verbosity', 'detailed',
             '-ExcludeVersion', // Keeps the package version from being included in the output folder name
@@ -191,7 +197,7 @@ async function getLanguageServer(): Promise<void> {
         console.log(`Removing ${languageServerFolderName}`);
         rimraf.sync(languageServerFolderName);
         console.log(`Copying language server binaries to ${languageServerFolderName}`);
-        const srcPath = path.join(__dirname, 'pkgs', languageServerNugetPackage, 'lib', `netcoreapp${dotnetVersion}`);
+        const srcPath = path.join(__dirname, 'pkgs', languageServerNugetPackage, 'lib', `netcoreapp${langServerDotnetVersion}`);
         let destPath = path.join(__dirname, languageServerFolderName);
         fse.mkdirpSync(destPath);
         copyFolder(srcPath, destPath);
@@ -273,7 +279,7 @@ async function packageVsix(): Promise<void> {
     try {
         console.log(`Running vsce package in staging folder ${stagingFolder}`);
         shelljs.cd(stagingFolder);
-        executeInShell('vsce package');
+        executeInShell('vsce package --githubBranch main');
     } finally {
         shelljs.cd(__dirname);
     }
@@ -333,9 +339,34 @@ async function verifyTestsReferenceOnlyExtensionBundle(testFolder: string): Prom
     }
 }
 
+export function gulp_installDotNetExtension(): Promise<void> | Stream {
+    const extensionName = '.NET Install Tool for Extension Authors';
+    console.log(`Installing ${extensionName}`);
+    const version: string = '0.1.0';
+    const extensionPath: string = path.join(os.homedir(), `.vscode/extensions/ms-dotnettools.vscode-dotnet-runtime-${version}`);
+    console.log(extensionPath);
+    const existingExtensions: string[] = glob.sync(extensionPath.replace(version, '*'));
+    if (existingExtensions.length === 0) {
+        // tslint:disable-next-line:no-http-string
+        return download(`http://ms-vscode.gallery.vsassets.io/_apis/public/gallery/publisher/ms-dotnettools/extension/vscode-dotnet-runtime/${version}/assetbyname/Microsoft.VisualStudio.Services.VSIXPackage`)
+            .pipe(decompress({
+                filter: (file: File): boolean => file.path.startsWith('extension/'),
+                map: (file: File): File => {
+                    file.path = file.path.slice(10);
+                    return file;
+                }
+            }))
+            .pipe(gulp.dest(extensionPath));
+    } else {
+        console.log(`${extensionName} already installed.`);
+        // We need to signal to gulp that we've completed this async task
+        return Promise.resolve();
+    }
+}
+
 exports['webpack-dev'] = gulp.series(() => gulp_webpack('development'), buildGrammars);
 exports['webpack-prod'] = gulp.series(() => gulp_webpack('production'), buildGrammars);
-exports.test = gulp.series(gulp_installAzureAccount, test);
+exports.test = gulp.series(gulp_installDotNetExtension, test);
 exports['build-grammars'] = buildGrammars;
 exports['watch-grammars'] = (): unknown => gulp.watch('grammars/**', buildGrammars);
 exports['get-language-server'] = getLanguageServer;

@@ -8,16 +8,15 @@
 
 import * as assert from 'assert';
 import { commands, Selection } from 'vscode';
-import { ext } from '../../extension.bundle';
+import { newParamValueCompletionLabel, newParamValueCompletionLabelWithQuotes } from '../support/constants';
 import { delay } from '../support/delay';
 import { IDeploymentParametersFile, IDeploymentTemplate } from "../support/diagnostics";
 import { getCompletionItemResolutionPromise, getCompletionItemsPromise, getDocumentChangedPromise } from '../support/getEventPromise';
+import { mapParameterFile } from '../support/mapParameterFile';
 import { getDocumentMarkers, removeEOLMarker } from "../support/parseTemplate";
 import { stringify } from '../support/stringify';
 import { TempDocument, TempEditor, TempFile } from '../support/TempFile';
 import { testWithLanguageServer } from '../support/testWithLanguageServer';
-
-const newParamCompletionLabel = `"<new parameter>"`;
 
 const defaultTemplate = {
     "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
@@ -53,7 +52,7 @@ suite("Functional parameter file completions", () => {
             let templateFile: TempFile | undefined;
 
             try {
-                const { markers: { bang }, unmarkedText } = getDocumentMarkers(params);
+                const { markers: { cursor }, unmarkedText } = getDocumentMarkers(params);
                 expectedResult = removeEOLMarker(expectedResult);
 
                 // Create template/params files
@@ -64,7 +63,7 @@ suite("Functional parameter file completions", () => {
 
                 // Map template to params
                 if (templateFile) {
-                    await ext.deploymentFileMapping.getValue().mapParameterFile(templateFile.uri, paramsFile.uri);
+                    await mapParameterFile(templateFile.uri, paramsFile.uri);
                 }
 
                 // Open params in editor
@@ -72,11 +71,10 @@ suite("Functional parameter file completions", () => {
                 editor = new TempEditor(paramsDoc);
                 await editor.open();
 
-                // Move cursor to the "!" in the document
-                const position = editor.document.realDocument.positionAt(bang.index);
+                // Move cursor to the "<!cursor!>" in the document
+                const position = editor.document.realDocument.positionAt(cursor.index);
                 editor.realEditor.selection = new Selection(position, position);
                 await delay(1);
-
                 // Trigger completion UI
                 const completionItemsPromise = getCompletionItemsPromise(paramsDoc.realDocument);
                 await commands.executeCommand('editor.action.triggerSuggest');
@@ -125,7 +123,8 @@ suite("Functional parameter file completions", () => {
                     await editor.dispose();
                 }
                 if (templateFile) {
-                    await ext.deploymentFileMapping.getValue().mapParameterFile(templateFile.uri, undefined);
+                    await mapParameterFile(templateFile.uri, undefined, false);
+                    templateFile.dispose();
                 }
             }
         });
@@ -138,11 +137,77 @@ suite("Functional parameter file completions", () => {
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        !{EOL}
+        <!cursor!>{EOL}
     }
 }`,
             undefined,
-            newParamCompletionLabel,
+            newParamValueCompletionLabel,
+            `{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "parameter1": {
+            "value": "value"
+        }
+    }
+}`
+        );
+
+        createCompletionsFunctionalTest(
+            "No template file, new parameter in blank section, inside quotes",
+            `{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "<!cursor!>{EOL}"
+    }
+}`,
+            undefined,
+            newParamValueCompletionLabelWithQuotes,
+            `{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "parameter1": {
+            "value": "value"
+        }
+    }
+}`
+        );
+
+        createCompletionsFunctionalTest(
+            "No template file, new parameter in blank section, inside existing string",
+            `{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "new<!cursor!>"
+    }
+}`,
+            undefined,
+            newParamValueCompletionLabelWithQuotes,
+            `{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "parameter1": {
+            "value": "value"
+        }
+    }
+}`
+        );
+
+        createCompletionsFunctionalTest(
+            "No template file, new parameter in blank section, existing non-string token",
+            `{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        new<!cursor!>{EOL}
+    }
+}`,
+            undefined,
+            newParamValueCompletionLabel,
             `{
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
@@ -163,11 +228,11 @@ suite("Functional parameter file completions", () => {
         "PARAmeter2": {
             "value": "string"
         },
-        !{EOL}
+        <!cursor!>{EOL}
     }
 }`,
             undefined,
-            newParamCompletionLabel,
+            newParamValueCompletionLabel,
             `{
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
@@ -191,11 +256,11 @@ suite("Functional parameter file completions", () => {
         "PARAmeter2": {
             "value": "string"
         }
-        !{EOL}
+        <!cursor!>{EOL}
     }
 }`,
             undefined,
-            newParamCompletionLabel,
+            newParamValueCompletionLabel,
             `{
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
@@ -220,11 +285,11 @@ suite("Functional parameter file completions", () => {
             "value": "string"
         }
         // some comments
-        !{EOL}
+        <!cursor!>{EOL}
     }
 }`,
             undefined,
-            newParamCompletionLabel,
+            newParamValueCompletionLabel,
             `{
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
@@ -246,14 +311,14 @@ suite("Functional parameter file completions", () => {
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        !{EOL}
+        <!cursor!>{EOL}
         "PARAmeter2": {
             "value": "string"
         }
     }
 }`,
             undefined,
-            newParamCompletionLabel,
+            newParamValueCompletionLabel,
             `{
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
@@ -274,11 +339,11 @@ suite("Functional parameter file completions", () => {
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "!"
+        "<!cursor!>"
     }
 }`,
             undefined,
-            newParamCompletionLabel,
+            newParamValueCompletionLabelWithQuotes,
             `{
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
@@ -296,11 +361,11 @@ suite("Functional parameter file completions", () => {
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        !{EOL}
+        <!cursor!>{EOL}
     }
 }`,
             defaultTemplate,
-            newParamCompletionLabel,
+            newParamValueCompletionLabel,
             `{
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
@@ -320,7 +385,7 @@ suite("Functional parameter file completions", () => {
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        !{EOL}
+        <!cursor!>{EOL}
     }
 }`,
             defaultTemplate,
@@ -345,7 +410,7 @@ suite("Functional parameter file completions", () => {
         "required1": {
             "value": "abc"
         },
-        !{EOL}
+        <!cursor!>{EOL}
         "required2": {
             "value": "abc"
         }
@@ -383,7 +448,7 @@ suite("Functional parameter file completions", () => {
     "required1": {
         "value": "abc"
     }
-    !{EOL}
+    <!cursor!>{EOL}
     "required2": {
         "value": "abc"
     }
@@ -405,6 +470,78 @@ suite("Functional parameter file completions", () => {
     },
     "required2": {
         "value": "abc"
+    }
+}
+}`
+    );
+
+    createCompletionsFunctionalTest(
+        "Inside blank string (or double quote as trigger)",
+        `{
+"$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+"contentVersion": "1.0.0.0",
+"parameters": {
+    "<!cursor!>"{EOL}
+}
+}`,
+        defaultTemplate,
+        `"optional1"`,
+        `{
+"$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+"contentVersion": "1.0.0.0",
+"parameters": {
+    "optional1": {
+        "value": {
+          "abc": "def"
+        }
+    }
+}
+}`
+    );
+
+    createCompletionsFunctionalTest(
+        "At end of existing string",
+        `{
+"$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+"contentVersion": "1.0.0.0",
+"parameters": {
+    "optiona<!cursor!>"{EOL}
+}
+}`,
+        defaultTemplate,
+        `"optional1"`,
+        `{
+"$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+"contentVersion": "1.0.0.0",
+"parameters": {
+    "optional1": {
+        "value": {
+          "abc": "def"
+        }
+    }
+}
+}`
+    );
+
+    createCompletionsFunctionalTest(
+        "In middle of existing string",
+        `{
+"$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+"contentVersion": "1.0.0.0",
+"parameters": {
+    "opti<!cursor!>cal"
+}
+}`,
+        defaultTemplate,
+        `"optional1"`,
+        `{
+"$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+"contentVersion": "1.0.0.0",
+"parameters": {
+    "optional1": {
+        "value": {
+          "abc": "def"
+        }
     }
 }
 }`

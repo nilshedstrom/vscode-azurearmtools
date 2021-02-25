@@ -5,6 +5,7 @@
 import { ext, LanguageServerState } from "../../extension.bundle";
 import { DISABLE_LANGUAGE_SERVER } from "../testConstants";
 import { delay } from "./delay";
+import { testLog } from "./testLog";
 
 let isLanguageServerAvailable = false;
 
@@ -14,11 +15,12 @@ export async function ensureLanguageServerAvailable(): Promise<void> {
     }
 
     if (!isLanguageServerAvailable) {
+        testLog.writeLine("Waiting for language server to be available");
         // tslint:disable-next-line: no-constant-condition
         while (true) {
             switch (ext.languageServerState) {
                 case LanguageServerState.Failed:
-                    throw new Error('Language server failed to start');
+                    throw new Error(`Language server failed on start-up`);
                 case LanguageServerState.NotStarted:
                 case LanguageServerState.Starting:
                     await delay(100);
@@ -27,6 +29,7 @@ export async function ensureLanguageServerAvailable(): Promise<void> {
                     await delay(1000); // Give vscode time to notice the new formatter available (I don't know of a way to detect this)
 
                     isLanguageServerAvailable = true;
+                    testLog.writeLine("Language server now available");
                     return;
                 case LanguageServerState.Stopped:
                     throw new Error('Language server stopped');

@@ -7,7 +7,7 @@
 
 import * as assert from "assert";
 import * as os from 'os';
-import { DefinitionKind, DeploymentTemplate, HoverInfo, IReferenceSite, Language } from "../extension.bundle";
+import { DefinitionKind, DeploymentTemplateDoc, HoverInfo, IReferenceSite, Span } from "../extension.bundle";
 import { createExpressionCompletionsTestEx } from "./support/createCompletionsTest";
 import { IDeploymentTemplate } from "./support/diagnostics";
 import { parseTemplate, parseTemplateWithMarkers } from "./support/parseTemplate";
@@ -377,7 +377,7 @@ suite("User functions", () => {
             assert(!dt.topLevelScope.getParameterDefinition('notfound'));
             assert.equal(dt.topLevelScope.namespaceDefinitions.length, 1);
             assert.equal(dt.topLevelScope.namespaceDefinitions[0].members.length, 2);
-            assert.equal(dt.topLevelScope.namespaceDefinitions[0].nameValue.toFriendlyString(), "udf");
+            assert.equal(dt.topLevelScope.namespaceDefinitions[0].nameValue.toShortFriendlyString(), "udf");
             assert.equal(dt.topLevelScope.namespaceDefinitions[0].getMemberDefinition('odd')!.nameValue.toString(), "odd");
             assert.equal(dt.topLevelScope.namespaceDefinitions[0].getMemberDefinition('ODD')!.nameValue.toString(), "odd");
             assert.equal(dt.topLevelScope.namespaceDefinitions[0].members[0].parameterDefinitions.length, 1);
@@ -1079,8 +1079,6 @@ suite("User functions", () => {
             };
 
             await parseTemplate(template, [
-                // tslint:disable-next-line: no-suspicious-comment
-                // TODO: Better error message?
                 'Error: Unrecognized user-defined function namespace \'udf\'.'
             ]);
         });
@@ -1276,7 +1274,7 @@ suite("User functions", () => {
                 await testGetReferences(dt, udfDef.index, [udfDef.index, udfReferenceAtNamespace.index]);
             });
 
-            test("Reference to built-in function with same name as UDF function doesn't find UDF", async () => {
+            test("Reference to built-in function with same name as UDF function doesn't find UDF function call", async () => {
                 const { dt, markers: { stringRef1, stringRef2, stringRef3, stringRef4 } } = await parseTemplateWithMarkers(userFuncsTemplate1);
                 await testGetReferences(dt, stringRef4.index, [stringRef1.index, stringRef2.index, stringRef3.index, stringRef4.index]);
             });
@@ -1300,10 +1298,10 @@ suite("User functions", () => {
 
     suite("UDF Hover Info", () => {
         async function testHover(
-            dt: DeploymentTemplate,
+            dt: DeploymentTemplateDoc,
             cursorIndex: number,
             expectedHoverText: string,
-            expectedSpan?: Language.Span
+            expectedSpan?: Span
         ): Promise<void> {
             const pc = dt.getContextFromDocumentCharacterIndex(cursorIndex, undefined);
             let hoverInfo: HoverInfo = pc.getHoverInfo()!;
@@ -1311,7 +1309,7 @@ suite("User functions", () => {
             hoverInfo = hoverInfo!;
 
             const text: string = hoverInfo.getHoverText();
-            const span: Language.Span = hoverInfo.span;
+            const span: Span = hoverInfo.span;
 
             assert.equal(text, expectedHoverText);
             if (expectedSpan) {
@@ -1355,7 +1353,7 @@ suite("User functions", () => {
 
     suite("UDF Go To Definition", async () => {
         async function testGoToDefinition(
-            dt: DeploymentTemplate,
+            dt: DeploymentTemplateDoc,
             cursorIndex: number,
             expectedReferenceKind: DefinitionKind,
             expectedDefinitionStart: number
@@ -1485,8 +1483,8 @@ suite("User functions", () => {
                 };
 
                 await parseTemplate(template, [
-                    "Warning: The parameter 'param1' of function 'udf.odd' is never used.",
-                    "Warning: The user-defined function 'udf.odd' is never used."
+                    "Warning: The user-defined function 'udf.odd' is never used.",
+                    "Warning: User-function parameter 'param1' is never used.",
                 ]);
             });
 
@@ -1526,8 +1524,8 @@ suite("User functions", () => {
                 };
 
                 await parseTemplate(template, [
-                    "Warning: The parameter 'param1' of function 'udf.odd' is never used.",
-                    "Warning: The user-defined function 'udf.odd' is never used."
+                    "Warning: The user-defined function 'udf.odd' is never used.",
+                    "Warning: User-function parameter 'param1' is never used.",
                 ]);
             });
 
@@ -1562,8 +1560,8 @@ suite("User functions", () => {
 
                 await parseTemplate(template, [
                     "Warning: The parameter 'param1' is never used.",
-                    "Warning: The parameter 'param1' of function 'udf.odd' is never used.",
-                    'Warning: The user-defined function \'udf.odd\' is never used.'
+                    'Warning: The user-defined function \'udf.odd\' is never used.',
+                    "Warning: User-function parameter 'param1' is never used.",
                 ]);
             });
         });
@@ -1789,159 +1787,124 @@ suite("User functions", () => {
         const allMixedCaseNsFunctionsCompletions: [string, string][] = [["mixedCaseNamespace.howdy", "howdy"]];
 
         suite("Completing UDF function names", () => {
-            suite("Completing udf.xxx gives udf's functions starting with xxx - not found", () => {
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.x!', []);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.udf35!', []);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.udf1!', []);
+            suite("Completing inside xxx in udf.xxx", () => {
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.p<!cursor!>', allUdfNsFunctionsCompletions);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.u<!cursor!>', allUdfNsFunctionsCompletions);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.ud<!cursor!>', allUdfNsFunctionsCompletions);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.udf<!cursor!>', allUdfNsFunctionsCompletions);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.udf2<!cursor!>', allUdfNsFunctionsCompletions);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.udf3<!cursor!>', allUdfNsFunctionsCompletions);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.udf34<!cursor!>', allUdfNsFunctionsCompletions);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.P<!cursor!>', allUdfNsFunctionsCompletions);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.U<!cursor!>', allUdfNsFunctionsCompletions);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.uD<!cursor!>', allUdfNsFunctionsCompletions);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.u<!cursor!>D', allUdfNsFunctionsCompletions);
             });
 
-            suite("Completing inside xxx in udf.xxx gives only udf's functions starting with xxx", () => {
-                // $0 indicates where the cursor should be placed after replacement
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.p!', [["udf.parameters", "parameters"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.u!', [["udf.udf", "udf"], ["udf.udf2", "udf2"], ["udf.udf3", "udf3"], ["udf.udf34", "udf34"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.ud!', [["udf.udf", "udf"], ["udf.udf2", "udf2"], ["udf.udf3", "udf3"], ["udf.udf34", "udf34"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.udf!', [["udf.udf", "udf"], ["udf.udf2", "udf2"], ["udf.udf3", "udf3"], ["udf.udf34", "udf34"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.udf2!', [["udf.udf2", "udf2"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.udf3!', [["udf.udf3", "udf3"], ["udf.udf34", "udf34"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.udf34!', [["udf.udf34", "udf34"]]);
-            });
-
-            suite("Completing udf.xxx gives udf's functions starting with xxx - case insensitive", () => {
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.P!', [["udf.parameters", "parameters"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.U!', [["udf.udf", "udf"], ["udf.udf2", "udf2"], ["udf.udf3", "udf3"], ["udf.udf34", "udf34"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.uD!', [["udf.udf", "udf"], ["udf.udf2", "udf2"], ["udf.udf3", "udf3"], ["udf.udf34", "udf34"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.udF!', [["udf.udf", "udf"], ["udf.udf2", "udf2"], ["udf.udf3", "udf3"], ["udf.udf34", "udf34"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.MIXEDCase!', [["udf.mixedCaseFunc", "mixedCaseFunc"]]);
-            });
-
-            suite("Completing built-in functions inside functions", () => {
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'param!', [["parameters", "parameters"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'p!', [["padLeft", "padLeft"], ["parameters", "parameters"], ["providers", "providers"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'P!', [["padLeft", "padLeft"], ["parameters", "parameters"], ["providers", "providers"]]);
-            });
-
-            suite("Completing built-in functions with UDF function names returns empty", () => {
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf1!', []);
+            suite("Completing built-in functions with UDF function names", () => {
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf1<!cursor!>', allBuiltinsExpectedCompletions.concat(allNamespaceExpectedCompletions));
             });
 
             suite("Completing udf.param does not find built-in parameters function", () => {
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.param!', [["udf.parameters", "parameters"]]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.param<!cursor!>', allUdfNsFunctionsCompletions);
             });
 
             suite("Completing udf. gives udf's functions", () => {
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.!', allUdfNsFunctionsCompletions);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'mixedCaseNamespace.!', allMixedCaseNsFunctionsCompletions);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf.<!cursor!>', allUdfNsFunctionsCompletions);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'mixedCaseNamespace.<!cursor!>', allMixedCaseNsFunctionsCompletions);
             });
 
             suite("Completing udf. case-insensitive", () => {
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'MIXEDCASENAMESPACE.!', allMixedCaseNsFunctionsCompletions);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'MIXEDCASENAMESPACE.<!cursor!>', allMixedCaseNsFunctionsCompletions);
             });
 
             suite("Completing <unknownnamespace>. gives empty", () => {
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'ud2.!', []);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'ud2.<!cursor!>', []);
             });
 
             suite("Completing in middle of function name", () => {
-                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", "udf.!udf34", [["udf.mixedCaseFunc", "mixedCaseFunc"], ["udf.string", "string"], ["udf.parameters", "parameters"], ["udf.udf", "udf"], ["udf.udf2", "udf2"], ["udf.udf3", "udf3"], ["udf.udf34", "udf34"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", "udf.u!df34", [["udf.udf", "udf"], ["udf.udf2", "udf2"], ["udf.udf3", "udf3"], ["udf.udf34", "udf34"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", "udf.udf3!4", [["udf.udf3", "udf3"], ["udf.udf34", "udf34"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", "udf.udf34!", [["udf.udf34", "udf34"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", "udf.udf345!", []);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", "udf.<!cursor!>udf34", allUdfNsFunctionsCompletions);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", "udf.u<!cursor!>df34", allUdfNsFunctionsCompletions);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", "udf.udf3<!cursor!>4", allUdfNsFunctionsCompletions);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", "udf.udf34<!cursor!>", allUdfNsFunctionsCompletions);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", "udf.udf345<!cursor!>", allUdfNsFunctionsCompletions);
             });
         }); // end Completing UDF function names
 
-        suite("Completing UDF namespaces before a function name is typed", () => {
-            suite("Unknown namespace or built-in", () => {
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'xyz!', []);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf2!', []);
-            });
-
-            suite("Only matches namespace", () => {
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'ud!', [["udf", "udf"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf!', [["udf", "udf"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'mixedCase!', [["mixedCaseNamespace", "mixedCaseNamespace"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'mixedCaseNamespace!', [["mixedCaseNamespace", "mixedCaseNamespace"]]);
-            });
-
-            suite("Only matches namespace - case insensitive", () => {
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'ud!', [["udf", "udf"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf!', [["udf", "udf"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'MIXEDCASE!', [["mixedCaseNamespace", "mixedCaseNamespace"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'mixedCASENAMESPACE!', [["mixedCaseNamespace", "mixedCaseNamespace"]]);
-            });
-
-            suite("Matches namespaces and built-in functions", () => {
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'u!', [["udf", "udf"], ["uniqueString", "uniqueString"], ["uri", "uri"]]);
-            });
+        suite("Completing UDF namespaces", () => {
+            createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'xyz<!cursor!>', allBuiltinsExpectedCompletions.concat(allNamespaceExpectedCompletions));
+            createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf2<!cursor!>', allBuiltinsExpectedCompletions.concat(allNamespaceExpectedCompletions));
+            createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'ud<!cursor!>f2', allBuiltinsExpectedCompletions.concat(allNamespaceExpectedCompletions));
+            createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', '<!cursor!>', allBuiltinsExpectedCompletions.concat(allNamespaceExpectedCompletions));
         }); // end Completing UDF namespaces
 
         suite("Completing UDF namespaces after a function name already exists", () => {
             suite("Unknown namespace or built-in", () => {
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'x!yz.', []);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf2!.', []);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'x<!cursor!>yz.', allBuiltinsExpectedCompletions.concat(allNamespaceExpectedCompletions));
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf2<!cursor!>.', allBuiltinsExpectedCompletions.concat(allNamespaceExpectedCompletions));
             });
 
             suite("Matches namespaces and built-in functions", () => {
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', '!udf.string', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'u!df.string', [["udf", "udf"], ["uniqueString", "uniqueString"], ["uri", "uri"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'ud!f.abc', [["udf", "udf"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf!.abc', [["udf", "udf"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'mixed!Ca.abc', [["mixedCaseNamespace", "mixedCaseNamespace"]]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', '<!cursor!>udf.string', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'u<!cursor!>df.string', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'ud<!cursor!>f.abc', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'udf<!cursor!>.abc', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'mixed<!cursor!>Ca.abc', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
             });
 
             suite("Parameters in outer scope", () => {
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'parameters!', [["parameters", "parameters"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'parameters(!', [["'year'", "'year')"], ["'apiVersion'", "'apiVersion')"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'parameters(!)', [["'year'", "'year')"], ["'apiVersion'", "'apiVersion')"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', "parameters('!y", [["'year'", "'year')"], ["'apiVersion'", "'apiVersion')"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', "parameters('y!", [["'year'", "'year')"]]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'parameters<!cursor!>', allBuiltinsExpectedCompletions.concat(allNamespaceExpectedCompletions));
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'parameters(<!cursor!>', [["'year'", "'year')"], ["'apiVersion'", "'apiVersion')"]]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'parameters(<!cursor!>)', [["'year'", "'year')"], ["'apiVersion'", "'apiVersion')"]]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', "parameters('<!cursor!>y", [["'year'", "'year')"], ["'apiVersion'", "'apiVersion')"]]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', "parameters('y<!cursor!>", [["'year'", "'year')"], ["'apiVersion'", "'apiVersion')"]]);
 
                 // Don't complete parameters against UDF with same name
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', "udf.parameters('y!", []);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', "udf.parameters('y<!cursor!>", []);
             });
 
             suite("Parameters in function scope", () => {
                 // Parameter completions should only be parameters inside the function
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<stringOutputValue>', 'parameters!', [["parameters", "parameters"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<stringOutputValue>', 'parameters(!', [["'year'", "'year')"], ["'day'", "'day')"], ["'month'", "'month')"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<stringOutputValue>', "parameters('y!", [["'year'", "'year')"]]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<stringOutputValue>', 'parameters<!cursor!>', allBuiltinsExpectedCompletions);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<stringOutputValue>', 'parameters(<!cursor!>', [["'year'", "'year')"], ["'day'", "'day')"], ["'month'", "'month')"]]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<stringOutputValue>', "parameters('y<!cursor!>", [["'year'", "'year')"], ["'day'", "'day')"], ["'month'", "'month')"]]);
             });
 
             suite("Variables in outer scope", () => {
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'variables!', [["variables", "variables"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'variables(!', [["'var1'", "'var1')"], ["'var2'", "'var2')"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'variables(!)', [["'var1'", "'var1')"], ["'var2'", "'var2')"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', "variables('!y", [["'var1'", "'var1')"], ["'var2'", "'var2')"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', "variables('y!", []);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', "variables('v!", [["'var1'", "'var1')"], ["'var2'", "'var2')"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', "variables('var1!", [["'var1'", "'var1')"]]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'variables<!cursor!>', allBuiltinsExpectedCompletions.concat(allNamespaceExpectedCompletions));
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'variables(<!cursor!>', [["'var1'", "'var1')"], ["'var2'", "'var2')"]]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', 'variables(<!cursor!>)', [["'var1'", "'var1')"], ["'var2'", "'var2')"]]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', "variables('<!cursor!>y", [["'var1'", "'var1')"], ["'var2'", "'var2')"]]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', "variables('y<!cursor!>", [["'var1'", "'var1')"], ["'var2'", "'var2')"]]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', "variables('v<!cursor!>", [["'var1'", "'var1')"], ["'var2'", "'var2')"]]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', "variables('var1<!cursor!>", [["'var1'", "'var1')"], ["'var2'", "'var2')"]]);
 
                 // Don't complete variables against UDF with same name
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', "udf.variables('var1!", []);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<output1>', "udf.variables('var1<!cursor!>", []);
             });
 
             suite("Variables in function scope", () => {
                 // CONSIDER: Ideally this would not return a 'variables' completion at all
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<stringOutputValue>', 'variables!', [["variables", "variables"]]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<stringOutputValue>', 'variables<!cursor!>', allBuiltinsExpectedCompletions);
 
                 // No variables availabe in function scope
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<stringOutputValue>', 'variables(!', []);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<stringOutputValue>', 'variables(<!cursor!>', []);
             });
 
             suite("User namespaces and functions not available in function scope", () => {
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<stringOutputValue>', '!udf.string', [...allBuiltinsExpectedCompletions]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<stringOutputValue>', 'u!df.string', [["uniqueString", "uniqueString"], ["uri", "uri"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<stringOutputValue>', 'u!', [["uniqueString", "uniqueString"], ["uri", "uri"]]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<stringOutputValue>', 'udf!.string', []);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, '<stringOutputValue>', 'udf.!', []);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<stringOutputValue>', '<!cursor!>udf.string', allBuiltinsExpectedCompletions);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<stringOutputValue>', 'u<!cursor!>df.string', allBuiltinsExpectedCompletions);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<stringOutputValue>', 'u<!cursor!>', allBuiltinsExpectedCompletions);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<stringOutputValue>', 'udf<!cursor!>.string', allBuiltinsExpectedCompletions);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, '<stringOutputValue>', 'udf.<!cursor!>', []);
             });
 
             suite("Property access completions from a function call", () => {
                 // Built-in function
-                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", 'resourceGroup().!', ["id", "location", "name", "properties", "tags"]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", 'resourceGroup().<!cursor!>', ["id", "location", "name", "properties", "tags"]);
 
                 // UDF function - don't pick up built-in function members
-                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", 'udf.resourceGroup().!', []);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", 'udf.resourceGroup().<!cursor!>', []);
             });
 
             suite("Property access completions from a properties call", () => {
@@ -1965,12 +1928,12 @@ suite("User functions", () => {
                 };
 
                 // Parameters call
-                createExpressionCompletionsTestEx(template, "<propaccess>", "parameters('param1').!", ["a"]);
-                createExpressionCompletionsTestEx(template, "<propaccess>", "parameters('param1').a.!", ["b"]);
+                createExpressionCompletionsTestEx(template, "<propaccess>", "parameters('param1').<!cursor!>", ["a"]);
+                createExpressionCompletionsTestEx(template, "<propaccess>", "parameters('param1').a.<!cursor!>", ["b"]);
 
                 // UDF function with name "parameters"
-                createExpressionCompletionsTestEx(template, "<propaccess>", "udf.parameters('param1').!", []);
-                createExpressionCompletionsTestEx(template, "<propaccess>", "udf.parameters('param1').a.!", []);
+                createExpressionCompletionsTestEx(template, "<propaccess>", "udf.parameters('param1').<!cursor!>", []);
+                createExpressionCompletionsTestEx(template, "<propaccess>", "udf.parameters('param1').a.<!cursor!>", []);
             });
 
             suite("Property access completions from a variables call", () => {
@@ -1991,41 +1954,41 @@ suite("User functions", () => {
                 };
 
                 // Parameters call
-                createExpressionCompletionsTestEx(template, "<varaccess>", "variables('var1').!", ["a"]);
-                createExpressionCompletionsTestEx(template, "<varaccess>", "variables('var1').a.!", ["b"]);
+                createExpressionCompletionsTestEx(template, "<varaccess>", "variables('var1').<!cursor!>", ["a"]);
+                createExpressionCompletionsTestEx(template, "<varaccess>", "variables('var1').a.<!cursor!>", ["b"]);
 
                 // UDF function with name "variables"
-                createExpressionCompletionsTestEx(template, "<varaccess>", "udf.variables('var1').!", []);
-                createExpressionCompletionsTestEx(template, "<varaccess>", "udf.variables('var1').a.!", []);
+                createExpressionCompletionsTestEx(template, "<varaccess>", "udf.variables('var1').<!cursor!>", []);
+                createExpressionCompletionsTestEx(template, "<varaccess>", "udf.variables('var1').a.<!cursor!>", []);
             });
 
         }); // end Completing UDF namespaces after a function name already exists
 
         suite("UDF completions in larger expression context", () => {
             suite("Starting a new call", () => {
-                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", "!", [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", ".!", [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", " . !", [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", " abc !", [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", 'udf.string !', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", '! udf.string', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", '!udf .string()', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", 'udf.string(!)', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", "udf.string('a', !)", [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", "<!cursor!>", [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", ".<!cursor!>", [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", " . <!cursor!>", [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", " abc <!cursor!>", [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", 'udf.string <!cursor!>', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", '<!cursor!> udf.string', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", '<!cursor!>udf .string()', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", 'udf.string(<!cursor!>)', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", "udf.string('a', <!cursor!>)", [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
 
                 // The result here is somwhat ambiguous, but this is good enough
-                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", ' udf. ! string()', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", ' udf. <!cursor!> string()', [...allNamespaceExpectedCompletions, ...allBuiltinsExpectedCompletions]);
             });
 
             suite("Whitespace not affecting the results", () => {
-                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", 'udf. !string()', allUdfNsFunctionsCompletions);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", ' udf. !string()', allUdfNsFunctionsCompletions);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", 'udf. <!cursor!>string()', allUdfNsFunctionsCompletions);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output1>", ' udf. <!cursor!>string()', allUdfNsFunctionsCompletions);
             });
 
             suite("Not in context of an expression", () => {
-                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output4BeforeBrackets>", "!", []);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output4BeforeBrackets>", " !", []);
-                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output4BeforeBrackets>", " ! ", []);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output4BeforeBrackets>", "<!cursor!>", []);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output4BeforeBrackets>", " <!cursor!>", []);
+                createExpressionCompletionsTestEx(userFuncsTemplate2, "<output4BeforeBrackets>", " <!cursor!> ", []);
             });
         });
 

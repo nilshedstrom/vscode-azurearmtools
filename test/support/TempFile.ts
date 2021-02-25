@@ -6,7 +6,9 @@
 
 import * as assert from 'assert';
 import * as fs from 'fs';
+import * as path from 'path';
 import { commands, TextDocument, TextEditor, Uri, window, workspace } from 'vscode';
+import { readUtf8FileWithBom } from "../../extension.bundle";
 import { getTempFilePath } from './getTempFilePath';
 
 export class TempFile {
@@ -18,6 +20,11 @@ export class TempFile {
         this.uri = Uri.file(this.fsPath);
 
         fs.writeFileSync(this.fsPath, contents);
+    }
+
+    public static async fromExistingFile(filepath: string): Promise<TempFile> {
+        const contents: string = await readUtf8FileWithBom(filepath);
+        return new TempFile(contents, path.basename(filepath), path.extname(filepath));
     }
 
     public dispose(): void {

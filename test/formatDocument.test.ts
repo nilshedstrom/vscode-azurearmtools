@@ -14,9 +14,10 @@ import { ISuiteCallbackContext, ITestCallbackContext } from "mocha";
 import * as path from 'path';
 import { commands, languages, Range, Selection, TextDocument, TextEditor, window, workspace } from "vscode";
 import { armTemplateLanguageId } from "../extension.bundle";
-import { diagnosticsTimeout, testFolder } from "./support/diagnostics";
+import { diagnosticsTimeout } from "./support/diagnostics";
 import { ensureLanguageServerAvailable } from "./support/ensureLanguageServerAvailable";
 import { getTempFilePath } from "./support/getTempFilePath";
+import { resolveInTestFolder } from "./support/resolveInTestFolder";
 import { testWithLanguageServer } from "./support/testWithLanguageServer";
 
 const formatDocumentCommand = 'editor.action.formatDocument';
@@ -31,11 +32,11 @@ suite("Format document", function (this: ISuiteCallbackContext): void {
             let jsonUnformatted: string = source;
             if (source.match(/\.jsonc?$/)) {
                 sourceIsFile = true;
-                jsonUnformatted = fs.readFileSync(path.join(testFolder, source)).toString().trim();
+                jsonUnformatted = fs.readFileSync(resolveInTestFolder(source)).toString().trim();
             }
             let jsonExpected: string = expected;
             if (jsonExpected.match(/\.jsonc?$/)) {
-                jsonExpected = fs.readFileSync(path.join(testFolder, expected)).toString().trim();
+                jsonExpected = fs.readFileSync(resolveInTestFolder(expected)).toString().trim();
             }
 
             if (source === 'format-me.json') {
@@ -88,11 +89,106 @@ suite("Format document", function (this: ISuiteCallbackContext): void {
         testFormat('templates/format-me.jsonc', 'templates/format-me.jsonc', 'templates/format-me.expected.full.jsonc');
         testFormat('format twice', 'templates/format-me.expected.full.jsonc', 'templates/format-me.expected.full.jsonc');
         testFormat('bad syntax', 'This is a bad json file', 'This is a bad json file');
-        testFormat('{}', '{}', '{\n}');
 
-        // tslint:disable-next-line: no-suspicious-comment
-        // TODO: Currently fails due to https://dev.azure.com/devdiv/DevDiv/_workitems/edit/892851
-        //testFormat('empty', '', '');
+        suite("Don't force expand or collapse empty objects", () => {
+            testFormat('{}', '{}', '{}');
+            testFormat('{\n}', '{\n}', '{\n}');
+            testFormat('{\r\n}', '{\r\n}', '{\r\n}');
+        });
+
+        testFormat('empty', '', '');
+
+        suite('Multiline strings', () => {
+            const template435 =
+                `{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "identity": {
+            "type": "string"
+        }
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Resources/deploymentScripts",
+            "name": "scriptInTemplate1",
+            "apiVersion": "2019-10-01-preview",
+            "location": "[resourceGroup().location]",
+            "kind": "AzurePowerShell",
+            "identity": {
+                "type": "userAssigned",
+                "userAssignedIdentities": {
+                    "[parameters('identity')]": {
+                    }
+                }
+            },
+            "properties": {
+                "azPowerShellVersion": "2.7",
+                "scriptContent": "
+                    param([string
+                ] $textToEcho)
+                    Write-Output $textToEcho
+                    $DeploymentScriptOutputs['text'
+                ] = $textToEcho",
+                "Arguments": "-textToEcho 'test'",
+                "timeout": "PT30M",
+                "retentionInterval": "P1D",
+                "cleanupPreference": "OnSuccess",
+                "forceUpdateTag": "1"
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deploymentScripts",
+            "name": "scriptInTemplate2",
+            "apiVersion": "2019-10-01-preview",
+            "location": "[resourceGroup().location]",
+            "kind": "AzurePowerShell",
+            "dependsOn": [
+                "scriptInTemplate1"
+            ],
+            "identity": {
+                "type": "userAssigned",
+                "userAssignedIdentities": {
+                    "[parameters('identity')]": {
+                    }
+                }
+            },
+            "properties": {
+                "azPowerShellVersion": "2.7",
+                "scriptContent": "
+                    param([string
+                ] $textToEcho)
+                    Write-Output $textToEcho
+                    $DeploymentScriptOutputs['text'
+                ] = $textToEcho
+                ",
+                "arguments": "[concat('-textToEcho ', reference('scriptInTemplate1').outputs.text, '-morestuff')]",
+                "timeout": "PT30M",
+                "retentionInterval": "P1D"
+            }
+        }
+    ],
+    "outputs": {
+        "result": {
+            "value": "[reference('scriptInTemplate2').outputs.text]",
+            "type": "string"
+        }
+    }
+}`;
+            testFormat(
+                'regress https://github.com/microsoft/vscode-azurearmtools/issues/435',
+                template435,
+                template435
+            );
+
+            const template2 =
+                `{
+    "whatever": "[concat('This is a ',
+        3, '-line ',
+        'expression ', 4, ' you!')]"
+};`;
+            testFormat('template2', template2, template2);
+        });
     });
 
     suite("Format range", () => {

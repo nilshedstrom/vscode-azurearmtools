@@ -6,8 +6,7 @@
 import * as os from 'os';
 import * as path from 'path';
 
-// tslint:disable-next-line: strict-boolean-expressions
-export const isWebpack: boolean = /^(false|0)?$/i.test(process.env.AZCODE_ARM_IGNORE_BUNDLE || '');
+export const isWebpack: boolean = /^(false|0)?$/i.test(process.env.AZCODE_ARM_IGNORE_BUNDLE ?? '');
 
 export const isWin32: boolean = os.platform() === 'win32';
 export const isCaseSensitiveFileSystem: boolean = !isWin32;
@@ -21,7 +20,7 @@ export const languageFriendlyName = 'Azure Resource Manager Template';
 export const armTemplateLanguageId = 'arm-template';
 export const languageServerFolderName = 'languageServer';
 export const extensionName = 'Azure Resource Manager Tools';
-export const outputWindowName = extensionName;
+export const outputChannelName = extensionName;
 
 // String that shows up in our errors as the source in parentheses
 export const expressionsDiagnosticsSource = "arm-template (expressions)";
@@ -31,7 +30,12 @@ export const languageServerStateSource = "arm-template";
 
 export const configPrefix = 'azureResourceManagerTools'; // Prefix for user settings
 
-export const dotnetVersion = '3.0';
+// The dotnet version the language server is compiled against (affects where the
+// assembly is found in the langServer folder)
+export const langServerDotnetVersion = '3.1';
+// The dotnet version to download and run the language server against (minor version
+// may be greater than langServerDotnetVersion)
+export const downloadDotnetVersion = '3.1';
 
 export namespace configKeys {
     export const autoDetectJsonTemplates = 'autoDetectJsonTemplates';
@@ -42,6 +46,9 @@ export namespace configKeys {
     export const checkForLatestSchema = 'checkForLatestSchema';
     export const checkForMatchingParameterFiles = 'checkForMatchingParameterFiles';
     export const parameterFiles = 'parameterFiles';
+    export const enableCodeLens = 'codelens.enable';
+    export const codeLensForParameters = 'codelens.parameters';
+    export const codeLensForResourceParentsAndChildren = 'codelens.resourceChildren';
 }
 
 export namespace globalStateKeys {
@@ -70,10 +77,10 @@ export namespace templateKeys {
     export const apiProfile = 'apiProfile';
 
     // Copy blocks
-    export const loopVarCopy = "copy";
-    export const loopVarName = 'name';
-    export const loopVarInput = 'input';
-    export const loopVarCount = 'count';
+    export const copyLoop = "copy";
+    export const copyName = 'name';
+    export const copyInput = 'input';
+    export const copyCount = 'count';
 
     // Resources
     export const properties = 'properties';
@@ -81,4 +88,19 @@ export namespace templateKeys {
     export const resourceApiVersion = 'apiVersion';
     export const resourceDependsOn = 'dependsOn';
     export const resourceName = 'name';
+    export const tags = 'tags';
+    export const displayNameTag = 'displayName';
+
+    // Nested templates
+    export const nestedDeploymentExprEvalOptions = 'expressionEvaluationOptions';
+    export const nestedDeploymentExprEvalScope = 'scope';
+    export const nestedDeploymentExprEvalScopeInner = 'inner';
+    export const nestedDeploymentTemplateProperty = 'template';
+
+    // Linked templates
+    export const linkedDeploymentTemplateLink = 'templateLink';
+
+    // User functions
+    export const userFunctionNamespace = 'namespace';
+    export const userFunctionMembers = 'members';
 }

@@ -51,10 +51,7 @@ suite("Schema validation", () => {
     );
 
     testWithLanguageServer(
-        "Shouldn't validate expressions against schema"
-        // tslint:disable-next-line: no-suspicious-comment
-        /* TODO: Re-enable once schema loading issues are resolved
-    ,
+        "Shouldn't validate expressions against schema",
         async () =>
             await testDiagnostics(
                 {
@@ -93,7 +90,7 @@ suite("Schema validation", () => {
                 },
                 {},
                 []
-            )*/
+            )
     );
 
     suite("Case-insensitivity", async () => {
@@ -102,7 +99,7 @@ suite("Schema validation", () => {
             async () =>
                 await testDiagnostics(
                     {
-                        $schema: "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                        $schema: "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
                         contentVersion: "1.0.0.0",
                         parameters: {
                             "publicIpAddressName": {
