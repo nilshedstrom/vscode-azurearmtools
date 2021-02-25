@@ -63,7 +63,7 @@
         "onCommand:azurerm-vscode-tools.insertFunction",
         "onCommand:azurerm-vscode-tools.insertResource",
         "onCommand:azurerm-vscode-tools.developer.resetGlobalState",
-        "onCommand:azurerm-vscode-tools.developer.showInsertionContext"
+        "onCommand:azurerm-vscode-tools.developer.showInsertionContext",
         "onCommand:azurerm-vscode-tools.showDocumentation"
     ],
     "contributes": {
@@ -220,8 +220,8 @@
                 "title": "Show Documentation...",
                 "command": "azurerm-vscode-tools.showDocumentation",
                 "icon": {
-                    "light": "icons/insertItemLight.svg",
-                    "dark": "icons/insertItemDark.svg"
+                    "light": "icons/questionLight.svg",
+                    "dark": "icons/questionDark.svg"
                 }
             },
             {
@@ -434,8 +434,8 @@
                     "$when.comment": "Shows up when it's a param file, but only enabled if there is an associated template file"
                 },
                 {
-                    "$comment": "============= General commands =============",
                     "command": "azurerm-vscode-tools.showDocumentation",
+                    "when": "editorLangId==arm-template",
                     "group": "zzz_arm-template@9"
                 }
             ],
@@ -545,6 +545,11 @@
                     "command": "azurerm-vscode-tools.showDocumentation",
                     "when": "view == azurerm-vscode-tools.template-outline && viewItem =~ /resources@\\d/",
                     "group": "arm-template"
+                },
+                {
+                    "command": "azurerm-vscode-tools.showDocumentation",
+                    "when": "view == azurerm-vscode-tools.template-outline && viewItem == resources@1",
+                    "group": "inline"
                 }
             ],
             "editor/title": [
@@ -599,6 +604,11 @@
                     "command": "azurerm-vscode-tools.sortTemplate",
                     "when": "view == azurerm-vscode-tools.template-outline",
                     "group": "navigation@2"
+                },
+                {
+                    "command": "azurerm-vscode-tools.showDocumentation",
+                    "when": "view == azurerm-vscode-tools.template-outline",
+                    "group": "navigation@3"
                 }
             ]
         }
